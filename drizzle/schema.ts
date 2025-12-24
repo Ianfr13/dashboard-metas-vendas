@@ -201,6 +201,7 @@ export const products = mysqlTable("products", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   type: mysqlEnum("type", ["front", "upsell", "high-ticket"]).notNull(),
   channel: mysqlEnum("channel", ["marketing", "comercial", "both"]).notNull().default("both"),
+  url: text("url"), // URL da página de checkout/venda para rastreamento
   active: int("active").notNull().default(1),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

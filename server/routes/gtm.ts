@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getDb } from "../db";
-import { gtmEvents } from "../../drizzle/schema";
-import { sql, count, gte, lte } from "drizzle-orm";
+import { gtmEvents, products } from "../../drizzle/schema";
+import { sql, count, gte, lte, eq, like } from "drizzle-orm";
 
 const router = Router();
 
@@ -206,15 +206,38 @@ router.post("/purchase", async (req, res) => {
       return res.status(500).json({ error: "Database not available" });
     }
 
+    // Tentar identificar o produto pela URL
+    let identifiedProductId = product_id;
+    let identifiedProductName = product_name;
+    
+    if (page_url) {
+      // Buscar produto que tenha URL correspondente
+      const matchedProducts = await db
+        .select()
+        .from(products)
+        .where(sql`${products.url} IS NOT NULL AND ${products.url} != '' AND ${products.active} = 1`);
+      
+      // Encontrar produto cuja URL está contida na page_url
+      const matchedProduct = matchedProducts.find(p => 
+        p.url && page_url.includes(p.url)
+      );
+      
+      if (matchedProduct) {
+        identifiedProductId = matchedProduct.id.toString();
+        identifiedProductName = matchedProduct.name;
+      }
+    }
+
     await db.insert(gtmEvents).values({
       eventName: "purchase",
       eventData: JSON.stringify({
         transaction_id,
         value,
         currency: currency || "BRL",
-        product_id,
-        product_name,
+        product_id: identifiedProductId,
+        product_name: identifiedProductName,
         quantity: quantity || 1,
+        identified_by_url: !!identifiedProductId && identifiedProductId !== product_id,
       }),
       userId: user_id || null,
       sessionId: session_id || null,
@@ -224,7 +247,14 @@ router.post("/purchase", async (req, res) => {
       referrer: referrer || null,
     });
 
-    res.json({ success: true, message: "Purchase recorded" });
+    res.json({ 
+      success: true, 
+      message: "Purchase recorded",
+      identified_product: identifiedProductId ? {
+        id: identifiedProductId,
+        name: identifiedProductName
+      } : null
+    });
   } catch (error) {
     console.error("Error recording purchase:", error);
     res.status(500).json({ error: "Failed to record purchase" });

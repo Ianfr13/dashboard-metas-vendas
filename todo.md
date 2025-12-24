@@ -303,3 +303,19 @@
 - [x] Adicionar gráfico de funil visual (pirâmide invertida)
 - [x] Mostrar breakdown por produto dentro do funil
 - [ ] Calcular taxa de take real de backend/downsell
+
+## Correção Dropdown Funil no Build
+- [ ] Investigar por que dropdown de funil não aparece no build publicado
+- [ ] Garantir que localStorage é carregado corretamente no build
+- [ ] Testar solução e criar checkpoint
+
+## Sistema de Rastreamento de Produtos por URL
+- [x] Adicionar campo "url" na tabela de produtos (schema)
+- [x] Adicionar campo "url" no formulário de produtos da Admin
+- [x] Modificar webhook POST /api/gtm/purchase para identificar produto pela URL
+- [x] Criar lógica para vincular vendas aos produtos corretos
+- [ ] Calcular automaticamente taxa de take real de upsell/downsell
+- [ ] Calcular ticket médio real do funil baseado em vendas reais
+- [ ] Atualizar página Métricas para usar dados reais do banco
+- [ ] Criar queries para buscar métricas por funil e período
+- [ ] Testar fluxo completo: GTM → Webhook → Banco → Métricas

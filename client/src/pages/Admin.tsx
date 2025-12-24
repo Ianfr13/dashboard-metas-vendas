@@ -16,6 +16,7 @@ interface Produto {
   nome: string;
   valor: number;
   canal: "marketing" | "comercial" | "ambos";
+  url?: string; // URL da página de checkout/venda
 }
 
 interface ProdutoNoFunil {
@@ -117,7 +118,7 @@ export default function Admin() {
   });
 
   // Estados para formulários
-  const [novoProduto, setNovoProduto] = useState({ nome: "", valor: "", canal: "ambos" as const });
+  const [novoProduto, setNovoProduto] = useState({ nome: "", valor: "", canal: "ambos" as const, url: "" });
   const [novoFunil, setNovoFunil] = useState({ nome: "" });
   const [editandoFunil, setEditandoFunil] = useState<string | null>(null);
   const [nomeEditado, setNomeEditado] = useState("");
@@ -215,10 +216,11 @@ export default function Admin() {
       nome: novoProduto.nome,
       valor: parseFloat(novoProduto.valor),
       canal: novoProduto.canal,
+      url: novoProduto.url || undefined,
     };
 
     setConfig({ ...config, produtos: [...config.produtos, novo] });
-    setNovoProduto({ nome: "", valor: "", canal: "ambos" });
+    setNovoProduto({ nome: "", valor: "", canal: "ambos", url: "" });
     toast.success("Produto adicionado!");
   };
 
@@ -663,7 +665,7 @@ export default function Admin() {
                 <CardDescription>Cadastre produtos simples (nome + valor + canal)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>Nome do Produto</Label>
                     <Input
@@ -697,6 +699,14 @@ export default function Admin() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div>
+                    <Label>URL da Página (Opcional)</Label>
+                    <Input
+                      value={novoProduto.url}
+                      onChange={(e) => setNovoProduto({ ...novoProduto, url: e.target.value })}
+                      placeholder="Ex: /checkout/creatina ou https://..."
+                    />
+                  </div>
                 </div>
 
                 <Button onClick={adicionarProduto} className="gap-2">
@@ -715,7 +725,7 @@ export default function Admin() {
                 <div className="space-y-3">
                   {config.produtos.map((produto) => (
                     <div key={produto.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label className="text-xs">Nome</Label>
                           <Input
@@ -746,6 +756,14 @@ export default function Admin() {
                               <SelectItem value="ambos">Ambos</SelectItem>
                             </SelectContent>
                           </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">URL da Página</Label>
+                          <Input
+                            value={produto.url || ""}
+                            onChange={(e) => atualizarProduto(produto.id, "url", e.target.value || undefined)}
+                            placeholder="/checkout/produto"
+                          />
                         </div>
                       </div>
                       <Button
