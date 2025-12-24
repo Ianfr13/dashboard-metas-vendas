@@ -240,3 +240,10 @@
 - [x] Adicionar grid completo de métricas por produto
 - [x] Métricas: CPL, CPA, Taxa Conversão, Custo Total, Receita, ROI, ROAS, Ticket Médio, etc
 - [x] Layout responsivo com gráfico + métricas
+
+## Ajustes Métricas - Novas Métricas e Funil Comercial
+- [x] Remover "Leads Qualificados" do funil comercial
+- [x] Adicionar métricas financeiras: LTV, CAC, Payback Period, Margem Contribuição, Break-even
+- [x] Adicionar métricas de qualidade: Taxa Chargeback, Taxa Reembolso
+- [x] Adicionar métricas temporais: Melhor hora, Melhor dia, Tempo médio lead→venda, Velocidade conversão
+- [x] Distribuir métricas apropriadamente entre as etapas

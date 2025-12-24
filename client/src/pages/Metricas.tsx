@@ -31,7 +31,7 @@ export default function Metricas() {
   // Estados para seleção
   const [selectedEtapaMarketing, setSelectedEtapaMarketing] = useState("leads");
   const [selectedProdutoMarketing, setSelectedProdutoMarketing] = useState("todos");
-  const [selectedEtapaComercial, setSelectedEtapaComercial] = useState("leads");
+  const [selectedEtapaComercial, setSelectedEtapaComercial] = useState("agendadas");
   const [selectedProdutoComercial, setSelectedProdutoComercial] = useState("todos");
 
   // Definição de produtos por canal
@@ -55,7 +55,6 @@ export default function Metricas() {
   ];
 
   const etapasComercial = [
-    { id: "leads", nome: "Leads Qualificados" },
     { id: "agendadas", nome: "Reuniões Agendadas" },
     { id: "realizadas", nome: "Reuniões Realizadas" },
     { id: "propostas", nome: "Propostas Enviadas" },
@@ -189,8 +188,21 @@ export default function Metricas() {
         roas: 2.79,
         vendasDia: 28.3,
         melhorDia: "Segunda",
+        melhorHora: "14h-16h",
         piorDia: "Domingo",
         crescimento: 11.2,
+        // Métricas Financeiras
+        ltv: 3600,
+        cac: 430,
+        paybackPeriod: "3.2 meses",
+        margemContribuicao: 64.2,
+        breakEven: 385,
+        // Métricas de Qualidade
+        taxaChargeback: 0.8,
+        taxaReembolso: 2.3,
+        // Métricas Temporais
+        tempoMedioLeadVenda: "4.2 dias",
+        velocidadeConversao: "23.8 leads/dia→vendas",
       },
       creatina: {
         total: 350,
@@ -205,8 +217,18 @@ export default function Metricas() {
         roas: 1.90,
         vendasDia: 11.7,
         melhorDia: "Segunda",
+        melhorHora: "15h-17h",
         piorDia: "Domingo",
         crescimento: 7.5,
+        ltv: 2391,
+        cac: 420,
+        paybackPeriod: "2.8 meses",
+        margemContribuicao: 52.8,
+        breakEven: 280,
+        taxaChargeback: 0.6,
+        taxaReembolso: 1.9,
+        tempoMedioLeadVenda: "3.8 dias",
+        velocidadeConversao: "15.8 leads/dia→vendas",
       },
       upsell: {
         total: 200,
@@ -221,8 +243,18 @@ export default function Metricas() {
         roas: 0.63,
         vendasDia: 6.7,
         melhorDia: "Terça",
+        melhorHora: "10h-12h",
         piorDia: "Sábado",
         crescimento: 15.3,
+        ltv: 741,
+        cac: 390,
+        paybackPeriod: "6.8 meses",
+        margemContribuicao: 18.5,
+        breakEven: 180,
+        taxaChargeback: 1.2,
+        taxaReembolso: 3.8,
+        tempoMedioLeadVenda: "5.1 dias",
+        velocidadeConversao: "6.5 leads/dia→vendas",
       },
       "outros-mkt": {
         total: 300,
@@ -237,55 +269,23 @@ export default function Metricas() {
         roas: 2.91,
         vendasDia: 10,
         melhorDia: "Quarta",
+        melhorHora: "13h-15h",
         piorDia: "Domingo",
         crescimento: 12.8,
+        ltv: 4017,
+        cac: 460,
+        paybackPeriod: "2.5 meses",
+        margemContribuicao: 71.3,
+        breakEven: 290,
+        taxaChargeback: 0.7,
+        taxaReembolso: 2.1,
+        tempoMedioLeadVenda: "4.5 dias",
+        velocidadeConversao: "10.2 leads/dia→vendas",
       },
     },
   };
 
   const metricasComercial: Record<string, any> = {
-    leads: {
-      todos: {
-        total: 450,
-        meta: 450,
-        percentual: 100,
-        leadsDia: 15,
-        melhorDia: "Segunda",
-        piorDia: "Sexta",
-        crescimento: 8.5,
-        qualificacao: 95.5,
-      },
-      "high-ticket": {
-        total: 300,
-        meta: 300,
-        percentual: 100,
-        leadsDia: 10,
-        melhorDia: "Segunda",
-        piorDia: "Sexta",
-        crescimento: 10.2,
-        qualificacao: 97.3,
-      },
-      creatina: {
-        total: 100,
-        meta: 100,
-        percentual: 100,
-        leadsDia: 3.3,
-        melhorDia: "Terça",
-        piorDia: "Sexta",
-        crescimento: 5.1,
-        qualificacao: 92.8,
-      },
-      "outros-com": {
-        total: 50,
-        meta: 50,
-        percentual: 100,
-        leadsDia: 1.7,
-        melhorDia: "Quarta",
-        piorDia: "Sexta",
-        crescimento: 7.3,
-        qualificacao: 94.2,
-      },
-    },
     agendadas: {
       todos: {
         total: 360,
