@@ -77,14 +77,14 @@ export default function Metricas() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img
-                src="/logo-douravita.png"
+                src="/douravita-logo.png"
                 alt="DouraVita"
-                className="h-10 w-auto drop-shadow-lg"
+                className="h-12 w-auto drop-shadow-md"
               />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Métricas Detalhadas</h1>
-                <p className="text-sm text-muted-foreground">
-                  Análise completa de performance
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Dashboard de Metas</h1>
+                <p className="text-xs text-muted-foreground font-medium">
+                  Janeiro 2025
                 </p>
               </div>
             </div>

@@ -146,3 +146,9 @@
 - [x] Remover sticky position do header em mobile (Métricas)
 - [x] Remover sticky position do header em mobile (Admin)
 - [x] Manter sticky apenas em desktop
+
+## Header - Logo e Textos
+- [x] Corrigir caminho da logo DouraVita em todas as páginas
+- [x] Simplificar texto: "Dashboard de Metas" (título) e "Janeiro 2025" (subtítulo)
+- [x] Otimizar hierarquia tipográfica
+- [x] Melhorar peso e tamanho das fontes
