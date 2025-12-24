@@ -319,3 +319,13 @@
 - [ ] Atualizar página Métricas para usar dados reais do banco
 - [ ] Criar queries para buscar métricas por funil e período
 - [ ] Testar fluxo completo: GTM → Webhook → Banco → Métricas
+
+## Refatoração: URL no Funil (não nos Produtos)
+- [x] Remover campo URL da tabela products
+- [x] Adicionar campo URL na interface Funil (Admin)
+- [x] Salvar URL do funil no localStorage
+- [x] Modificar webhook /api/gtm/purchase para armazenar page_url
+- [ ] Criar lógica para identificar funil pela URL na página Métricas
+- [ ] Criar API para calcular métricas do funil: taxa de take real, ticket médio real, conversão
+- [ ] Conectar página Métricas aos dados reais do banco
+- [ ] Testar fluxo completo: GTM envia purchase com URL → identifica funil → calcula métricas

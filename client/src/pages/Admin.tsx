@@ -28,6 +28,7 @@ interface ProdutoNoFunil {
 interface Funil {
   id: string;
   nome: string;
+  url?: string; // URL da página de checkout do funil
   produtos: ProdutoNoFunil[];
 }
 
@@ -118,8 +119,8 @@ export default function Admin() {
   });
 
   // Estados para formulários
-  const [novoProduto, setNovoProduto] = useState({ nome: "", valor: "", canal: "ambos" as const, url: "" });
-  const [novoFunil, setNovoFunil] = useState({ nome: "" });
+  const [novoProduto, setNovoProduto] = useState({ nome: "", valor: "", canal: "ambos" as const });
+  const [novoFunil, setNovoFunil] = useState({ nome: "", url: "" });
   const [editandoFunil, setEditandoFunil] = useState<string | null>(null);
   const [nomeEditado, setNomeEditado] = useState("");
 
@@ -216,11 +217,10 @@ export default function Admin() {
       nome: novoProduto.nome,
       valor: parseFloat(novoProduto.valor),
       canal: novoProduto.canal,
-      url: novoProduto.url || undefined,
     };
 
     setConfig({ ...config, produtos: [...config.produtos, novo] });
-    setNovoProduto({ nome: "", valor: "", canal: "ambos", url: "" });
+    setNovoProduto({ nome: "", valor: "", canal: "ambos" });
     toast.success("Produto adicionado!");
   };
 
@@ -255,11 +255,12 @@ export default function Admin() {
     const novo: Funil = {
       id: Date.now().toString(),
       nome: novoFunil.nome,
+      url: novoFunil.url || undefined,
       produtos: [],
     };
 
     setConfig({ ...config, funis: [...config.funis, novo] });
-    setNovoFunil({ nome: "" });
+    setNovoFunil({ nome: "", url: "" });
     toast.success("Funil criado!");
   };
 
@@ -699,14 +700,6 @@ export default function Admin() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>URL da Página (Opcional)</Label>
-                    <Input
-                      value={novoProduto.url}
-                      onChange={(e) => setNovoProduto({ ...novoProduto, url: e.target.value })}
-                      placeholder="Ex: /checkout/creatina ou https://..."
-                    />
-                  </div>
                 </div>
 
                 <Button onClick={adicionarProduto} className="gap-2">
@@ -725,7 +718,7 @@ export default function Admin() {
                 <div className="space-y-3">
                   {config.produtos.map((produto) => (
                     <div key={produto.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <Label className="text-xs">Nome</Label>
                           <Input
@@ -757,14 +750,6 @@ export default function Admin() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
-                          <Label className="text-xs">URL da Página</Label>
-                          <Input
-                            value={produto.url || ""}
-                            onChange={(e) => atualizarProduto(produto.id, "url", e.target.value || undefined)}
-                            placeholder="/checkout/produto"
-                          />
-                        </div>
                       </div>
                       <Button
                         variant="ghost"
@@ -789,22 +774,28 @@ export default function Admin() {
                 <CardDescription>Dê um nome ao funil e adicione produtos depois</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
                     <Label>Nome do Funil</Label>
                     <Input
                       value={novoFunil.nome}
-                      onChange={(e) => setNovoFunil({ nome: e.target.value })}
+                      onChange={(e) => setNovoFunil({ ...novoFunil, nome: e.target.value })}
                       placeholder="Ex: Funil Creatina"
                     />
                   </div>
-                  <div className="flex items-end">
-                    <Button onClick={adicionarFunil} className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Criar Funil
-                    </Button>
+                  <div>
+                    <Label>URL da Página de Checkout</Label>
+                    <Input
+                      value={novoFunil.url}
+                      onChange={(e) => setNovoFunil({ ...novoFunil, url: e.target.value })}
+                      placeholder="Ex: /checkout/creatina ou https://..."
+                    />
                   </div>
                 </div>
+                <Button onClick={adicionarFunil} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Criar Funil
+                </Button>
               </CardContent>
             </Card>
 
@@ -877,6 +868,23 @@ export default function Admin() {
                   <CardDescription>{funil.produtos.length} produtos no funil</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* URL do Funil */}
+                  <div>
+                    <Label className="text-xs">URL da Página de Checkout</Label>
+                    <Input
+                      value={funil.url || ""}
+                      onChange={(e) => {
+                        setConfig({
+                          ...config,
+                          funis: config.funis.map(f =>
+                            f.id === funil.id ? { ...f, url: e.target.value || undefined } : f
+                          ),
+                        });
+                      }}
+                      placeholder="Ex: /checkout/creatina ou https://..."
+                    />
+                  </div>
+
                   {/* Adicionar Produto ao Funil */}
                   <div className="border-t pt-4">
                     <Label className="mb-2 block">Adicionar Produto ao Funil</Label>

@@ -206,26 +206,25 @@ router.post("/purchase", async (req, res) => {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    // Tentar identificar o produto pela URL
-    let identifiedProductId = product_id;
-    let identifiedProductName = product_name;
+    // Tentar identificar o funil pela URL da página
+    let identifiedFunilId: string | null = null;
+    let identifiedFunilNome: string | null = null;
     
     if (page_url) {
-      // Buscar produto que tenha URL correspondente
-      const matchedProducts = await db
-        .select()
-        .from(products)
-        .where(sql`${products.url} IS NOT NULL AND ${products.url} != '' AND ${products.active} = 1`);
+      // Buscar funis cadastrados no localStorage (simulando busca no banco)
+      // Em produção, isso viria de uma tabela de funis no banco
+      // Por enquanto, vamos armazenar apenas a URL no event_data
+      // e processar depois na página de Métricas
       
-      // Encontrar produto cuja URL está contida na page_url
-      const matchedProduct = matchedProducts.find(p => 
-        p.url && page_url.includes(p.url)
-      );
-      
-      if (matchedProduct) {
-        identifiedProductId = matchedProduct.id.toString();
-        identifiedProductName = matchedProduct.name;
-      }
+      // TODO: Criar tabela de funis no banco e buscar aqui
+      // const matchedFunil = await db.query.funis.findFirst({
+      //   where: (funis, { and, isNotNull, ne, like }) =>
+      //     and(
+      //       isNotNull(funis.url),
+      //       ne(funis.url, ''),
+      //       like(page_url, `%${funis.url}%`)
+      //     )
+      // });
     }
 
     await db.insert(gtmEvents).values({
@@ -234,10 +233,12 @@ router.post("/purchase", async (req, res) => {
         transaction_id,
         value,
         currency: currency || "BRL",
-        product_id: identifiedProductId,
-        product_name: identifiedProductName,
+        product_id: product_id || null,
+        product_name: product_name || null,
         quantity: quantity || 1,
-        identified_by_url: !!identifiedProductId && identifiedProductId !== product_id,
+        funil_id: identifiedFunilId,
+        funil_nome: identifiedFunilNome,
+        page_url, // Armazenar URL para identificar funil depois
       }),
       userId: user_id || null,
       sessionId: session_id || null,
@@ -250,10 +251,11 @@ router.post("/purchase", async (req, res) => {
     res.json({ 
       success: true, 
       message: "Purchase recorded",
-      identified_product: identifiedProductId ? {
-        id: identifiedProductId,
-        name: identifiedProductName
-      } : null
+      identified_funil: identifiedFunilId ? {
+        id: identifiedFunilId,
+        nome: identifiedFunilNome
+      } : null,
+      note: "Funil será identificado pela URL na página de Métricas"
     });
   } catch (error) {
     console.error("Error recording purchase:", error);
