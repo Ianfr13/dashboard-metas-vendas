@@ -166,3 +166,12 @@
 - [x] Implementar visualização de métricas por período selecionado
 - [x] Adicionar ícones e cores distintas para cada card
 - [x] Mostrar valores esperados vs realizados
+
+## Seleção de Intervalo de Datas e Celebração de Meta
+- [x] Substituir seletor de data único por seletor de intervalo (data inicial e final)
+- [x] Calcular valores realizados e esperados para o período selecionado
+- [x] Criar componente de animação de fogos de artifício
+- [x] Adicionar banner "META BATIDA!" quando meta for atingida
+- [x] Detectar quando meta é batida no período selecionado
+- [x] Ajustar gauge para mostrar valores além de 100%
+- [x] Continuar contagem e mostrar quanto excedeu a meta

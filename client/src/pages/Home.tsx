@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +10,7 @@ import { Moon, Sun, TrendingUp, Users, DollarSign, Target, CalendarIcon, Home as
 import { Link, useLocation } from "wouter";
 import MobileNav from "@/components/MobileNav";
 import GoalGauge from "@/components/GoalGauge";
+import GoalCelebration from "@/components/GoalCelebration";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -42,33 +43,51 @@ const scenarios = {
 
 export default function Home() {
   const [selectedScenario, setSelectedScenario] = useState<"3M" | "4M" | "5M">("3M");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: new Date(2025, 0, 1), // 1 de janeiro
+    to: new Date(2025, 0, 9), // 9 de janeiro
+  });
   const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month">("month");
+  const [showCelebration, setShowCelebration] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
 
   const scenario = scenarios[selectedScenario];
   const avgTicket = 1000;
 
-  // Calcular valores baseados no período selecionado
+  // Calcular valores baseados no período selecionado e intervalo de datas
   const getPeriodValues = () => {
-    const divisor = selectedPeriod === "day" ? 30 : selectedPeriod === "week" ? 4 : 1;
+    // Calcular número de dias no intervalo
+    const daysDiff = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const divisor = 30 / daysDiff; // Proporção do mês
+    
     return {
       total: scenario.total / divisor,
       marketing: scenario.marketing / divisor,
       commercial: scenario.commercial / divisor,
       marketingSales: Math.round(scenario.marketingSales / divisor),
       commercialSales: Math.round(scenario.commercialSales / divisor),
-      // Valores realizados (mockados - 28.3% do esperado)
-      totalRealized: (scenario.total / divisor) * 0.283,
-      marketingRealized: Math.round((scenario.marketingSales / divisor) * 0.283),
-      commercialRealized: Math.round((scenario.commercialSales / divisor) * 0.283),
-      revenueRealized: (scenario.marketing / divisor) * 0.283,
+      // Valores realizados (mockados - simular 110% para demonstrar meta batida)
+      totalRealized: (scenario.total / divisor) * 1.1,
+      marketingRealized: Math.round((scenario.marketingSales / divisor) * 1.1),
+      commercialRealized: Math.round((scenario.commercialSales / divisor) * 1.1),
+      revenueRealized: (scenario.marketing / divisor) * 1.1,
+      daysDiff,
     };
   };
 
   const periodValues = getPeriodValues();
-  const periodLabel = selectedPeriod === "day" ? "diária" : selectedPeriod === "week" ? "semanal" : "mensal";
+  const periodLabel = `${periodValues.daysDiff} ${periodValues.daysDiff === 1 ? 'dia' : 'dias'}`;
+  const isGoalAchieved = periodValues.totalRealized >= periodValues.total;
+  
+  // Mostrar celebração quando meta for batida
+  useEffect(() => {
+    if (isGoalAchieved) {
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isGoalAchieved]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -81,6 +100,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Celebração de Meta Batida */}
+      <GoalCelebration show={showCelebration} />
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm md:sticky md:top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -172,20 +193,31 @@ export default function Home() {
             </Select>
           </div>
 
-          {/* Seletor de Data */}
+          {/* Seletor de Intervalo de Datas */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+              <Button variant="outline" className="w-[280px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, "PPP", { locale: ptBR }) : "Selecione a data"}
+                {dateRange.from && dateRange.to ? (
+                  <>
+                    {format(dateRange.from, "dd/MM", { locale: ptBR })} - {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
+                  </>
+                ) : (
+                  "Selecione o período"
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
               <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
+                mode="range"
+                selected={{ from: dateRange.from, to: dateRange.to }}
+                onSelect={(range) => {
+                  if (range?.from && range?.to) {
+                    setDateRange({ from: range.from, to: range.to });
+                  }
+                }}
                 initialFocus
+                numberOfMonths={2}
               />
             </PopoverContent>
           </Popover>
@@ -193,9 +225,9 @@ export default function Home() {
 
         {/* Goal Gauge */}
         <GoalGauge
-          percentage={(850000 / scenario.total) * 100}
-          current={850000}
-          target={scenario.total}
+          percentage={(periodValues.totalRealized / periodValues.total) * 100}
+          current={periodValues.totalRealized}
+          target={periodValues.total}
           subGoals={[
             { value: 100000, achieved: true },
             { value: 250000, achieved: true },

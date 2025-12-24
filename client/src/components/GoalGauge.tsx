@@ -32,7 +32,11 @@ export default function GoalGauge({
   const strokeWidth = 28; // Increased for better visibility
   const radius = (size - strokeWidth) / 2;
   const circumference = Math.PI * radius;
-  const progress = (percentage / 100) * circumference;
+  // Limitar progresso visual a 100% mas mostrar valor real no texto
+  const displayPercentage = Math.min(percentage, 100);
+  const progress = (displayPercentage / 100) * circumference;
+  const isOverGoal = percentage > 100;
+  const excessAmount = current - target;
 
   return (
     <div className="w-full flex flex-col items-center gap-8 py-8">
@@ -76,11 +80,15 @@ export default function GoalGauge({
         {/* Center content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pt-8 md:pt-12">
           <div className="text-center px-4">
-            <div className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-[#00a67d] via-[#418ecb] to-[#5a4b99] bg-clip-text text-transparent">
+            <div className={`text-4xl md:text-6xl font-bold ${
+              isOverGoal 
+                ? "bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 bg-clip-text text-transparent"
+                : "bg-gradient-to-r from-[#00a67d] via-[#418ecb] to-[#5a4b99] bg-clip-text text-transparent"
+            }`}>
               {percentage.toFixed(1)}%
             </div>
             <div className="text-xs md:text-sm text-muted-foreground mt-1 md:mt-2">
-              da meta atingida
+              {isOverGoal ? "META SUPERADA!" : "da meta atingida"}
             </div>
             <div className="mt-3 md:mt-4 space-y-1">
               <div className="text-xl md:text-2xl font-semibold text-foreground">
@@ -89,6 +97,11 @@ export default function GoalGauge({
               <div className="text-xs md:text-sm text-muted-foreground">
                 de {formatCurrency(target)}
               </div>
+              {isOverGoal && (
+                <div className="text-sm font-semibold text-green-500 mt-2">
+                  +{formatCurrency(excessAmount)} acima da meta
+                </div>
+              )}
             </div>
           </div>
         </div>
