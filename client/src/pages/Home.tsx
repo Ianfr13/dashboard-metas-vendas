@@ -5,6 +5,7 @@
 // - Fluid transitions and micro-interactions
 
 import { useState, useMemo } from 'react';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -26,8 +27,13 @@ import {
   calculateProgress,
   type Scenario 
 } from '@/lib/salesData';
+import { MetricsSimulator } from '@/components/MetricsSimulator';
 
 export default function Home() {
+  // The userAuth hooks provides authentication state
+  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
+  let { user, loading, error, isAuthenticated, logout } = useAuth();
+
   const [selectedScenario, setSelectedScenario] = useState<Scenario>('3M');
   const [currentWeek, setCurrentWeek] = useState(1);
   
@@ -350,6 +356,11 @@ export default function Home() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Metrics Simulator */}
+        <div className="mb-8">
+          <MetricsSimulator scenario={selectedScenario} />
+        </div>
 
         {/* Summary Table */}
         <Card className="glass-card p-6">
