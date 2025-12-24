@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `calculated_metrics` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `simulationId` int NOT NULL,\n  `scenario` enum('3M','4M','5M') NOT NULL,\n  `requiredSales` int NOT NULL,\n  `requiredLeads` int NOT NULL,\n  `requiredViews` int NOT NULL,\n  `requiredClicks` int NOT NULL,\n  `trafficInvestment` text NOT NULL,\n  `avgTicket` text NOT NULL,\n  `roi` text NOT NULL,\n  `roas` text NOT NULL,\n  `dailySales` int NOT NULL,\n  `weeklySales` int NOT NULL,\n  `monthlySales` int NOT NULL,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user gTuCx5NRGBDR5QQ.9ba8bfb62d50 --database kGhctA2StutzGX6UjXzrGZ --execute CREATE TABLE IF NOT EXISTS `calculated_metrics` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `simulationId` int NOT NULL,\n  `scenario` enum('3M','4M','5M') NOT NULL,\n  `requiredSales` int NOT NULL,\n  `requiredLeads` int NOT NULL,\n  `requiredViews` int NOT NULL,\n  `requiredClicks` int NOT NULL,\n  `trafficInvestment` text NOT NULL,\n  `avgTicket` text NOT NULL,\n  `roi` text NOT NULL,\n  `roas` text NOT NULL,\n  `dailySales` int NOT NULL,\n  `weeklySales` int NOT NULL,\n  `monthlySales` int NOT NULL,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 58
+}
