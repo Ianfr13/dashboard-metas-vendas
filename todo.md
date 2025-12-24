@@ -192,3 +192,14 @@
 - [x] Posicionar banner pequeno abaixo do header
 - [x] Design mais discreto e elegante
 - [x] Manter apenas fogos de artifício
+
+## Página de Métricas - Implementação Completa
+- [x] Instalar recharts para gráficos
+- [x] Criar gráfico de evolução temporal (linha)
+- [x] Criar funil de conversão visual
+- [x] Adicionar tabela detalhada de produtos
+- [x] Implementar comparação Marketing vs Comercial
+- [x] Adicionar métricas das últimas 24h
+- [x] Implementar score de saúde do negócio
+- [x] Adicionar botão de exportação PDF (UI)
+- [ ] Conectar dados reais do GTM
