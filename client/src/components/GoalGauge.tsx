@@ -27,9 +27,9 @@ export default function GoalGauge({
     return `R$ ${(value / 1000).toFixed(0)}k`;
   };
 
-  // SVG parameters for larger gauge
+  // SVG parameters - responsive sizing
   const size = 400;
-  const strokeWidth = 24;
+  const strokeWidth = 28; // Increased for better visibility
   const radius = (size - strokeWidth) / 2;
   const circumference = Math.PI * radius;
   const progress = (percentage / 100) * circumference;
@@ -37,12 +37,12 @@ export default function GoalGauge({
   return (
     <div className="w-full flex flex-col items-center gap-8 py-8">
       {/* Gauge */}
-      <div className="relative">
+      <div className="relative w-full max-w-md md:max-w-lg">
         <svg
           width={size}
           height={size / 2 + 40}
           viewBox={`0 0 ${size} ${size / 2 + 40}`}
-          className="overflow-visible"
+          className="overflow-visible w-full h-auto"
         >
           {/* Background arc */}
           <path
@@ -51,7 +51,7 @@ export default function GoalGauge({
             stroke="currentColor"
             strokeWidth={strokeWidth}
             strokeLinecap="round"
-            className="text-muted/20"
+            className="text-muted-foreground opacity-30 dark:opacity-40"
           />
           {/* Progress arc */}
           <path
@@ -74,19 +74,19 @@ export default function GoalGauge({
         </svg>
 
         {/* Center content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pt-12">
-          <div className="text-center">
-            <div className="text-6xl font-bold bg-gradient-to-r from-[#00a67d] via-[#418ecb] to-[#5a4b99] bg-clip-text text-transparent">
+        <div className="absolute inset-0 flex flex-col items-center justify-center pt-8 md:pt-12">
+          <div className="text-center px-4">
+            <div className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-[#00a67d] via-[#418ecb] to-[#5a4b99] bg-clip-text text-transparent">
               {percentage.toFixed(1)}%
             </div>
-            <div className="text-sm text-muted-foreground mt-2">
+            <div className="text-xs md:text-sm text-muted-foreground mt-1 md:mt-2">
               da meta atingida
             </div>
-            <div className="mt-4 space-y-1">
-              <div className="text-2xl font-semibold text-foreground">
+            <div className="mt-3 md:mt-4 space-y-1">
+              <div className="text-xl md:text-2xl font-semibold text-foreground">
                 {formatCurrency(current)}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-xs md:text-sm text-muted-foreground">
                 de {formatCurrency(target)}
               </div>
             </div>

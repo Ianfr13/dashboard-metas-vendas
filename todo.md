@@ -152,3 +152,10 @@
 - [x] Simplificar texto: "Dashboard de Metas" (título) e "Janeiro 2025" (subtítulo)
 - [x] Otimizar hierarquia tipográfica
 - [x] Melhorar peso e tamanho das fontes
+
+## Otimização GoalGauge (Medidor Meia Lua)
+- [x] Reduzir tamanho do gauge em mobile
+- [x] Ajustar proporções para telas pequenas
+- [x] Aumentar espessura/opacidade da barra vazia (background)
+- [x] Melhorar contraste em dark mode
+- [x] Melhorar contraste em light mode
