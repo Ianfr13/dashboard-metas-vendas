@@ -102,6 +102,64 @@ export type DailyResults = typeof dailyResults.$inferSelect;
 export type InsertDailyResults = typeof dailyResults.$inferInsert;
 
 /**
+ * Goals Table
+ * Stores custom goals/targets set by admin
+ */
+export const goals = mysqlTable("goals", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  scenario: mysqlEnum("scenario", ["3M", "4M", "5M"]).notNull(),
+  period: mysqlEnum("period", ["monthly", "weekly", "daily"]).notNull(),
+  
+  // Target values
+  targetRevenue: text("targetRevenue").notNull(),
+  targetSales: int("targetSales").notNull(),
+  targetMarketingSales: int("targetMarketingSales").notNull(),
+  targetCommercialSales: int("targetCommercialSales").notNull(),
+  
+  // Date range
+  startDate: timestamp("startDate").notNull(),
+  endDate: timestamp("endDate").notNull(),
+  
+  // Status
+  isActive: int("isActive").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Goal = typeof goals.$inferSelect;
+export type InsertGoal = typeof goals.$inferInsert;
+
+/**
+ * Sub Goals Table
+ * Stores sub-goals (by product, funnel, channel, etc)
+ */
+export const subGoals = mysqlTable("sub_goals", {
+  id: int("id").autoincrement().primaryKey(),
+  goalId: int("goalId").notNull(), // FK to goals table
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: mysqlEnum("category", ["product", "funnel", "channel", "team", "other"]).notNull(),
+  
+  // Target values
+  targetRevenue: text("targetRevenue").notNull(),
+  targetSales: int("targetSales").notNull(),
+  
+  // Progress tracking
+  currentRevenue: text("currentRevenue"),
+  currentSales: int("currentSales"),
+  
+  // Status
+  isActive: int("isActive").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SubGoal = typeof subGoals.$inferSelect;
+export type InsertSubGoal = typeof subGoals.$inferInsert;
+
+/**
  * Calculated Metrics Table (Cache)
  * Stores pre-calculated metrics for performance
  */

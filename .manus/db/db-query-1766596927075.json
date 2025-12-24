@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `sub_goals` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `goalId` int NOT NULL,\n  `userId` int NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `category` enum('product','funnel','channel','team','other') NOT NULL,\n  `targetRevenue` text NOT NULL,\n  `targetSales` int NOT NULL,\n  `currentRevenue` text,\n  `currentSales` int,\n  `isActive` int NOT NULL DEFAULT 1,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user gTuCx5NRGBDR5QQ.9ba8bfb62d50 --database kGhctA2StutzGX6UjXzrGZ --execute CREATE TABLE IF NOT EXISTS `sub_goals` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `goalId` int NOT NULL,\n  `userId` int NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `category` enum('product','funnel','channel','team','other') NOT NULL,\n  `targetRevenue` text NOT NULL,\n  `targetSales` int NOT NULL,\n  `currentRevenue` text,\n  `currentSales` int,\n  `isActive` int NOT NULL DEFAULT 1,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 221
+}

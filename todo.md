@@ -7,3 +7,17 @@
 - [x] Suportar múltiplos gateways (Stripe, Hotmart, Kiwify, Braip)
 - [x] Documentar API de webhooks com exemplos
 - [x] Criar testes para endpoints de webhook
+
+## Painel Administrativo e Contadores
+- [x] Criar schema de metas personalizadas no banco
+- [x] Criar schema de sub-metas no banco
+- [x] Implementar API CRUD para metas
+- [x] Implementar API CRUD para sub-metas
+- [x] Criar painel admin de configuração de metas
+- [ ] Implementar contador de dias restantes
+- [ ] Implementar % de meta mensal atingida
+- [ ] Implementar % de meta diária atingida
+- [ ] Calcular déficit/superávit do dia anterior
+- [ ] Calcular déficit/superávit da semana anterior
+- [ ] Exibir progresso de sub-metas
+- [ ] Calcular ritmo necessário para recuperar atrasos

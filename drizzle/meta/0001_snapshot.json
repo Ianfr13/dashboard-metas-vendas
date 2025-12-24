@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "45a7ab56-c439-4c87-8497-1d64313294a9",
-  "prevId": "3c6c388b-e654-42a9-bf66-108b88a029d9",
+  "id": "93421b84-c173-4e95-abe2-b9e395a41047",
+  "prevId": "f9289f16-099c-4dbc-a162-9d2191d62a54",
   "tables": {
     "calculated_metrics": {
       "name": "calculated_metrics",
@@ -188,16 +188,14 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('0.00')"
+          "autoincrement": false
         },
         "commercialRevenue": {
           "name": "commercialRevenue",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('0.00')"
+          "autoincrement": false
         },
         "actualViews": {
           "name": "actualViews",
@@ -220,24 +218,21 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false,
-          "default": "('0.00')"
+          "autoincrement": false
         },
         "actualCPA": {
           "name": "actualCPA",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false,
-          "default": "('0.00')"
+          "autoincrement": false
         },
         "actualCPL": {
           "name": "actualCPL",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false,
-          "default": "('0.00')"
+          "autoincrement": false
         },
         "notes": {
           "name": "notes",
@@ -269,6 +264,125 @@
       "compositePrimaryKeys": {
         "daily_results_id": {
           "name": "daily_results_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "goals": {
+      "name": "goals",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scenario": {
+          "name": "scenario",
+          "type": "enum('3M','4M','5M')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "period": {
+          "name": "period",
+          "type": "enum('monthly','weekly','daily')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "targetRevenue": {
+          "name": "targetRevenue",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "targetSales": {
+          "name": "targetSales",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "targetMarketingSales": {
+          "name": "targetMarketingSales",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "targetCommercialSales": {
+          "name": "targetCommercialSales",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "startDate": {
+          "name": "startDate",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "endDate": {
+          "name": "endDate",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "goals_id": {
+          "name": "goals_id",
           "columns": [
             "id"
           ]
@@ -313,88 +427,77 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('1.50')"
+          "autoincrement": false
         },
         "tslConversionRate": {
           "name": "tslConversionRate",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('1.50')"
+          "autoincrement": false
         },
         "checkoutConversionRate": {
           "name": "checkoutConversionRate",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('80.00')"
+          "autoincrement": false
         },
         "upsellConversionRate": {
           "name": "upsellConversionRate",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('25.00')"
+          "autoincrement": false
         },
         "sdrConversionRate": {
           "name": "sdrConversionRate",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('20.00')"
+          "autoincrement": false
         },
         "targetCPA": {
           "name": "targetCPA",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('450.00')"
+          "autoincrement": false
         },
         "targetCPL": {
           "name": "targetCPL",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('30.00')"
+          "autoincrement": false
         },
         "avgCTR": {
           "name": "avgCTR",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('3.00')"
+          "autoincrement": false
         },
         "frontTicket": {
           "name": "frontTicket",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('797.00')"
+          "autoincrement": false
         },
         "upsellTicket": {
           "name": "upsellTicket",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('247.00')"
+          "autoincrement": false
         },
         "avgTicket": {
           "name": "avgTicket",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('1000.00')"
+          "autoincrement": false
         },
         "sdrDailyMeetings": {
           "name": "sdrDailyMeetings",
@@ -451,6 +554,111 @@
       "compositePrimaryKeys": {
         "simulation_params_id": {
           "name": "simulation_params_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "sub_goals": {
+      "name": "sub_goals",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "goalId": {
+          "name": "goalId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "userId": {
+          "name": "userId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category": {
+          "name": "category",
+          "type": "enum('product','funnel','channel','team','other')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "targetRevenue": {
+          "name": "targetRevenue",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "targetSales": {
+          "name": "targetSales",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currentRevenue": {
+          "name": "currentRevenue",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "currentSales": {
+          "name": "currentSales",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "sub_goals_id": {
+          "name": "sub_goals_id",
           "columns": [
             "id"
           ]
