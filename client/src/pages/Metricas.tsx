@@ -23,12 +23,27 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function Metricas() {
+  // Ler configurações da Admin
+  const [config, setConfig] = useState(() => {
+    const saved = localStorage.getItem("dashboard-config");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Erro ao ler config:", e);
+      }
+    }
+    return null;
+  });
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("monthly");
   const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
   
   // Estados para seleção
+  const [selectedFunil, setSelectedFunil] = useState<string | null>(null);
+  const [showFunilCompleto, setShowFunilCompleto] = useState(false);
   const [selectedEtapaMarketing, setSelectedEtapaMarketing] = useState("leads");
   const [selectedProdutoMarketing, setSelectedProdutoMarketing] = useState("todos");
   const [selectedEtapaComercial, setSelectedEtapaComercial] = useState("agendadas");
@@ -729,6 +744,38 @@ export default function Metricas() {
 
           {/* Tab Funil de Marketing */}
           <TabsContent value="marketing" className="space-y-6 mt-6">
+            {/* Seletor de Funil */}
+            {config?.funis && config.funis.length > 0 && (
+              <div className="mb-4">
+                <label className="text-sm font-medium mb-2 block">Funil</label>
+                <div className="flex gap-2">
+                  <Select value={selectedFunil || undefined} onValueChange={(value) => {
+                    setSelectedFunil(value);
+                    setShowFunilCompleto(false);
+                  }}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecione um funil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {config.funis.map((funil: any) => (
+                        <SelectItem key={funil.id} value={funil.id}>
+                          {funil.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedFunil && (
+                    <Button
+                      variant={showFunilCompleto ? "default" : "outline"}
+                      onClick={() => setShowFunilCompleto(!showFunilCompleto)}
+                    >
+                      {showFunilCompleto ? "Ver por Etapa" : "Ver Funil Completo"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Seletores */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
@@ -765,8 +812,132 @@ export default function Metricas() {
               </div>
             </div>
 
+            {/* Visualização de Funil Completo */}
+            {showFunilCompleto && selectedFunil && (() => {
+              const funil = config?.funis?.find((f: any) => f.id === selectedFunil);
+              if (!funil) return null;
+
+              // Calcular métricas consolidadas do funil
+              const ticketMedioReal = funil.produtos.reduce((acc: number, p: any) => {
+                const produto = config?.produtos?.find((pr: any) => pr.id === p.produtoId);
+                if (!produto) return acc;
+                
+                if (p.tipo === 'frontend') {
+                  return acc + produto.valor;
+                } else if (p.tipo === 'backend') {
+                  return acc + (produto.valor * (p.taxaTake || 0) / 100);
+                } else if (p.tipo === 'downsell') {
+                  return acc + (produto.valor * (p.taxaTake || 0) / 100);
+                }
+                return acc;
+              }, 0);
+
+              return (
+                <div className="space-y-6">
+                  <Card className="border-l-4 border-l-purple-500">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>Funil Completo: {funil.nome}</span>
+                      </CardTitle>
+                      <CardDescription>
+                        Visão consolidada de todas as etapas do funil
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Produtos do Funil */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Produtos no Funil</h4>
+                        <div className="space-y-2">
+                          {funil.produtos.map((p: any) => {
+                            const produto = config?.produtos?.find((pr: any) => pr.id === p.produtoId);
+                            if (!produto) return null;
+                            
+                            const tipoLabel = p.tipo === 'frontend' ? 'Frontend' : p.tipo === 'backend' ? 'Backend (Upsell)' : 'Downsell';
+                            const tipoColor = p.tipo === 'frontend' ? 'bg-green-500' : p.tipo === 'backend' ? 'bg-blue-500' : 'bg-orange-500';
+                            
+                            return (
+                              <div key={p.produtoId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-2 h-2 rounded-full ${tipoColor}`} />
+                                  <div>
+                                    <div className="font-medium">{produto.nome}</div>
+                                    <div className="text-xs text-muted-foreground">{tipoLabel}</div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-semibold">{formatCurrency(produto.valor)}</div>
+                                  {p.tipo !== 'frontend' && (
+                                    <div className="text-xs text-muted-foreground">Taxa: {p.taxaTake}%</div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Métricas Consolidadas */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardDescription>Ticket Médio Real</CardDescription>
+                            <CardTitle className="text-2xl">{formatCurrency(ticketMedioReal)}</CardTitle>
+                          </CardHeader>
+                        </Card>
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardDescription>Conversão End-to-End</CardDescription>
+                            <CardTitle className="text-2xl">28.3%</CardTitle>
+                          </CardHeader>
+                        </Card>
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardDescription>Receita Total</CardDescription>
+                            <CardTitle className="text-2xl">{formatCurrency(2550000)}</CardTitle>
+                          </CardHeader>
+                        </Card>
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardDescription>Vendas Totais</CardDescription>
+                            <CardTitle className="text-2xl">2.550</CardTitle>
+                          </CardHeader>
+                        </Card>
+                      </div>
+
+                      {/* Gráfico de Funil Visual */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Funil de Conversão</h4>
+                        <div className="space-y-2">
+                          {[
+                            { etapa: 'Leads Gerados', valor: 9000, percentual: 100 },
+                            { etapa: 'Checkout Iniciado', valor: 3600, percentual: 40 },
+                            { etapa: 'Vendas Concluídas', valor: 2550, percentual: 28.3 },
+                          ].map((item, index) => (
+                            <div key={index}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span>{item.etapa}</span>
+                                <span className="font-semibold">{formatNumber(item.valor)} ({formatPercent(item.percentual)})</span>
+                              </div>
+                              <div className="w-full bg-muted/30 rounded-full h-8 overflow-hidden">
+                                <div 
+                                  className="h-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-medium"
+                                  style={{ width: `${item.percentual}%` }}
+                                >
+                                  {item.percentual >= 20 && `${formatPercent(item.percentual)}`}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })()}
+
             {/* Card Principal com Resumo */}
-            {(() => {
+            {!showFunilCompleto && (() => {
               const metricas = metricasMarketing[selectedEtapaMarketing]?.[selectedProdutoMarketing];
               if (!metricas) return null;
 

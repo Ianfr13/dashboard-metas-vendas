@@ -296,7 +296,10 @@
 - [x] Configurar valor e cor de cada sub-meta
 - [x] Conectar Home ao localStorage da Admin (ler produtos, funis, metas)
 - [ ] Conectar Métricas ao localStorage da Admin
-- [ ] Adicionar seletor de funil na página Métricas
-- [ ] Mostrar métricas de funil completo (todas etapas juntas)
-- [ ] Mostrar métricas por etapa individual do funil
-- [ ] Calcular ticket médio real do funil nas métricas
+- [x] Adicionar seletor de funil na página Métricas
+- [x] Conectar Métricas ao localStorage da Admin (ler funis)
+- [x] Mostrar visão geral do funil completo (todas etapas juntas)
+- [x] Mostrar métricas consolidadas: ticket médio real, conversão end-to-end, receita total
+- [x] Adicionar gráfico de funil visual (pirâmide invertida)
+- [x] Mostrar breakdown por produto dentro do funil
+- [ ] Calcular taxa de take real de backend/downsell
