@@ -63,25 +63,13 @@ export default function GoalCelebration({ show }: GoalCelebrationProps) {
         ref={canvasRef}
         className="fixed inset-0 w-full h-full z-[9998] pointer-events-none"
       />
-      <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none px-4">
-        <div className="relative">
-          {/* Glow effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 blur-2xl opacity-60 animate-pulse" />
-          
-          {/* Banner principal */}
-          <div className="relative bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white px-6 py-4 md:px-16 md:py-10 rounded-3xl shadow-2xl border-4 border-white/30">
-            <div className="flex flex-col items-center gap-2 md:gap-4">
-              <div className="text-4xl md:text-6xl animate-bounce">
-                🎉
-              </div>
-              <h1 className="text-3xl md:text-7xl font-black tracking-tight text-center leading-tight">
-                META BATIDA!
-              </h1>
-              <div className="text-4xl md:text-6xl animate-bounce">
-                🎉
-              </div>
-            </div>
-          </div>
+      <div className="fixed top-20 left-0 right-0 z-[9999] pointer-events-none flex justify-center px-4">
+        <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-2 rounded-full shadow-lg border border-white/20 animate-bounce">
+          <p className="text-sm md:text-base font-bold flex items-center gap-2">
+            <span>🎉</span>
+            <span>META BATIDA!</span>
+            <span>🎉</span>
+          </p>
         </div>
       </div>
     </>

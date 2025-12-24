@@ -186,3 +186,9 @@
 - [x] Ajustar tamanho e padding para mobile
 - [x] Melhorar posicionamento e responsividade
 - [x] Ajustar tamanho da fonte para diferentes telas
+
+## Simplificação Banner Celebração
+- [x] Remover fundo verde grande
+- [x] Posicionar banner pequeno abaixo do header
+- [x] Design mais discreto e elegante
+- [x] Manter apenas fogos de artifício
