@@ -203,3 +203,11 @@
 - [x] Implementar score de saúde do negócio
 - [x] Adicionar botão de exportação PDF (UI)
 - [ ] Conectar dados reais do GTM
+
+## Refatoração Página Métricas - Foco em Metas
+- [x] Remover componentes estratégicos (HealthScore, análises complexas)
+- [x] Criar visão simples: Meta vs Realizado
+- [x] Mostrar quanto falta para cada meta (total e por produto)
+- [x] Adicionar progress bars visuais para cada meta
+- [x] Exibir vendas por produto com quanto falta
+- [x] Design motivacional para toda equipe acompanhar

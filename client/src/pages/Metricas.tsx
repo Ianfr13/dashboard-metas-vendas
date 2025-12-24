@@ -1,23 +1,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, BarChart3, Home as HomeIcon, Settings, Moon, Sun, Download } from "lucide-react";
+import { CalendarIcon, BarChart3, Home as HomeIcon, Settings, Moon, Sun, Target, TrendingUp, Package, DollarSign } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import MobileNav from "@/components/MobileNav";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTheme } from "@/contexts/ThemeContext";
-
-// Componentes de métricas
-import EvolutionChart from "@/components/metrics/EvolutionChart";
-import ConversionFunnel from "@/components/metrics/ConversionFunnel";
-import ProductsTable from "@/components/metrics/ProductsTable";
-import ChannelsComparison from "@/components/metrics/ChannelsComparison";
-import RealtimeMetrics from "@/components/metrics/RealtimeMetrics";
-import HealthScore from "@/components/metrics/HealthScore";
+import { Progress } from "@/components/ui/progress";
 
 export default function Metricas() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -25,121 +19,104 @@ export default function Metricas() {
   const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
 
-  // Mock data - Evolução temporal (últimos 30 dias)
-  const evolutionData = Array.from({ length: 30 }, (_, i) => ({
-    date: `${i + 1}/01`,
-    vendas: Math.floor(20 + Math.random() * 15 + i * 0.5),
-    receita: Math.floor((20000 + Math.random() * 15000 + i * 500)),
-    leads: Math.floor(100 + Math.random() * 80 + i * 2),
-  }));
-
-  // Mock data - Funil de conversão
-  const funnelData = [
-    { name: "Views VSL", value: 12500, percentage: 100, conversionFromPrevious: undefined },
-    { name: "Leads Gerados", value: 4368, percentage: 34.9, conversionFromPrevious: 34.9 },
-    { name: "Checkout Iniciado", value: 1200, percentage: 9.6, conversionFromPrevious: 27.5 },
-    { name: "Vendas Concluídas", value: 850, percentage: 6.8, conversionFromPrevious: 70.8 },
-  ];
-
-  // Mock data - Produtos
-  const productsData = [
-    { 
-      name: "Creatina Pro 797", 
-      sales: 450, 
-      revenue: 358650, 
-      percentage: 42.2, 
-      avgTicket: 797,
-      growth: 15.3
+  // Mock data - Metas e Realizações
+  const metasData = {
+    total: {
+      meta: 3000000,
+      realizado: 850000,
+      falta: 2150000,
+      percentual: 28.3,
+      vendasMeta: 3000,
+      vendasRealizadas: 850,
+      vendasFaltam: 2150,
     },
-    { 
-      name: "High-Ticket VIP", 
-      sales: 150, 
-      revenue: 375000, 
-      percentage: 44.1, 
-      avgTicket: 2500,
-      growth: 22.7
-    },
-    { 
-      name: "Upsell Premium", 
-      sales: 200, 
-      revenue: 49400, 
-      percentage: 5.8, 
-      avgTicket: 247,
-      growth: 8.4
-    },
-    { 
-      name: "Outros Produtos", 
-      sales: 50, 
-      revenue: 66950, 
-      percentage: 7.9, 
-      avgTicket: 1339,
-      growth: -3.2
-    },
-  ];
-
-  // Mock data - Canais
-  const channelsData = {
-    marketing: {
-      sales: 650,
-      revenue: 650000,
-      leads: 4000,
-      conversionRate: 16.25,
-      cpa: 430,
-      roi: 90.8,
-      roas: 1.91,
-    },
-    comercial: {
-      sales: 200,
-      revenue: 200000,
-      meetings: 120,
-      conversionRate: 20,
-      avgTicket: 1000,
-      roi: 150.5,
-    },
-  };
-
-  // Mock data - Tempo real
-  const realtimeData = {
-    last24h: {
-      sales: 32,
-      revenue: 32000,
-      leads: 156,
-    },
-    today: {
-      sales: 18,
-      revenue: 18000,
-      leads: 89,
-    },
-    yesterday: {
-      sales: 25,
-      revenue: 25000,
-      leads: 120,
-    },
-    dailyGoal: {
-      sales: 28,
-      revenue: 28333,
-    },
-    recentSales: [
-      { time: "Há 5 minutos", product: "Creatina Pro 797", value: 797 },
-      { time: "Há 12 minutos", product: "High-Ticket VIP", value: 2500 },
-      { time: "Há 18 minutos", product: "Upsell Premium", value: 247 },
-      { time: "Há 25 minutos", product: "Creatina Pro 797", value: 797 },
-      { time: "Há 31 minutos", product: "Creatina Pro 797", value: 797 },
-      { time: "Há 45 minutos", product: "High-Ticket VIP", value: 2500 },
-      { time: "Há 52 minutos", product: "Upsell Premium", value: 247 },
-      { time: "Há 1 hora", product: "Creatina Pro 797", value: 797 },
+    produtos: [
+      {
+        nome: "Creatina Pro 797",
+        meta: 1500,
+        realizado: 450,
+        falta: 1050,
+        percentual: 30,
+        valorUnitario: 797,
+        receitaMeta: 1195500,
+        receitaRealizada: 358650,
+        receitaFalta: 836850,
+      },
+      {
+        nome: "High-Ticket VIP",
+        meta: 150,
+        realizado: 150,
+        falta: 0,
+        percentual: 100,
+        valorUnitario: 2500,
+        receitaMeta: 375000,
+        receitaRealizada: 375000,
+        receitaFalta: 0,
+      },
+      {
+        nome: "Upsell Premium",
+        meta: 1000,
+        realizado: 200,
+        falta: 800,
+        percentual: 20,
+        valorUnitario: 247,
+        receitaMeta: 247000,
+        receitaRealizada: 49400,
+        receitaFalta: 197600,
+      },
+      {
+        nome: "Outros Produtos",
+        meta: 350,
+        realizado: 50,
+        falta: 300,
+        percentual: 14.3,
+        valorUnitario: 1339,
+        receitaMeta: 468650,
+        receitaRealizada: 66950,
+        receitaFalta: 401700,
+      },
     ],
+    canais: {
+      marketing: {
+        meta: 2550,
+        realizado: 650,
+        falta: 1900,
+        percentual: 25.5,
+        receitaMeta: 2550000,
+        receitaRealizada: 650000,
+        receitaFalta: 1900000,
+      },
+      comercial: {
+        meta: 450,
+        realizado: 200,
+        falta: 250,
+        percentual: 44.4,
+        receitaMeta: 450000,
+        receitaRealizada: 200000,
+        receitaFalta: 250000,
+      },
+    },
   };
 
-  // Mock data - Score de saúde
-  const healthMetrics = [
-    { name: "Taxa de Conversão", value: 19.5, target: 20, weight: 0.25, status: 'good' as const },
-    { name: "ROI", value: 90.8, target: 100, weight: 0.20, status: 'good' as const },
-    { name: "ROAS", value: 1.91, target: 2.0, weight: 0.15, status: 'warning' as const },
-    { name: "CPA", value: 430, target: 400, weight: 0.15, status: 'warning' as const },
-    { name: "Ticket Médio", value: 1000, target: 1000, weight: 0.15, status: 'excellent' as const },
-    { name: "Volume de Vendas", value: 850, target: 1000, weight: 0.10, status: 'good' as const },
-  ];
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat("pt-BR").format(value);
+  };
+
+  const getProgressColor = (percentual: number) => {
+    if (percentual >= 100) return "bg-green-500";
+    if (percentual >= 75) return "bg-blue-500";
+    if (percentual >= 50) return "bg-yellow-500";
+    return "bg-orange-500";
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -205,8 +182,8 @@ export default function Metricas() {
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold">Análise de Performance</h2>
-            <p className="text-sm text-muted-foreground">Acompanhe suas métricas em tempo real</p>
+            <h2 className="text-2xl font-bold">Acompanhamento de Metas</h2>
+            <p className="text-sm text-muted-foreground">Veja quanto falta para bater cada meta</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -239,51 +216,233 @@ export default function Metricas() {
                 />
               </PopoverContent>
             </Popover>
-
-            {/* Botão Exportar */}
-            <Button variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Exportar PDF</span>
-            </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="geral" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
-            <TabsTrigger value="geral">Visão Geral</TabsTrigger>
-            <TabsTrigger value="funil">Funil</TabsTrigger>
-            <TabsTrigger value="produtos">Produtos</TabsTrigger>
-            <TabsTrigger value="canais">Canais</TabsTrigger>
-            <TabsTrigger value="tempo-real">Tempo Real</TabsTrigger>
+        {/* Meta Total */}
+        <Card className="mb-6 border-2 border-primary">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl">
+              <Target className="h-6 w-6 text-primary" />
+              Meta Total do Mês
+            </CardTitle>
+            <CardDescription>Progresso geral de vendas e receita</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Receita */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Receita</p>
+                  <p className="text-3xl font-bold">{formatCurrency(metasData.total.realizado)}</p>
+                  <p className="text-sm text-muted-foreground">de {formatCurrency(metasData.total.meta)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-4xl font-bold text-primary">{metasData.total.percentual.toFixed(1)}%</p>
+                  <p className="text-sm text-muted-foreground">atingido</p>
+                </div>
+              </div>
+              <Progress value={metasData.total.percentual} className="h-4" />
+              <p className="text-sm font-semibold text-orange-500 mt-2">
+                Falta: {formatCurrency(metasData.total.falta)}
+              </p>
+            </div>
+
+            {/* Vendas */}
+            <div className="pt-4 border-t border-border">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Vendas</p>
+                  <p className="text-3xl font-bold">{formatNumber(metasData.total.vendasRealizadas)}</p>
+                  <p className="text-sm text-muted-foreground">de {formatNumber(metasData.total.vendasMeta)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-4xl font-bold text-primary">{metasData.total.percentual.toFixed(1)}%</p>
+                  <p className="text-sm text-muted-foreground">atingido</p>
+                </div>
+              </div>
+              <Progress value={metasData.total.percentual} className="h-4" />
+              <p className="text-sm font-semibold text-orange-500 mt-2">
+                Faltam: {formatNumber(metasData.total.vendasFaltam)} vendas
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Tabs defaultValue="produtos" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="produtos">Por Produto</TabsTrigger>
+            <TabsTrigger value="canais">Por Canal</TabsTrigger>
           </TabsList>
 
-          {/* Tab Visão Geral */}
-          <TabsContent value="geral" className="space-y-6 mt-6">
-            {/* Score de Saúde */}
-            <HealthScore metrics={healthMetrics} />
+          {/* Tab Por Produto */}
+          <TabsContent value="produtos" className="space-y-4 mt-6">
+            {metasData.produtos.map((produto, index) => (
+              <Card key={index} className={produto.percentual >= 100 ? "border-2 border-green-500" : ""}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    {produto.nome}
+                    {produto.percentual >= 100 && (
+                      <span className="ml-auto text-green-500 text-sm font-semibold flex items-center gap-1">
+                        <TrendingUp className="h-4 w-4" />
+                        META BATIDA!
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription>Valor unitário: {formatCurrency(produto.valorUnitario)}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Vendas */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Vendas</p>
+                        <p className="text-2xl font-bold">{formatNumber(produto.realizado)}</p>
+                        <p className="text-xs text-muted-foreground">de {formatNumber(produto.meta)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-primary">{produto.percentual.toFixed(1)}%</p>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <Progress value={Math.min(produto.percentual, 100)} className="h-3" />
+                      <div 
+                        className={`absolute top-0 left-0 h-3 rounded-full ${getProgressColor(produto.percentual)}`}
+                        style={{ width: `${Math.min(produto.percentual, 100)}%` }}
+                      />
+                    </div>
+                    {produto.falta > 0 && (
+                      <p className="text-sm font-semibold text-orange-500 mt-2">
+                        Faltam: {formatNumber(produto.falta)} vendas
+                      </p>
+                    )}
+                  </div>
 
-            {/* Gráficos de Evolução */}
-            <EvolutionChart data={evolutionData} />
+                  {/* Receita */}
+                  <div className="pt-4 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Receita</p>
+                        <p className="text-xl font-bold">{formatCurrency(produto.receitaRealizada)}</p>
+                        <p className="text-xs text-muted-foreground">de {formatCurrency(produto.receitaMeta)}</p>
+                      </div>
+                      {produto.receitaFalta > 0 && (
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Falta</p>
+                          <p className="text-lg font-semibold text-orange-500">{formatCurrency(produto.receitaFalta)}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </TabsContent>
 
-          {/* Tab Funil */}
-          <TabsContent value="funil" className="space-y-6 mt-6">
-            <ConversionFunnel data={funnelData} />
-          </TabsContent>
+          {/* Tab Por Canal */}
+          <TabsContent value="canais" className="space-y-4 mt-6">
+            {/* Marketing */}
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-500" />
+                  Marketing Direto
+                </CardTitle>
+                <CardDescription>Vendas online e tráfego pago</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Vendas */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Vendas</p>
+                      <p className="text-2xl font-bold">{formatNumber(metasData.canais.marketing.realizado)}</p>
+                      <p className="text-xs text-muted-foreground">de {formatNumber(metasData.canais.marketing.meta)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-bold text-primary">{metasData.canais.marketing.percentual.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <Progress value={metasData.canais.marketing.percentual} className="h-3" />
+                    <div 
+                      className={`absolute top-0 left-0 h-3 rounded-full ${getProgressColor(metasData.canais.marketing.percentual)}`}
+                      style={{ width: `${Math.min(metasData.canais.marketing.percentual, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-sm font-semibold text-orange-500 mt-2">
+                    Faltam: {formatNumber(metasData.canais.marketing.falta)} vendas
+                  </p>
+                </div>
 
-          {/* Tab Produtos */}
-          <TabsContent value="produtos" className="space-y-6 mt-6">
-            <ProductsTable data={productsData} />
-          </TabsContent>
+                {/* Receita */}
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Receita</p>
+                      <p className="text-xl font-bold">{formatCurrency(metasData.canais.marketing.receitaRealizada)}</p>
+                      <p className="text-xs text-muted-foreground">de {formatCurrency(metasData.canais.marketing.receitaMeta)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">Falta</p>
+                      <p className="text-lg font-semibold text-orange-500">{formatCurrency(metasData.canais.marketing.receitaFalta)}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Tab Canais */}
-          <TabsContent value="canais" className="space-y-6 mt-6">
-            <ChannelsComparison data={channelsData} />
-          </TabsContent>
+            {/* Comercial */}
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-blue-500" />
+                  Time Comercial
+                </CardTitle>
+                <CardDescription>Vendas consultivas e high-ticket</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Vendas */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Vendas</p>
+                      <p className="text-2xl font-bold">{formatNumber(metasData.canais.comercial.realizado)}</p>
+                      <p className="text-xs text-muted-foreground">de {formatNumber(metasData.canais.comercial.meta)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-bold text-primary">{metasData.canais.comercial.percentual.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <Progress value={metasData.canais.comercial.percentual} className="h-3" />
+                    <div 
+                      className={`absolute top-0 left-0 h-3 rounded-full ${getProgressColor(metasData.canais.comercial.percentual)}`}
+                      style={{ width: `${Math.min(metasData.canais.comercial.percentual, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-sm font-semibold text-orange-500 mt-2">
+                    Faltam: {formatNumber(metasData.canais.comercial.falta)} vendas
+                  </p>
+                </div>
 
-          {/* Tab Tempo Real */}
-          <TabsContent value="tempo-real" className="space-y-6 mt-6">
-            <RealtimeMetrics data={realtimeData} />
+                {/* Receita */}
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Receita</p>
+                      <p className="text-xl font-bold">{formatCurrency(metasData.canais.comercial.receitaRealizada)}</p>
+                      <p className="text-xs text-muted-foreground">de {formatCurrency(metasData.canais.comercial.receitaMeta)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">Falta</p>
+                      <p className="text-lg font-semibold text-orange-500">{formatCurrency(metasData.canais.comercial.receitaFalta)}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
