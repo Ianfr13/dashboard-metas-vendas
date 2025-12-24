@@ -47,19 +47,28 @@ export default function Home() {
     <div className="min-h-screen py-8 px-4">
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
-        <header className="mb-8 text-center">
-          <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-            Dashboard de Metas de Vendas
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Janeiro 2025 - Suplementos de Longevidade Ativa
-          </p>
+        <header className="mb-8">
+          <div className="flex flex-col items-center justify-center gap-4 mb-6">
+            <img 
+              src="/douravita-logo.png" 
+              alt="DouraVita" 
+              className="h-20 md:h-24 w-auto"
+            />
+          </div>
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-[#00a67d] via-[#418ecb] to-[#5a4b99] bg-clip-text text-transparent">
+              Dashboard de Metas de Vendas
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Janeiro 2025 - Suplementos de Longevidade Ativa
+            </p>
+          </div>
         </header>
 
         {/* Scenario Selector */}
         <div className="glass-card p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Target className="w-5 h-5 text-emerald-400" />
+            <Target className="w-5 h-5 text-[#00a67d]" />
             Selecione o Cenário de Faturamento
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -72,13 +81,13 @@ export default function Home() {
                   onClick={() => setSelectedScenario(id)}
                   className={`glass-card-hover p-6 text-left transition-all ${
                     isSelected 
-                      ? 'ring-2 ring-emerald-400 bg-emerald-400/10' 
+                      ? 'ring-2 ring-[#00a67d] bg-[#00a67d]/10' 
                       : 'hover:bg-card/60'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-3xl font-bold">{formatCurrency(data.totalRevenue)}</span>
-                    {isSelected && <CheckCircle2 className="w-6 h-6 text-emerald-400" />}
+                    {isSelected && <CheckCircle2 className="w-6 h-6 text-[#00a67d]" />}
                   </div>
                   <p className="text-sm text-muted-foreground">Meta Total</p>
                   <div className="mt-4 pt-4 border-t border-border/50">
@@ -101,8 +110,8 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="glass-card p-6 glass-card-hover">
             <div className="flex items-center justify-between mb-2">
-              <DollarSign className="w-8 h-8 text-emerald-400" />
-              <span className="text-xs font-medium text-emerald-400">TOTAL</span>
+              <DollarSign className="w-8 h-8 text-[#00a67d]" />
+                  <span className="text-xs font-medium text-[#00a67d]">TOTAL</span>
             </div>
             <p className="text-3xl font-bold mb-1">{formatCurrency(scenario.totalRevenue)}</p>
             <p className="text-sm text-muted-foreground">Faturamento Meta</p>
@@ -110,8 +119,8 @@ export default function Home() {
 
           <Card className="glass-card p-6 glass-card-hover">
             <div className="flex items-center justify-between mb-2">
-              <TrendingUp className="w-8 h-8 text-cyan-400" />
-              <span className="text-xs font-medium text-cyan-400">MARKETING</span>
+              <TrendingUp className="w-8 h-8 text-[#418ecb]" />
+                  <span className="text-xs font-medium text-[#418ecb]">MARKETING</span>
             </div>
             <p className="text-3xl font-bold mb-1">{formatNumber(totalMarketingSales)}</p>
             <p className="text-sm text-muted-foreground">Vendas Diretas</p>
@@ -119,8 +128,8 @@ export default function Home() {
 
           <Card className="glass-card p-6 glass-card-hover">
             <div className="flex items-center justify-between mb-2">
-              <Users className="w-8 h-8 text-blue-400" />
-              <span className="text-xs font-medium text-blue-400">COMERCIAL</span>
+              <Users className="w-8 h-8 text-[#5a4b99]" />
+                  <span className="text-xs font-medium text-[#5a4b99]">COMERCIAL</span>
             </div>
             <p className="text-3xl font-bold mb-1">{formatNumber(totalCommercialSales)}</p>
             <p className="text-sm text-muted-foreground">Vendas High-Ticket</p>
@@ -128,8 +137,8 @@ export default function Home() {
 
           <Card className="glass-card p-6 glass-card-hover">
             <div className="flex items-center justify-between mb-2">
-              <BarChart3 className="w-8 h-8 text-amber-400" />
-              <span className="text-xs font-medium text-amber-400">TICKET MÉDIO</span>
+              <BarChart3 className="w-8 h-8 text-[#efd565]" />
+                  <span className="text-xs font-medium text-[#efd565]">TICKET MÉDIO</span>
             </div>
             <p className="text-3xl font-bold mb-1">R$ 1.000</p>
             <p className="text-sm text-muted-foreground">Funil Principal</p>
@@ -139,7 +148,7 @@ export default function Home() {
         {/* Week Selector */}
         <div className="glass-card p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-cyan-400" />
+            <Calendar className="w-5 h-5 text-[#418ecb]" />
             Selecione a Semana
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -149,7 +158,7 @@ export default function Home() {
                 onClick={() => setCurrentWeek(week.week)}
                 className={`glass-card-hover p-4 text-center transition-all ${
                   currentWeek === week.week
-                    ? 'ring-2 ring-cyan-400 bg-cyan-400/10'
+                    ? 'ring-2 ring-[#418ecb] bg-[#418ecb]/10'
                     : 'hover:bg-card/60'
                 }`}
               >
@@ -181,7 +190,7 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="glass-card p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <TrendingUp className="w-5 h-5 text-[#00a67d]" />
                   Metas de Vendas
                 </h3>
                 <div className="space-y-4">
@@ -192,13 +201,13 @@ export default function Home() {
                     </div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Faturamento</span>
-                      <span className="font-semibold text-emerald-400">{formatCurrency(weekData.marketingDirectRevenue)}</span>
+                      <span className="font-semibold text-[#00a67d]">{formatCurrency(weekData.marketingDirectRevenue)}</span>
                     </div>
                   </div>
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Meta Diária</span>
-                      <span className="text-2xl font-bold text-emerald-400">{formatNumber(weekData.dailyTarget)}</span>
+                      <span className="text-2xl font-bold text-[#00a67d]">{formatNumber(weekData.dailyTarget)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">vendas por dia</p>
                   </div>
@@ -207,7 +216,7 @@ export default function Home() {
 
               <Card className="glass-card p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-cyan-400" />
+                  <Users className="w-5 h-5 text-[#418ecb]" />
                   Tráfego e Conversão
                 </h3>
                 <div className="space-y-4">
@@ -218,13 +227,13 @@ export default function Home() {
                     </div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Taxa de Conversão</span>
-                      <span className="font-semibold text-cyan-400">1.5%</span>
+                      <span className="font-semibold text-[#418ecb]">1.5%</span>
                     </div>
                   </div>
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-muted-foreground">CPA Alvo</span>
-                      <span className="text-2xl font-bold text-cyan-400">R$ 450</span>
+                      <span className="text-2xl font-bold text-[#418ecb]">R$ 450</span>
                     </div>
                     <p className="text-xs text-muted-foreground">custo por aquisição</p>
                   </div>
@@ -237,7 +246,7 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="glass-card p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Target className="w-5 h-5 text-blue-400" />
+                  <Target className="w-5 h-5 text-[#5a4b99]" />
                   Metas do Time
                 </h3>
                 <div className="space-y-4">
@@ -248,13 +257,13 @@ export default function Home() {
                     </div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Faturamento</span>
-                      <span className="font-semibold text-blue-400">{formatCurrency(weekData.commercialRevenue)}</span>
+                      <span className="font-semibold text-[#5a4b99]">{formatCurrency(weekData.commercialRevenue)}</span>
                     </div>
                   </div>
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Ticket Médio</span>
-                      <span className="text-2xl font-bold text-blue-400">R$ 20.000</span>
+                      <span className="text-2xl font-bold text-[#5a4b99]">R$ 20.000</span>
                     </div>
                     <p className="text-xs text-muted-foreground">produtos high-ticket</p>
                   </div>
@@ -263,7 +272,7 @@ export default function Home() {
 
               <Card className="glass-card p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-amber-400" />
+                  <Users className="w-5 h-5 text-[#efd565]" />
                   Performance SDR/Closer
                 </h3>
                 <div className="space-y-4">
@@ -274,13 +283,13 @@ export default function Home() {
                     </div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Taxa de Conversão</span>
-                      <span className="font-semibold text-amber-400">20%</span>
+                      <span className="font-semibold text-[#efd565]">20%</span>
                     </div>
                   </div>
                   <div className="pt-4 border-t border-border/50">
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Meta Diária SDR</span>
-                      <span className="text-2xl font-bold text-amber-400">4</span>
+                      <span className="text-2xl font-bold text-[#efd565]">4</span>
                     </div>
                     <p className="text-xs text-muted-foreground">agendamentos por dia</p>
                   </div>
@@ -292,18 +301,18 @@ export default function Home() {
           <TabsContent value="operations" className="mt-6">
             <Card className="glass-card p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-rose-400" />
+                <AlertCircle className="w-5 h-5 text-[#f1b82c]" />
                 Observações Operacionais - Semana {currentWeek}
               </h3>
               <div className="space-y-3 text-sm">
                 {currentWeek === 1 && (
                   <>
                     <p className="flex items-start gap-2">
-                      <span className="text-emerald-400 mt-1">•</span>
+                      <span className="text-[#00a67d] mt-1">•</span>
                       <span><strong>Marketing:</strong> Foco em validar a VSL e otimizar a conversão. Performance inicial de 25% da capacidade total.</span>
                     </p>
                     <p className="flex items-start gap-2">
-                      <span className="text-cyan-400 mt-1">•</span>
+                      <span className="text-[#418ecb] mt-1">•</span>
                       <span><strong>Comercial:</strong> Estruturar o processo e qualificar os primeiros leads. 1 SDR + 1 Closer + Head.</span>
                     </p>
                   </>
@@ -311,11 +320,11 @@ export default function Home() {
                 {currentWeek === 2 && (
                   <>
                     <p className="flex items-start gap-2">
-                      <span className="text-emerald-400 mt-1">•</span>
+                      <span className="text-[#00a67d] mt-1">•</span>
                       <span><strong>Marketing:</strong> Início da escala após validação. Monitorar CPA rigorosamente. Performance de 60% da capacidade.</span>
                     </p>
                     <p className="flex items-start gap-2">
-                      <span className="text-cyan-400 mt-1">•</span>
+                      <span className="text-[#418ecb] mt-1">•</span>
                       <span><strong>Comercial:</strong> Primeiro closer começa a tracionar. SDR precisa qualificar leads rapidamente.</span>
                     </p>
                   </>
@@ -323,11 +332,11 @@ export default function Home() {
                 {(currentWeek === 3 || currentWeek === 4) && (
                   <>
                     <p className="flex items-start gap-2">
-                      <span className="text-emerald-400 mt-1">•</span>
+                      <span className="text-[#00a67d] mt-1">•</span>
                       <span><strong>Marketing:</strong> Escala total do tráfego. Diversificar criativos para evitar saturação. Múltiplos funis rodando em paralelo.</span>
                     </p>
                     <p className="flex items-start gap-2">
-                      <span className="text-cyan-400 mt-1">•</span>
+                      <span className="text-[#418ecb] mt-1">•</span>
                       <span><strong>Comercial:</strong> Time completo operando (2 SDRs + 2 Closers). Exige performance de elite para atingir metas.</span>
                     </p>
                   </>
@@ -345,7 +354,7 @@ export default function Home() {
         {/* Summary Table */}
         <Card className="glass-card p-6">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-emerald-400" />
+            <BarChart3 className="w-5 h-5 text-[#00a67d]" />
             Resumo Completo - Cenário {selectedScenario}
           </h2>
           <div className="overflow-x-auto">
@@ -365,7 +374,7 @@ export default function Home() {
                   <tr 
                     key={week.week} 
                     className={`border-b border-border/30 hover:bg-card/30 transition-colors ${
-                      currentWeek === week.week ? 'bg-emerald-400/10' : ''
+                      currentWeek === week.week ? 'bg-[#00a67d]/10' : ''
                     }`}
                   >
                     <td className="py-3 px-2">
@@ -373,9 +382,9 @@ export default function Home() {
                       <span className="text-xs text-muted-foreground ml-2">({week.period})</span>
                     </td>
                     <td className="text-right py-3 px-2">{formatNumber(week.marketingDirectSales)}</td>
-                    <td className="text-right py-3 px-2 text-emerald-400">{formatCurrency(week.marketingDirectRevenue)}</td>
+                    <td className="text-right py-3 px-2 text-[#00a67d]">{formatCurrency(week.marketingDirectRevenue)}</td>
                     <td className="text-right py-3 px-2">{formatNumber(week.commercialSales)}</td>
-                    <td className="text-right py-3 px-2 text-cyan-400">{formatCurrency(week.commercialRevenue)}</td>
+                    <td className="text-right py-3 px-2 text-[#418ecb]">{formatCurrency(week.commercialRevenue)}</td>
                     <td className="text-right py-3 px-2 font-semibold">
                       {formatCurrency(week.marketingDirectRevenue + week.commercialRevenue)}
                     </td>
@@ -384,9 +393,9 @@ export default function Home() {
                 <tr className="font-bold bg-card/50">
                   <td className="py-3 px-2">TOTAL</td>
                   <td className="text-right py-3 px-2">{formatNumber(totalMarketingSales)}</td>
-                  <td className="text-right py-3 px-2 text-emerald-400">{formatCurrency(scenario.marketingDirectTotal)}</td>
+                  <td className="text-right py-3 px-2 text-[#00a67d]">{formatCurrency(scenario.marketingDirectTotal)}</td>
                   <td className="text-right py-3 px-2">{formatNumber(totalCommercialSales)}</td>
-                  <td className="text-right py-3 px-2 text-cyan-400">{formatCurrency(scenario.commercialTotal)}</td>
+                  <td className="text-right py-3 px-2 text-[#418ecb]">{formatCurrency(scenario.commercialTotal)}</td>
                   <td className="text-right py-3 px-2 text-xl">{formatCurrency(scenario.totalRevenue)}</td>
                 </tr>
               </tbody>
