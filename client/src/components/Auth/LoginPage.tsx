@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 
 export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     // Verificar se já está autenticado
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate('/dashboard');
+        setLocation('/');
       }
     });
 
@@ -25,7 +25,7 @@ export function LoginPage() {
         const domain = email.split('@')[1];
 
         if (domain === 'douravita.com.br') {
-          navigate('/dashboard');
+          setLocation('/');
         } else {
           setError('Acesso negado. Apenas emails @douravita.com.br são permitidos.');
           supabase.auth.signOut();
@@ -34,7 +34,7 @@ export function LoginPage() {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const handleGoogleLogin = async () => {
     try {
