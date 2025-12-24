@@ -48,3 +48,23 @@
 - [x] Adicionar filtro de período (diário, semanal, mensal)
 - [x] Otimizar paleta de cores completa
 - [x] Melhorar contraste e legibilidade
+
+## Sistema de Meta Principal e Sub-metas
+- [x] Criar interface para definir meta principal (ex: R$ 5M)
+- [x] Adicionar interface para criar sub-metas personalizadas
+- [x] Substituir "Próximas Metas" por sub-metas configuráveis
+- [x] Salvar meta principal e sub-metas no banco de dados
+- [x] Atualizar gauge para usar meta principal
+- [ ] Marcar sub-metas como batidas automaticamente
+
+## Otimização de Interface
+- [x] Transformar cards de cenários em dropdown compacto
+- [x] Remover calculadora de métricas do dashboard
+- [x] Ajustar layout para melhor uso do espaço
+
+## Filtro de Calendário
+- [x] Adicionar seletor de data (dia/mês/ano)
+- [x] Implementar visualização de faturamento por data específica
+- [x] Permitir comparação entre períodos
+- [x] Adaptar dashboard para uso permanente (não apenas janeiro)
+- [x] Buscar dados reais do banco por período selecionado

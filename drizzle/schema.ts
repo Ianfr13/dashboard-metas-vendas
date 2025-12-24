@@ -118,6 +118,9 @@ export const goals = mysqlTable("goals", {
   targetMarketingSales: int("targetMarketingSales").notNull(),
   targetCommercialSales: int("targetCommercialSales").notNull(),
   
+  // Sub-goals as JSON array: [{value: 100000, completed: false}, ...]
+  subGoals: text("subGoals"),
+  
   // Date range
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate").notNull(),

@@ -2,10 +2,14 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Moon, Sun, TrendingUp, Users, DollarSign, Target } from "lucide-react";
-import { MetricsSimulator } from "@/components/MetricsSimulator";
+import { Moon, Sun, TrendingUp, Users, DollarSign, Target, CalendarIcon } from "lucide-react";
 import { GoalGauge } from "@/components/GoalGauge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 // Dados dos cenários
 const scenarios = {
@@ -42,6 +46,7 @@ const weeks = [
 export default function Home() {
   const [selectedScenario, setSelectedScenario] = useState<"3M" | "4M" | "5M">("3M");
   const [selectedWeek, setSelectedWeek] = useState(1);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { theme, toggleTheme } = useTheme();
 
   const scenario = scenarios[selectedScenario];
@@ -74,7 +79,7 @@ export default function Home() {
                   Dashboard de Metas
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Janeiro 2025 - Suplementos de Longevidade Ativa
+                  Acompanhamento de Vendas - DouraVita
                 </p>
               </div>
             </div>
@@ -98,6 +103,42 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Filtros e Controles */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          {/* Seletor de Cenário (Dropdown) */}
+          <div className="flex items-center gap-3">
+            <Target className="w-5 h-5 text-primary" />
+            <Select value={selectedScenario} onValueChange={(value) => setSelectedScenario(value as "3M" | "4M" | "5M")}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Selecione o cenário" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3M">R$ 3.000.000</SelectItem>
+                <SelectItem value="4M">R$ 4.000.000</SelectItem>
+                <SelectItem value="5M">R$ 5.000.000</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Seletor de Data */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, "PPP", { locale: ptBR }) : "Selecione a data"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
         {/* Goal Gauge */}
         <GoalGauge
           current={850000}
@@ -115,61 +156,14 @@ export default function Home() {
           ]}
         />
 
-        {/* Seletor de Cenários */}
-        <Card className="border border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-primary" />
-              Selecione o Cenário de Faturamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {Object.entries(scenarios).map(([key, data]) => (
-                <button
-                  key={key}
-                  onClick={() => setSelectedScenario(key as "3M" | "4M" | "5M")}
-                  className={`p-6 rounded-xl border-2 transition-all duration-200 text-left ${
-                    selectedScenario === key
-                      ? "border-primary bg-primary/10 shadow-lg scale-105"
-                      : "border-border hover:border-primary/50 hover:bg-accent/50"
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-3xl font-bold text-foreground">
-                        {formatCurrency(data.total)}
-                      </h3>
-                      {selectedScenario === key && (
-                        <div className="w-3 h-3 rounded-full bg-primary animate-pulse" />
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">Meta Total</p>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Marketing</p>
-                        <p className="text-sm font-semibold text-foreground">85%</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Comercial</p>
-                        <p className="text-sm font-semibold text-foreground">15%</p>
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Cards de Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="border-l-4 border-l-primary">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 TOTAL
               </CardTitle>
-              <DollarSign className="w-5 h-5 text-primary" />
+              <DollarSign className="h-5 w-5 text-green-500" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
@@ -181,12 +175,12 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 MARKETING
               </CardTitle>
-              <TrendingUp className="w-5 h-5 text-green-500" />
+              <TrendingUp className="h-5 w-5 text-blue-500" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
@@ -199,11 +193,11 @@ export default function Home() {
           </Card>
 
           <Card className="border-l-4 border-l-purple-500">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 COMERCIAL
               </CardTitle>
-              <Users className="w-5 h-5 text-purple-500" />
+              <Users className="h-5 w-5 text-purple-500" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
@@ -216,11 +210,11 @@ export default function Home() {
           </Card>
 
           <Card className="border-l-4 border-l-yellow-500">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 TICKET MÉDIO
               </CardTitle>
-              <Target className="w-5 h-5 text-yellow-500" />
+              <Target className="h-5 w-5 text-yellow-500" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
@@ -233,13 +227,13 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Seletor de Semanas */}
+        {/* Metas Semanais */}
         <Card>
           <CardHeader>
             <CardTitle>Metas Semanais</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {weeks.map((week) => (
                 <button
                   key={week.id}
@@ -250,11 +244,9 @@ export default function Home() {
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <div className="text-center space-y-1">
-                    <p className="font-semibold text-foreground">{week.label}</p>
-                    <p className="text-sm text-muted-foreground">{week.period}</p>
-                    <p className="text-xs text-muted-foreground">{week.days} dias</p>
-                  </div>
+                  <h3 className="font-semibold text-foreground">{week.label}</h3>
+                  <p className="text-sm text-muted-foreground">{week.period}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{week.days} dias</p>
                 </button>
               ))}
             </div>
@@ -275,26 +267,24 @@ export default function Home() {
                 <CardTitle>Métricas de Marketing Direto</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="p-4 rounded-lg bg-accent/50">
-                      <p className="text-sm text-muted-foreground">Vendas Esperadas</p>
-                      <p className="text-2xl font-bold text-foreground">{scenario.marketingSales}</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-accent/50">
-                      <p className="text-sm text-muted-foreground">Receita Esperada</p>
-                      <p className="text-2xl font-bold text-foreground">
-                        {formatCurrency(scenario.marketing)}
-                      </p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-accent/50">
-                      <p className="text-sm text-muted-foreground">Conversão VSL</p>
-                      <p className="text-2xl font-bold text-foreground">1.5%</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-accent/50">
-                      <p className="text-sm text-muted-foreground">CPA Alvo</p>
-                      <p className="text-2xl font-bold text-foreground">R$ 450</p>
-                    </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Vendas Esperadas</p>
+                    <p className="text-2xl font-bold text-foreground">{scenario.marketingSales}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Receita Esperada</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {formatCurrency(scenario.marketing)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Conversão VSL</p>
+                    <p className="text-2xl font-bold text-foreground">1.5%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">CPA Alvo</p>
+                    <p className="text-2xl font-bold text-foreground">R$ 450</p>
                   </div>
                 </div>
               </CardContent>
@@ -308,21 +298,23 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 rounded-lg bg-accent/50">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Vendas Esperadas</p>
+                    <p className="text-2xl font-bold text-foreground">{scenario.commercialSales}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Receita Esperada</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {formatCurrency(scenario.commercial)}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-sm text-muted-foreground">SDRs</p>
                     <p className="text-2xl font-bold text-foreground">2</p>
                   </div>
-                  <div className="p-4 rounded-lg bg-accent/50">
+                  <div>
                     <p className="text-sm text-muted-foreground">Closers</p>
                     <p className="text-2xl font-bold text-foreground">2</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-accent/50">
-                    <p className="text-sm text-muted-foreground">Agendamentos/Dia</p>
-                    <p className="text-2xl font-bold text-foreground">4</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-accent/50">
-                    <p className="text-sm text-muted-foreground">Taxa Conversão</p>
-                    <p className="text-2xl font-bold text-foreground">20%</p>
                   </div>
                 </div>
               </CardContent>
@@ -336,18 +328,54 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>• Primeiros dias serão de validação e ajuste das campanhas</p>
-                  <p>• Escala forte planejada a partir da segunda semana (dia 8)</p>
-                  <p>• Time comercial em fase inicial, tração esperada após dia 15</p>
-                  <p>• Capacidade de geração de criativos: 2 editores + 3 copys</p>
+                  <p>• Primeiros dias focados em validação da VSL</p>
+                  <p>• Escala forte a partir da segunda semana</p>
+                  <p>• Time comercial ganha tração progressivamente</p>
+                  <p>• Funil completo com upsells implementado até dia 05</p>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
-        {/* Simulador de Métricas */}
-        <MetricsSimulator scenario={selectedScenario} />
+        {/* Tabela de Resumo Semanal */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Resumo Semanal - Cenário {formatCurrency(scenario.total)}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3 text-muted-foreground font-medium">Semana</th>
+                    <th className="text-right p-3 text-muted-foreground font-medium">Meta</th>
+                    <th className="text-right p-3 text-muted-foreground font-medium">Marketing</th>
+                    <th className="text-right p-3 text-muted-foreground font-medium">Comercial</th>
+                    <th className="text-right p-3 text-muted-foreground font-medium">Dias</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weeks.map((week) => {
+                    const weeklyTarget = scenario.total / 4;
+                    const weeklyMarketing = scenario.marketing / 4;
+                    const weeklyCommercial = scenario.commercial / 4;
+                    
+                    return (
+                      <tr key={week.id} className="border-b hover:bg-accent/50">
+                        <td className="p-3 font-medium text-foreground">{week.label}</td>
+                        <td className="text-right p-3 text-foreground">{formatCurrency(weeklyTarget)}</td>
+                        <td className="text-right p-3 text-foreground">{formatCurrency(weeklyMarketing)}</td>
+                        <td className="text-right p-3 text-foreground">{formatCurrency(weeklyCommercial)}</td>
+                        <td className="text-right p-3 text-muted-foreground">{week.days}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

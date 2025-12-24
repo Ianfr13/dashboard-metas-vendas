@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE goals ADD COLUMN subGoals TEXT AFTER targetCommercialSales;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user gTuCx5NRGBDR5QQ.9ba8bfb62d50 --database kGhctA2StutzGX6UjXzrGZ --execute ALTER TABLE goals ADD COLUMN subGoals TEXT AFTER targetCommercialSales;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 691
+}
