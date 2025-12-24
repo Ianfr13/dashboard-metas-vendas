@@ -140,3 +140,9 @@
 - [x] Integrar em todas as páginas (Home, Métricas, Admin)
 - [x] Garantir que navegação desktop permaneça visível em telas grandes
 - [x] Testar responsividade em diferentes tamanhos de tela
+
+## Header Mobile - Remover Sticky
+- [x] Remover sticky position do header em mobile (Home)
+- [x] Remover sticky position do header em mobile (Métricas)
+- [x] Remover sticky position do header em mobile (Admin)
+- [x] Manter sticky apenas em desktop
