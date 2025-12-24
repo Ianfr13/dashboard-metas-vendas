@@ -87,3 +87,8 @@
 - [x] Manter apenas: Vendas Esperadas, Receita Esperada, Vendas, Receita
 - [x] Otimizar formatação de números
 - [x] Melhorar legibilidade da tabela
+
+## Ajuste de Fonte das Métricas
+- [x] Reduzir tamanho da fonte dos números (de 3xl para xl)
+- [x] Garantir que valores grandes caibam sem quebrar layout
+- [x] Testar com valores grandes (R$ 2.550.000+)

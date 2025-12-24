@@ -269,21 +269,21 @@ export default function Home() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Vendas Esperadas</p>
-                    <p className="text-3xl font-bold text-foreground">{scenario.marketingSales.toLocaleString('pt-BR')}</p>
+                    <p className="text-xl font-bold text-foreground">{scenario.marketingSales.toLocaleString('pt-BR')}</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Receita Esperada</p>
-                    <p className="text-3xl font-bold text-foreground">
+                    <p className="text-xl font-bold text-foreground">
                       {formatCurrency(scenario.marketing)}
                     </p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Vendas</p>
-                    <p className="text-3xl font-bold text-green-500">0</p>
+                    <p className="text-xl font-bold text-green-500">0</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Receita</p>
-                    <p className="text-3xl font-bold text-green-500">
+                    <p className="text-xl font-bold text-green-500">
                       R$ 0
                     </p>
                   </div>
@@ -301,21 +301,21 @@ export default function Home() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Vendas Esperadas</p>
-                    <p className="text-3xl font-bold text-foreground">{scenario.commercialSales.toLocaleString('pt-BR')}</p>
+                    <p className="text-xl font-bold text-foreground">{scenario.commercialSales.toLocaleString('pt-BR')}</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Receita Esperada</p>
-                    <p className="text-3xl font-bold text-foreground">
+                    <p className="text-xl font-bold text-foreground">
                       {formatCurrency(scenario.commercial)}
                     </p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Vendas</p>
-                    <p className="text-3xl font-bold text-green-500">0</p>
+                    <p className="text-xl font-bold text-green-500">0</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Receita</p>
-                    <p className="text-3xl font-bold text-green-500">
+                    <p className="text-xl font-bold text-green-500">
                       R$ 0
                     </p>
                   </div>
