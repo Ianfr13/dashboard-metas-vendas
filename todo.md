@@ -254,3 +254,15 @@
 - [x] Adicionar separadores visuais entre grupos
 - [x] Melhorar tipografia e hierarquia visual
 - [x] Otimizar para mobile
+
+## Área Admin - Sistema de Configuração
+- [x] Criar estrutura com tabs: Metas, Produtos, Custos, Cenários, Período
+- [x] Formulário de Meta Mensal Total com cálculos automáticos (diária, semanal, sub-metas)
+- [x] Formulário de Produtos (nome, ticket médio, canal)
+- [x] Cálculo automático de vendas necessárias por produto
+- [x] Formulário de Distribuição Marketing vs Comercial (%)
+- [x] Formulário de Custos (CPL, CPA) com cálculo de orçamento
+- [x] Sistema de edição manual com flag "customizado"
+- [x] Preview em tempo real das configurações
+- [x] Botão "Salvar Configurações" com persistência
+- [x] Botão "Resetar para Cálculos Automáticos"

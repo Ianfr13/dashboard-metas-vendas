@@ -1,184 +1,181 @@
-import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, Edit, Package, Home as HomeIcon, BarChart3, Settings, Moon, Sun } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Home as HomeIcon, BarChart3, Settings, Moon, Sun, Save, RotateCcw, Plus, Trash2, Calculator } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
 import MobileNav from "@/components/MobileNav";
 
+interface Produto {
+  id: string;
+  nome: string;
+  ticketMedio: number;
+  canal: "marketing" | "comercial" | "ambos";
+  customizado: boolean;
+}
+
+interface Configuracao {
+  metaMensal: number;
+  produtos: Produto[];
+  distribuicao: {
+    marketing: number;
+    comercial: number;
+  };
+  custos: {
+    cplMarketing: number;
+    cpaMarketing: number;
+  };
+  cenarios: {
+    conservador: number;
+    realista: number;
+    otimista: number;
+  };
+  periodo: {
+    mes: number;
+    ano: number;
+    diasUteis: number;
+  };
+}
+
+const CONFIG_STORAGE_KEY = "dashboard-config";
+
 export default function Admin() {
   const [location] = useLocation();
   const { theme, toggleTheme } = useTheme();
-  
-  // Metas
-  const [mainGoal, setMainGoal] = useState("5000000");
-  const [subGoals, setSubGoals] = useState<string[]>([
-    "100000",
-    "200000",
-    "300000",
-    "500000",
-    "1000000",
-    "1500000",
-    "2000000",
-    "3000000",
-  ]);
-  const [newSubGoal, setNewSubGoal] = useState("");
 
-  // Produtos
-  const [productName, setProductName] = useState("");
-  const [productPrice, setProductPrice] = useState("");
-  const [productType, setProductType] = useState<"front" | "upsell" | "high-ticket">("front");
-  const [productChannel, setProductChannel] = useState<"marketing" | "comercial" | "both">("both");
-  const [editingProduct, setEditingProduct] = useState<number | null>(null);
-
-  const { data: products, refetch: refetchProducts } = trpc.products.list.useQuery();
-
-  const createProduct = trpc.products.create.useMutation({
-    onSuccess: () => {
-      toast.success("Produto criado com sucesso!");
-      setProductName("");
-      setProductPrice("");
-      setProductType("front");
-      setProductChannel("both");
-      refetchProducts();
+  // Estado da configuração
+  const [config, setConfig] = useState<Configuracao>({
+    metaMensal: 3000000,
+    produtos: [
+      { id: "1", nome: "Creatina Pro 797", ticketMedio: 797, canal: "ambos", customizado: false },
+      { id: "2", nome: "Whey Premium", ticketMedio: 450, canal: "marketing", customizado: false },
+      { id: "3", nome: "Colágeno Hidrolisado", ticketMedio: 350, canal: "marketing", customizado: false },
+      { id: "4", nome: "Ômega-3 Ultra", ticketMedio: 180, canal: "comercial", customizado: false },
+    ],
+    distribuicao: {
+      marketing: 85,
+      comercial: 15,
     },
-    onError: () => {
-      toast.error("Erro ao criar produto");
+    custos: {
+      cplMarketing: 85,
+      cpaMarketing: 430,
+    },
+    cenarios: {
+      conservador: 70,
+      realista: 100,
+      otimista: 130,
+    },
+    periodo: {
+      mes: 1,
+      ano: 2025,
+      diasUteis: 22,
     },
   });
 
-  const updateProduct = trpc.products.update.useMutation({
-    onSuccess: () => {
-      toast.success("Produto atualizado com sucesso!");
-      setEditingProduct(null);
-      setProductName("");
-      setProductPrice("");
-      refetchProducts();
-    },
-    onError: () => {
-      toast.error("Erro ao atualizar produto");
-    },
-  });
+  // Estados para formulários
+  const [novoProduto, setNovoProduto] = useState({ nome: "", ticketMedio: "", canal: "ambos" as const });
+  const [editandoProduto, setEditandoProduto] = useState<string | null>(null);
 
-  const deleteProduct = trpc.products.delete.useMutation({
-    onSuccess: () => {
-      toast.success("Produto removido com sucesso!");
-      refetchProducts();
-    },
-    onError: () => {
-      toast.error("Erro ao remover produto");
-    },
-  });
+  // Carregar configuração do localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
+    if (saved) {
+      try {
+        setConfig(JSON.parse(saved));
+      } catch (e) {
+        console.error("Erro ao carregar configuração:", e);
+      }
+    }
+  }, []);
 
-  const formatCurrency = (value: string | number) => {
-    const num = typeof value === "string" ? parseFloat(value) : value;
-    if (isNaN(num)) return "R$ 0";
+  // Salvar configuração
+  const salvarConfiguracao = () => {
+    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+    toast.success("Configurações salvas com sucesso!");
+  };
+
+  // Resetar para valores padrão
+  const resetarConfiguracao = () => {
+    if (confirm("Tem certeza que deseja resetar todas as configurações?")) {
+      localStorage.removeItem(CONFIG_STORAGE_KEY);
+      window.location.reload();
+    }
+  };
+
+  // Cálculos automáticos
+  const calculos = {
+    metaDiaria: config.metaMensal / 30,
+    metaSemanal: config.metaMensal / 4,
+    metaMarketing: (config.metaMensal * config.distribuicao.marketing) / 100,
+    metaComercial: (config.metaMensal * config.distribuicao.comercial) / 100,
+    vendasNecessarias: Math.ceil(
+      config.metaMensal / (config.produtos.reduce((acc, p) => acc + p.ticketMedio, 0) / config.produtos.length)
+    ),
+    orcamentoMarketing: function() {
+      const vendasMkt = Math.ceil(this.metaMarketing / (config.produtos.filter(p => p.canal === "marketing" || p.canal === "ambos").reduce((acc, p) => acc + p.ticketMedio, 0) / config.produtos.filter(p => p.canal === "marketing" || p.canal === "ambos").length || 1));
+      return vendasMkt * config.custos.cpaMarketing;
+    },
+    roiEsperado: function() {
+      const orcamento = this.orcamentoMarketing();
+      return orcamento > 0 ? ((this.metaMarketing - orcamento) / orcamento) * 100 : 0;
+    },
+  };
+
+  // Adicionar produto
+  const adicionarProduto = () => {
+    if (!novoProduto.nome || !novoProduto.ticketMedio) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    const novo: Produto = {
+      id: Date.now().toString(),
+      nome: novoProduto.nome,
+      ticketMedio: parseFloat(novoProduto.ticketMedio),
+      canal: novoProduto.canal,
+      customizado: false,
+    };
+
+    setConfig({ ...config, produtos: [...config.produtos, novo] });
+    setNovoProduto({ nome: "", ticketMedio: "", canal: "ambos" });
+    toast.success("Produto adicionado!");
+  };
+
+  // Remover produto
+  const removerProduto = (id: string) => {
+    if (confirm("Tem certeza que deseja remover este produto?")) {
+      setConfig({ ...config, produtos: config.produtos.filter(p => p.id !== id) });
+      toast.success("Produto removido!");
+    }
+  };
+
+  // Atualizar produto
+  const atualizarProduto = (id: string, campo: keyof Produto, valor: any) => {
+    setConfig({
+      ...config,
+      produtos: config.produtos.map(p =>
+        p.id === id ? { ...p, [campo]: valor, customizado: true } : p
+      ),
+    });
+  };
+
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(num);
+    }).format(value);
   };
 
-  const addSubGoal = () => {
-    if (!newSubGoal || isNaN(parseFloat(newSubGoal))) {
-      toast.error("Digite um valor válido");
-      return;
-    }
-    
-    if (subGoals.includes(newSubGoal)) {
-      toast.error("Esta sub-meta já existe");
-      return;
-    }
-
-    setSubGoals([...subGoals, newSubGoal].sort((a, b) => parseFloat(a) - parseFloat(b)));
-    setNewSubGoal("");
-    toast.success("Sub-meta adicionada!");
-  };
-
-  const removeSubGoal = (index: number) => {
-    setSubGoals(subGoals.filter((_, i) => i !== index));
-    toast.success("Sub-meta removida!");
-  };
-
-  const createGoal = trpc.goals.create.useMutation({
-    onSuccess: () => {
-      toast.success("Configuração salva com sucesso!");
-    },
-    onError: (error) => {
-      toast.error("Erro ao salvar configuração");
-      console.error(error);
-    },
-  });
-
-  const saveConfiguration = async () => {
-    try {
-      await createGoal.mutateAsync({
-        name: "Meta Principal",
-        scenario: "3M",
-        period: "monthly",
-        targetRevenue: mainGoal,
-        targetSales: 0,
-        targetMarketingSales: 0,
-        targetCommercialSales: 0,
-        startDate: new Date(),
-        endDate: new Date(new Date().getFullYear(), 11, 31),
-        subGoals: JSON.stringify(subGoals.map(sg => ({ value: parseFloat(sg), completed: false }))),
-      });
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleSaveProduct = async () => {
-    if (!productName || !productPrice) {
-      toast.error("Preencha todos os campos");
-      return;
-    }
-
-    const price = parseFloat(productPrice);
-    if (isNaN(price) || price <= 0) {
-      toast.error("Preço inválido");
-      return;
-    }
-
-    if (editingProduct) {
-      await updateProduct.mutateAsync({
-        id: editingProduct,
-        name: productName,
-        price,
-        type: productType,
-        channel: productChannel,
-      });
-    } else {
-      await createProduct.mutateAsync({
-        name: productName,
-        price,
-        type: productType,
-        channel: productChannel,
-      });
-    }
-  };
-
-  const handleEditProduct = (product: any) => {
-    setEditingProduct(product.id);
-    setProductName(product.name);
-    setProductPrice(product.price);
-    setProductType(product.type);
-    setProductChannel(product.channel);
-  };
-
-  const handleDeleteProduct = async (id: number) => {
-    if (confirm("Tem certeza que deseja remover este produto?")) {
-      await deleteProduct.mutateAsync({ id });
-    }
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat("pt-BR").format(Math.round(value));
   };
 
   return (
@@ -194,19 +191,14 @@ export default function Admin() {
                 className="h-12 w-auto drop-shadow-md"
               />
               <div>
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">
-                  Dashboard de Metas
-                </h1>
-                <p className="text-xs text-muted-foreground font-medium">
-                  Janeiro 2025
-                </p>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Dashboard de Metas</h1>
+                <p className="text-xs text-muted-foreground font-medium">Janeiro 2025</p>
               </div>
             </div>
+
             <div className="flex items-center gap-3">
-              {/* Menu Mobile */}
               <MobileNav />
               
-              {/* Navegação Desktop */}
               <nav className="hidden md:flex items-center gap-2">
                 <Link href="/">
                   <Button variant={location === "/" ? "default" : "ghost"} className="gap-2">
@@ -228,18 +220,8 @@ export default function Admin() {
                 </Link>
               </nav>
 
-              {/* Toggle de Tema */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={toggleTheme}
-                className="rounded-full"
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
+              <Button variant="outline" size="icon" onClick={toggleTheme} className="rounded-full">
+                {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
             </div>
           </div>
@@ -248,255 +230,387 @@ export default function Admin() {
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-2xl font-bold">Configurações do Dashboard</h2>
+            <p className="text-sm text-muted-foreground">Defina metas, produtos e custos com cálculos automáticos</p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={resetarConfiguracao} className="gap-2">
+              <RotateCcw className="h-4 w-4" />
+              Resetar
+            </Button>
+            <Button onClick={salvarConfiguracao} className="gap-2">
+              <Save className="h-4 w-4" />
+              Salvar Configurações
+            </Button>
+          </div>
+        </div>
+
         <Tabs defaultValue="metas" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="metas">Metas</TabsTrigger>
             <TabsTrigger value="produtos">Produtos</TabsTrigger>
+            <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
+            <TabsTrigger value="custos">Custos</TabsTrigger>
+            <TabsTrigger value="cenarios">Cenários</TabsTrigger>
           </TabsList>
 
           {/* Tab Metas */}
           <TabsContent value="metas" className="space-y-6 mt-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Meta Principal */}
-              <Card className="border-2 border-primary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="text-2xl">🎯</span>
-                    Meta Principal
-                  </CardTitle>
-                  <CardDescription>
-                    Defina o valor total que deseja atingir no período
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="mainGoal">Valor da Meta</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="mainGoal"
-                        type="number"
-                        value={mainGoal}
-                        onChange={(e) => setMainGoal(e.target.value)}
-                        placeholder="5000000"
-                        className="text-lg font-semibold"
-                      />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {formatCurrency(mainGoal)}
-                    </p>
-                  </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Meta Mensal Total</CardTitle>
+                <CardDescription>Defina a meta de receita para o mês</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Meta Mensal (R$)</Label>
+                  <Input
+                    type="number"
+                    value={config.metaMensal}
+                    onChange={(e) => setConfig({ ...config, metaMensal: parseFloat(e.target.value) || 0 })}
+                    className="text-lg font-semibold"
+                  />
+                </div>
 
-                  <div className="rounded-lg bg-muted p-4">
-                    <p className="text-sm font-medium text-foreground">
-                      Visualização
-                    </p>
-                    <p className="text-3xl font-bold text-primary mt-2">
-                      {formatCurrency(mainGoal)}
-                    </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Meta Diária</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(calculos.metaDiaria)}</p>
+                    <p className="text-xs text-muted-foreground">Meta mensal ÷ 30 dias</p>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Meta Semanal</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(calculos.metaSemanal)}</p>
+                    <p className="text-xs text-muted-foreground">Meta mensal ÷ 4 semanas</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Vendas Necessárias</p>
+                    <p className="text-2xl font-bold text-primary">{formatNumber(calculos.vendasNecessarias)}</p>
+                    <p className="text-xs text-muted-foreground">Baseado no ticket médio</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Sub-metas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="text-2xl">📊</span>
-                    Sub-metas
-                  </CardTitle>
-                  <CardDescription>
-                    Marcos intermediários para acompanhar o progresso
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Período</CardTitle>
+                <CardDescription>Configure o mês e ano do dashboard</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Mês</Label>
+                    <Select
+                      value={config.periodo.mes.toString()}
+                      onValueChange={(v) => setConfig({ ...config, periodo: { ...config.periodo, mes: parseInt(v) } })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <SelectItem key={i + 1} value={(i + 1).toString()}>
+                            {new Date(2025, i).toLocaleDateString("pt-BR", { month: "long" })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Ano</Label>
                     <Input
                       type="number"
-                      value={newSubGoal}
-                      onChange={(e) => setNewSubGoal(e.target.value)}
-                      placeholder="Ex: 500000"
-                      onKeyPress={(e) => e.key === "Enter" && addSubGoal()}
+                      value={config.periodo.ano}
+                      onChange={(e) => setConfig({ ...config, periodo: { ...config.periodo, ano: parseInt(e.target.value) || 2025 } })}
                     />
-                    <Button onClick={addSubGoal} size="icon">
-                      <Plus className="h-4 w-4" />
-                    </Button>
                   </div>
-
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {subGoals.map((goal, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted"
-                      >
-                        <span className="font-medium text-foreground">
-                          {formatCurrency(goal)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeSubGoal(index)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
+                  <div>
+                    <Label>Dias Úteis</Label>
+                    <Input
+                      type="number"
+                      value={config.periodo.diasUteis}
+                      onChange={(e) => setConfig({ ...config, periodo: { ...config.periodo, diasUteis: parseInt(e.target.value) || 22 } })}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="flex justify-end">
-              <Button onClick={saveConfiguration} size="lg" className="gap-2">
-                <Save className="h-5 w-5" />
-                Salvar Configuração
-              </Button>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Tab Produtos */}
           <TabsContent value="produtos" className="space-y-6 mt-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Formulário de Produto */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    {editingProduct ? "Editar Produto" : "Novo Produto"}
-                  </CardTitle>
-                  <CardDescription>
-                    {editingProduct
-                      ? "Atualize as informações do produto"
-                      : "Adicione um novo produto ao catálogo"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="productName">Nome do Produto</Label>
+            <Card>
+              <CardHeader>
+                <CardTitle>Adicionar Produto</CardTitle>
+                <CardDescription>Configure produtos e tickets médios</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2">
+                    <Label>Nome do Produto</Label>
                     <Input
-                      id="productName"
-                      value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
+                      value={novoProduto.nome}
+                      onChange={(e) => setNovoProduto({ ...novoProduto, nome: e.target.value })}
                       placeholder="Ex: Creatina Pro 797"
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="productPrice">Preço (R$)</Label>
+                  <div>
+                    <Label>Ticket Médio (R$)</Label>
                     <Input
-                      id="productPrice"
                       type="number"
-                      value={productPrice}
-                      onChange={(e) => setProductPrice(e.target.value)}
-                      placeholder="797.00"
+                      value={novoProduto.ticketMedio}
+                      onChange={(e) => setNovoProduto({ ...novoProduto, ticketMedio: e.target.value })}
+                      placeholder="797"
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="productType">Tipo</Label>
+                  <div>
+                    <Label>Canal</Label>
                     <Select
-                      value={productType}
-                      onValueChange={(value: any) => setProductType(value)}
+                      value={novoProduto.canal}
+                      onValueChange={(v: any) => setNovoProduto({ ...novoProduto, canal: v })}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="front">Front-end (Produto Principal)</SelectItem>
-                        <SelectItem value="upsell">Upsell</SelectItem>
-                        <SelectItem value="high-ticket">High-Ticket</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="comercial">Comercial</SelectItem>
+                        <SelectItem value="ambos">Ambos</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                <Button onClick={adicionarProduto} className="mt-4 gap-2">
+                  <Plus className="h-4 w-4" />
+                  Adicionar Produto
+                </Button>
+              </CardContent>
+            </Card>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="productChannel">Canal</Label>
-                    <Select
-                      value={productChannel}
-                      onValueChange={(value: any) => setProductChannel(value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="marketing">Marketing Direto</SelectItem>
-                        <SelectItem value="comercial">Time Comercial</SelectItem>
-                        <SelectItem value="both">Ambos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button onClick={handleSaveProduct} className="flex-1">
-                      <Save className="h-4 w-4 mr-2" />
-                      {editingProduct ? "Atualizar" : "Criar"} Produto
-                    </Button>
-                    {editingProduct && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Produtos Cadastrados</CardTitle>
+                <CardDescription>{config.produtos.length} produtos configurados</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {config.produtos.map((produto) => (
+                    <div key={produto.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Nome</Label>
+                          <Input
+                            value={produto.nome}
+                            onChange={(e) => atualizarProduto(produto.id, "nome", e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Ticket Médio</Label>
+                          <Input
+                            type="number"
+                            value={produto.ticketMedio}
+                            onChange={(e) => atualizarProduto(produto.id, "ticketMedio", parseFloat(e.target.value) || 0)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Canal</Label>
+                          <Select
+                            value={produto.canal}
+                            onValueChange={(v: any) => atualizarProduto(produto.id, "canal", v)}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="marketing">Marketing</SelectItem>
+                              <SelectItem value="comercial">Comercial</SelectItem>
+                              <SelectItem value="ambos">Ambos</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                       <Button
-                        variant="outline"
-                        onClick={() => {
-                          setEditingProduct(null);
-                          setProductName("");
-                          setProductPrice("");
-                          setProductType("front");
-                          setProductChannel("both");
-                        }}
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removerProduto(produto.id)}
+                        className="text-destructive hover:text-destructive"
                       >
-                        Cancelar
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              {/* Lista de Produtos */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Produtos Cadastrados</CardTitle>
-                  <CardDescription>
-                    {products?.length || 0} produto(s) no catálogo
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {products?.map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <p className="font-semibold text-foreground">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatCurrency(parseFloat(product.price))} • {product.type} • {product.channel}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditProduct(product)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteProduct(product.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-
-                    {!products || products.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        Nenhum produto cadastrado ainda
-                      </div>
-                    )}
+          {/* Tab Distribuição */}
+          <TabsContent value="distribuicao" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribuição Marketing vs Comercial</CardTitle>
+                <CardDescription>Defina o percentual de meta para cada canal</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label>Marketing (%)</Label>
+                    <Input
+                      type="number"
+                      value={config.distribuicao.marketing}
+                      onChange={(e) => {
+                        const mkt = parseFloat(e.target.value) || 0;
+                        setConfig({
+                          ...config,
+                          distribuicao: { marketing: mkt, comercial: 100 - mkt },
+                        });
+                      }}
+                      max={100}
+                      min={0}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <div>
+                    <Label>Comercial (%)</Label>
+                    <Input
+                      type="number"
+                      value={config.distribuicao.comercial}
+                      onChange={(e) => {
+                        const com = parseFloat(e.target.value) || 0;
+                        setConfig({
+                          ...config,
+                          distribuicao: { marketing: 100 - com, comercial: com },
+                        });
+                      }}
+                      max={100}
+                      min={0}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Meta Marketing</p>
+                    <p className="text-2xl font-bold text-blue-500">{formatCurrency(calculos.metaMarketing)}</p>
+                    <p className="text-xs text-muted-foreground">{config.distribuicao.marketing}% da meta total</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Meta Comercial</p>
+                    <p className="text-2xl font-bold text-purple-500">{formatCurrency(calculos.metaComercial)}</p>
+                    <p className="text-xs text-muted-foreground">{config.distribuicao.comercial}% da meta total</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab Custos */}
+          <TabsContent value="custos" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Custos de Aquisição - Marketing</CardTitle>
+                <CardDescription>Configure CPL e CPA para cálculo de orçamento</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label>CPL - Custo por Lead (R$)</Label>
+                    <Input
+                      type="number"
+                      value={config.custos.cplMarketing}
+                      onChange={(e) => setConfig({ ...config, custos: { ...config.custos, cplMarketing: parseFloat(e.target.value) || 0 } })}
+                    />
+                  </div>
+                  <div>
+                    <Label>CPA - Custo por Aquisição (R$)</Label>
+                    <Input
+                      type="number"
+                      value={config.custos.cpaMarketing}
+                      onChange={(e) => setConfig({ ...config, custos: { ...config.custos, cpaMarketing: parseFloat(e.target.value) || 0 } })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Calculator className="h-4 w-4" />
+                      Orçamento Necessário
+                    </p>
+                    <p className="text-2xl font-bold text-orange-500">{formatCurrency(calculos.orcamentoMarketing())}</p>
+                    <p className="text-xs text-muted-foreground">Vendas × CPA</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Calculator className="h-4 w-4" />
+                      ROI Esperado
+                    </p>
+                    <p className="text-2xl font-bold text-green-500">{calculos.roiEsperado().toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground">(Receita - Custo) / Custo</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Calculator className="h-4 w-4" />
+                      Lucro Esperado
+                    </p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(calculos.metaMarketing - calculos.orcamentoMarketing())}</p>
+                    <p className="text-xs text-muted-foreground">Receita - Orçamento</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab Cenários */}
+          <TabsContent value="cenarios" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cenários de Projeção</CardTitle>
+                <CardDescription>Defina percentuais para diferentes cenários</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <Label>Conservador (%)</Label>
+                    <Input
+                      type="number"
+                      value={config.cenarios.conservador}
+                      onChange={(e) => setConfig({ ...config, cenarios: { ...config.cenarios, conservador: parseFloat(e.target.value) || 0 } })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatCurrency((config.metaMensal * config.cenarios.conservador) / 100)}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Realista (%)</Label>
+                    <Input
+                      type="number"
+                      value={config.cenarios.realista}
+                      onChange={(e) => setConfig({ ...config, cenarios: { ...config.cenarios, realista: parseFloat(e.target.value) || 0 } })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatCurrency((config.metaMensal * config.cenarios.realista) / 100)}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Otimista (%)</Label>
+                    <Input
+                      type="number"
+                      value={config.cenarios.otimista}
+                      onChange={(e) => setConfig({ ...config, cenarios: { ...config.cenarios, otimista: parseFloat(e.target.value) || 0 } })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatCurrency((config.metaMensal * config.cenarios.otimista) / 100)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
