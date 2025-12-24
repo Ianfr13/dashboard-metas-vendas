@@ -211,3 +211,10 @@
 - [x] Adicionar progress bars visuais para cada meta
 - [x] Exibir vendas por produto com quanto falta
 - [x] Design motivacional para toda equipe acompanhar
+
+## Ajustes Página Métricas - Barra Gradiente
+- [x] Remover card de meta total (já existe na Home)
+- [x] Focar apenas em vendas por produto
+- [x] Criar barra gradiente: 0-33% vermelho, 33-66% amarelo, 66-100% verde
+- [x] Clarear/escurecer cores dentro de cada faixa de 33%
+- [x] Mostrar quantas vendas devem ser feitas e quanto falta

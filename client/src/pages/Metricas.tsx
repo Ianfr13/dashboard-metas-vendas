@@ -5,13 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, BarChart3, Home as HomeIcon, Settings, Moon, Sun, Target, TrendingUp, Package, DollarSign } from "lucide-react";
+import { CalendarIcon, BarChart3, Home as HomeIcon, Settings, Moon, Sun, Package, TrendingUp, DollarSign } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import MobileNav from "@/components/MobileNav";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Progress } from "@/components/ui/progress";
 
 export default function Metricas() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -19,83 +18,62 @@ export default function Metricas() {
   const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
 
-  // Mock data - Metas e Realizações
-  const metasData = {
-    total: {
-      meta: 3000000,
-      realizado: 850000,
-      falta: 2150000,
-      percentual: 28.3,
-      vendasMeta: 3000,
-      vendasRealizadas: 850,
-      vendasFaltam: 2150,
+  // Mock data - Produtos
+  const produtosData = [
+    {
+      nome: "Creatina Pro 797",
+      meta: 1500,
+      realizado: 450,
+      falta: 1050,
+      percentual: 30,
+      valorUnitario: 797,
     },
-    produtos: [
-      {
-        nome: "Creatina Pro 797",
-        meta: 1500,
-        realizado: 450,
-        falta: 1050,
-        percentual: 30,
-        valorUnitario: 797,
-        receitaMeta: 1195500,
-        receitaRealizada: 358650,
-        receitaFalta: 836850,
-      },
-      {
-        nome: "High-Ticket VIP",
-        meta: 150,
-        realizado: 150,
-        falta: 0,
-        percentual: 100,
-        valorUnitario: 2500,
-        receitaMeta: 375000,
-        receitaRealizada: 375000,
-        receitaFalta: 0,
-      },
-      {
-        nome: "Upsell Premium",
-        meta: 1000,
-        realizado: 200,
-        falta: 800,
-        percentual: 20,
-        valorUnitario: 247,
-        receitaMeta: 247000,
-        receitaRealizada: 49400,
-        receitaFalta: 197600,
-      },
-      {
-        nome: "Outros Produtos",
-        meta: 350,
-        realizado: 50,
-        falta: 300,
-        percentual: 14.3,
-        valorUnitario: 1339,
-        receitaMeta: 468650,
-        receitaRealizada: 66950,
-        receitaFalta: 401700,
-      },
-    ],
-    canais: {
-      marketing: {
-        meta: 2550,
-        realizado: 650,
-        falta: 1900,
-        percentual: 25.5,
-        receitaMeta: 2550000,
-        receitaRealizada: 650000,
-        receitaFalta: 1900000,
-      },
-      comercial: {
-        meta: 450,
-        realizado: 200,
-        falta: 250,
-        percentual: 44.4,
-        receitaMeta: 450000,
-        receitaRealizada: 200000,
-        receitaFalta: 250000,
-      },
+    {
+      nome: "High-Ticket VIP",
+      meta: 150,
+      realizado: 150,
+      falta: 0,
+      percentual: 100,
+      valorUnitario: 2500,
     },
+    {
+      nome: "Upsell Premium",
+      meta: 1000,
+      realizado: 200,
+      falta: 800,
+      percentual: 20,
+      valorUnitario: 247,
+    },
+    {
+      nome: "Outros Produtos",
+      meta: 350,
+      realizado: 50,
+      falta: 300,
+      percentual: 14.3,
+      valorUnitario: 1339,
+    },
+  ];
+
+  // Mock data - Canais
+  const canaisData = {
+    marketing: {
+      nome: "Marketing Direto",
+      meta: 2550,
+      realizado: 650,
+      falta: 1900,
+      percentual: 25.5,
+    },
+    comercial: {
+      nome: "Time Comercial",
+      meta: 450,
+      realizado: 200,
+      falta: 250,
+      percentual: 44.4,
+    },
+  };
+
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat("pt-BR").format(value);
   };
 
   const formatCurrency = (value: number) => {
@@ -107,15 +85,37 @@ export default function Metricas() {
     }).format(value);
   };
 
-  const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("pt-BR").format(value);
+  // Função para calcular cor do gradiente baseado no percentual
+  const getGradientColor = (percentual: number) => {
+    // 0-33%: Vermelho (escuro → claro)
+    if (percentual <= 33) {
+      const progress = percentual / 33; // 0 a 1
+      const lightness = 35 + (progress * 20); // 35% a 55%
+      return `hsl(0, 70%, ${lightness}%)`;
+    }
+    // 33-66%: Amarelo (escuro → claro)
+    else if (percentual <= 66) {
+      const progress = (percentual - 33) / 33; // 0 a 1
+      const lightness = 45 + (progress * 20); // 45% a 65%
+      return `hsl(45, 90%, ${lightness}%)`;
+    }
+    // 66-100%: Verde (escuro → claro)
+    else {
+      const progress = (percentual - 66) / 34; // 0 a 1
+      const lightness = 40 + (progress * 25); // 40% a 65%
+      return `hsl(142, 70%, ${lightness}%)`;
+    }
   };
 
-  const getProgressColor = (percentual: number) => {
-    if (percentual >= 100) return "bg-green-500";
-    if (percentual >= 75) return "bg-blue-500";
-    if (percentual >= 50) return "bg-yellow-500";
-    return "bg-orange-500";
+  // Função para criar gradiente completo da barra
+  const getProgressGradient = (percentual: number) => {
+    const clampedPercentual = Math.min(percentual, 100);
+    const color = getGradientColor(clampedPercentual);
+    
+    return {
+      background: `linear-gradient(to right, ${color} 0%, ${color} 100%)`,
+      width: `${clampedPercentual}%`,
+    };
   };
 
   return (
@@ -139,10 +139,8 @@ export default function Metricas() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Menu Mobile */}
               <MobileNav />
               
-              {/* Navegação Desktop */}
               <nav className="hidden md:flex items-center gap-2">
                 <Link href="/">
                   <Button variant={location === "/" ? "default" : "ghost"} className="gap-2">
@@ -164,7 +162,6 @@ export default function Metricas() {
                 </Link>
               </nav>
 
-              {/* Toggle Tema */}
               <Button variant="outline" size="icon" onClick={toggleTheme} className="rounded-full">
                 {theme === "dark" ? (
                   <Sun className="h-5 w-5" />
@@ -182,12 +179,11 @@ export default function Metricas() {
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold">Acompanhamento de Metas</h2>
-            <p className="text-sm text-muted-foreground">Veja quanto falta para bater cada meta</p>
+            <h2 className="text-2xl font-bold">Vendas por Produto e Canal</h2>
+            <p className="text-sm text-muted-foreground">Acompanhe quantas vendas faltam para cada meta</p>
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Filtro de Período */}
             <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -199,12 +195,11 @@ export default function Metricas() {
               </SelectContent>
             </Select>
 
-            {/* Calendário */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <CalendarIcon className="h-4 w-4" />
-                  {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
@@ -219,56 +214,6 @@ export default function Metricas() {
           </div>
         </div>
 
-        {/* Meta Total */}
-        <Card className="mb-6 border-2 border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <Target className="h-6 w-6 text-primary" />
-              Meta Total do Mês
-            </CardTitle>
-            <CardDescription>Progresso geral de vendas e receita</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Receita */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Receita</p>
-                  <p className="text-3xl font-bold">{formatCurrency(metasData.total.realizado)}</p>
-                  <p className="text-sm text-muted-foreground">de {formatCurrency(metasData.total.meta)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-4xl font-bold text-primary">{metasData.total.percentual.toFixed(1)}%</p>
-                  <p className="text-sm text-muted-foreground">atingido</p>
-                </div>
-              </div>
-              <Progress value={metasData.total.percentual} className="h-4" />
-              <p className="text-sm font-semibold text-orange-500 mt-2">
-                Falta: {formatCurrency(metasData.total.falta)}
-              </p>
-            </div>
-
-            {/* Vendas */}
-            <div className="pt-4 border-t border-border">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Vendas</p>
-                  <p className="text-3xl font-bold">{formatNumber(metasData.total.vendasRealizadas)}</p>
-                  <p className="text-sm text-muted-foreground">de {formatNumber(metasData.total.vendasMeta)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-4xl font-bold text-primary">{metasData.total.percentual.toFixed(1)}%</p>
-                  <p className="text-sm text-muted-foreground">atingido</p>
-                </div>
-              </div>
-              <Progress value={metasData.total.percentual} className="h-4" />
-              <p className="text-sm font-semibold text-orange-500 mt-2">
-                Faltam: {formatNumber(metasData.total.vendasFaltam)} vendas
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         <Tabs defaultValue="produtos" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="produtos">Por Produto</TabsTrigger>
@@ -277,14 +222,16 @@ export default function Metricas() {
 
           {/* Tab Por Produto */}
           <TabsContent value="produtos" className="space-y-4 mt-6">
-            {metasData.produtos.map((produto, index) => (
+            {produtosData.map((produto, index) => (
               <Card key={index} className={produto.percentual >= 100 ? "border-2 border-green-500" : ""}>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    {produto.nome}
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      {produto.nome}
+                    </div>
                     {produto.percentual >= 100 && (
-                      <span className="ml-auto text-green-500 text-sm font-semibold flex items-center gap-1">
+                      <span className="text-green-500 text-sm font-semibold flex items-center gap-1">
                         <TrendingUp className="h-4 w-4" />
                         META BATIDA!
                       </span>
@@ -293,46 +240,44 @@ export default function Metricas() {
                   <CardDescription>Valor unitário: {formatCurrency(produto.valorUnitario)}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Vendas */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Vendas</p>
-                        <p className="text-2xl font-bold">{formatNumber(produto.realizado)}</p>
-                        <p className="text-xs text-muted-foreground">de {formatNumber(produto.meta)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-3xl font-bold text-primary">{produto.percentual.toFixed(1)}%</p>
-                      </div>
+                  {/* Números */}
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Meta</p>
+                      <p className="text-2xl font-bold">{formatNumber(produto.meta)}</p>
+                      <p className="text-xs text-muted-foreground">vendas</p>
                     </div>
-                    <div className="relative">
-                      <Progress value={Math.min(produto.percentual, 100)} className="h-3" />
-                      <div 
-                        className={`absolute top-0 left-0 h-3 rounded-full ${getProgressColor(produto.percentual)}`}
-                        style={{ width: `${Math.min(produto.percentual, 100)}%` }}
-                      />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Realizado</p>
+                      <p className="text-2xl font-bold text-primary">{formatNumber(produto.realizado)}</p>
+                      <p className="text-xs text-muted-foreground">{produto.percentual.toFixed(1)}%</p>
                     </div>
-                    {produto.falta > 0 && (
-                      <p className="text-sm font-semibold text-orange-500 mt-2">
-                        Faltam: {formatNumber(produto.falta)} vendas
-                      </p>
-                    )}
+                    <div>
+                      <p className="text-sm text-muted-foreground">Faltam</p>
+                      <p className="text-2xl font-bold text-orange-500">{formatNumber(produto.falta)}</p>
+                      <p className="text-xs text-muted-foreground">vendas</p>
+                    </div>
                   </div>
 
-                  {/* Receita */}
-                  <div className="pt-4 border-t border-border">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Receita</p>
-                        <p className="text-xl font-bold">{formatCurrency(produto.receitaRealizada)}</p>
-                        <p className="text-xs text-muted-foreground">de {formatCurrency(produto.receitaMeta)}</p>
+                  {/* Barra de Progresso Gradiente */}
+                  <div className="space-y-2">
+                    <div className="w-full bg-muted/30 rounded-full h-6 overflow-hidden">
+                      <div 
+                        className="h-6 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                        style={getProgressGradient(produto.percentual)}
+                      >
+                        <span className="text-xs font-bold text-white drop-shadow-md">
+                          {produto.percentual.toFixed(1)}%
+                        </span>
                       </div>
-                      {produto.receitaFalta > 0 && (
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Falta</p>
-                          <p className="text-lg font-semibold text-orange-500">{formatCurrency(produto.receitaFalta)}</p>
-                        </div>
-                      )}
+                    </div>
+                    
+                    {/* Legenda da barra */}
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>0%</span>
+                      <span>33%</span>
+                      <span>66%</span>
+                      <span>100%</span>
                     </div>
                   </div>
                 </CardContent>
@@ -347,47 +292,46 @@ export default function Metricas() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-green-500" />
-                  Marketing Direto
+                  {canaisData.marketing.nome}
                 </CardTitle>
                 <CardDescription>Vendas online e tráfego pago</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Vendas */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Vendas</p>
-                      <p className="text-2xl font-bold">{formatNumber(metasData.canais.marketing.realizado)}</p>
-                      <p className="text-xs text-muted-foreground">de {formatNumber(metasData.canais.marketing.meta)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-3xl font-bold text-primary">{metasData.canais.marketing.percentual.toFixed(1)}%</p>
-                    </div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Meta</p>
+                    <p className="text-2xl font-bold">{formatNumber(canaisData.marketing.meta)}</p>
+                    <p className="text-xs text-muted-foreground">vendas</p>
                   </div>
-                  <div className="relative">
-                    <Progress value={metasData.canais.marketing.percentual} className="h-3" />
-                    <div 
-                      className={`absolute top-0 left-0 h-3 rounded-full ${getProgressColor(metasData.canais.marketing.percentual)}`}
-                      style={{ width: `${Math.min(metasData.canais.marketing.percentual, 100)}%` }}
-                    />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Realizado</p>
+                    <p className="text-2xl font-bold text-primary">{formatNumber(canaisData.marketing.realizado)}</p>
+                    <p className="text-xs text-muted-foreground">{canaisData.marketing.percentual.toFixed(1)}%</p>
                   </div>
-                  <p className="text-sm font-semibold text-orange-500 mt-2">
-                    Faltam: {formatNumber(metasData.canais.marketing.falta)} vendas
-                  </p>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Faltam</p>
+                    <p className="text-2xl font-bold text-orange-500">{formatNumber(canaisData.marketing.falta)}</p>
+                    <p className="text-xs text-muted-foreground">vendas</p>
+                  </div>
                 </div>
 
-                {/* Receita */}
-                <div className="pt-4 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Receita</p>
-                      <p className="text-xl font-bold">{formatCurrency(metasData.canais.marketing.receitaRealizada)}</p>
-                      <p className="text-xs text-muted-foreground">de {formatCurrency(metasData.canais.marketing.receitaMeta)}</p>
+                <div className="space-y-2">
+                  <div className="w-full bg-muted/30 rounded-full h-6 overflow-hidden">
+                    <div 
+                      className="h-6 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                      style={getProgressGradient(canaisData.marketing.percentual)}
+                    >
+                      <span className="text-xs font-bold text-white drop-shadow-md">
+                        {canaisData.marketing.percentual.toFixed(1)}%
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Falta</p>
-                      <p className="text-lg font-semibold text-orange-500">{formatCurrency(metasData.canais.marketing.receitaFalta)}</p>
-                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>0%</span>
+                    <span>33%</span>
+                    <span>66%</span>
+                    <span>100%</span>
                   </div>
                 </div>
               </CardContent>
@@ -398,47 +342,46 @@ export default function Metricas() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-blue-500" />
-                  Time Comercial
+                  {canaisData.comercial.nome}
                 </CardTitle>
                 <CardDescription>Vendas consultivas e high-ticket</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Vendas */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Vendas</p>
-                      <p className="text-2xl font-bold">{formatNumber(metasData.canais.comercial.realizado)}</p>
-                      <p className="text-xs text-muted-foreground">de {formatNumber(metasData.canais.comercial.meta)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-3xl font-bold text-primary">{metasData.canais.comercial.percentual.toFixed(1)}%</p>
-                    </div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Meta</p>
+                    <p className="text-2xl font-bold">{formatNumber(canaisData.comercial.meta)}</p>
+                    <p className="text-xs text-muted-foreground">vendas</p>
                   </div>
-                  <div className="relative">
-                    <Progress value={metasData.canais.comercial.percentual} className="h-3" />
-                    <div 
-                      className={`absolute top-0 left-0 h-3 rounded-full ${getProgressColor(metasData.canais.comercial.percentual)}`}
-                      style={{ width: `${Math.min(metasData.canais.comercial.percentual, 100)}%` }}
-                    />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Realizado</p>
+                    <p className="text-2xl font-bold text-primary">{formatNumber(canaisData.comercial.realizado)}</p>
+                    <p className="text-xs text-muted-foreground">{canaisData.comercial.percentual.toFixed(1)}%</p>
                   </div>
-                  <p className="text-sm font-semibold text-orange-500 mt-2">
-                    Faltam: {formatNumber(metasData.canais.comercial.falta)} vendas
-                  </p>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Faltam</p>
+                    <p className="text-2xl font-bold text-orange-500">{formatNumber(canaisData.comercial.falta)}</p>
+                    <p className="text-xs text-muted-foreground">vendas</p>
+                  </div>
                 </div>
 
-                {/* Receita */}
-                <div className="pt-4 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Receita</p>
-                      <p className="text-xl font-bold">{formatCurrency(metasData.canais.comercial.receitaRealizada)}</p>
-                      <p className="text-xs text-muted-foreground">de {formatCurrency(metasData.canais.comercial.receitaMeta)}</p>
+                <div className="space-y-2">
+                  <div className="w-full bg-muted/30 rounded-full h-6 overflow-hidden">
+                    <div 
+                      className="h-6 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                      style={getProgressGradient(canaisData.comercial.percentual)}
+                    >
+                      <span className="text-xs font-bold text-white drop-shadow-md">
+                        {canaisData.comercial.percentual.toFixed(1)}%
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Falta</p>
-                      <p className="text-lg font-semibold text-orange-500">{formatCurrency(metasData.canais.comercial.receitaFalta)}</p>
-                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>0%</span>
+                    <span>33%</span>
+                    <span>66%</span>
+                    <span>100%</span>
                   </div>
                 </div>
               </CardContent>
