@@ -7,6 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
 
@@ -54,8 +55,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       </div>
     );
   }
-
-  const [, setLocation] = useLocation();
 
   if (!authenticated) {
     setLocation('/login');
