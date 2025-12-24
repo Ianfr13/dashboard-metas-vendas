@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 
 export function Header() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -25,7 +25,7 @@ export function Header() {
     try {
       setLoading(true);
       await supabase.auth.signOut();
-      navigate('/login');
+      setLocation('/login');
     } catch (error) {
       console.error('Error logging out:', error);
     } finally {
