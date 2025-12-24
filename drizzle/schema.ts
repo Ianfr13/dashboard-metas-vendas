@@ -208,3 +208,24 @@ export const products = mysqlTable("products", {
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
+
+/**
+ * GTM Events Table
+ * Stores events received from Google Tag Manager
+ */
+export const gtmEvents = mysqlTable("gtm_events", {
+  id: int("id").autoincrement().primaryKey(),
+  eventName: varchar("event_name", { length: 100 }).notNull(),
+  eventData: text("event_data"),
+  userId: varchar("user_id", { length: 255 }),
+  sessionId: varchar("session_id", { length: 255 }),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  pageUrl: text("page_url"),
+  referrer: text("referrer"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type GtmEvent = typeof gtmEvents.$inferSelect;
+export type InsertGtmEvent = typeof gtmEvents.$inferInsert;

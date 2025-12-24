@@ -1,0 +1,30 @@
+{
+  "query": "SELECT id, event_name, timestamp FROM gtm_events ORDER BY timestamp DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user gTuCx5NRGBDR5QQ.9ba8bfb62d50 --database kGhctA2StutzGX6UjXzrGZ --execute SELECT id, event_name, timestamp FROM gtm_events ORDER BY timestamp DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "4",
+      "event_name": "purchase",
+      "timestamp": "2025-12-24 18:41:34"
+    },
+    {
+      "id": "3",
+      "event_name": "begin_checkout",
+      "timestamp": "2025-12-24 18:41:30"
+    },
+    {
+      "id": "2",
+      "event_name": "generate_lead",
+      "timestamp": "2025-12-24 18:41:26"
+    },
+    {
+      "id": "1",
+      "event_name": "page_view",
+      "timestamp": "2025-12-24 18:41:22"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tevent_name\ttimestamp\n4\tpurchase\t2025-12-24 18:41:34\n3\tbegin_checkout\t2025-12-24 18:41:30\n2\tgenerate_lead\t2025-12-24 18:41:26\n1\tpage_view\t2025-12-24 18:41:22\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

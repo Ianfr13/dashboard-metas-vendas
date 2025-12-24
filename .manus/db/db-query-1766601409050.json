@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS gtm_events (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  event_name VARCHAR(100) NOT NULL,\n  event_data JSON,\n  user_id VARCHAR(255),\n  session_id VARCHAR(255),\n  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,\n  ip_address VARCHAR(45),\n  user_agent TEXT,\n  page_url TEXT,\n  referrer TEXT,\n  INDEX idx_event_name (event_name),\n  INDEX idx_timestamp (timestamp),\n  INDEX idx_user_id (user_id)\n)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user gTuCx5NRGBDR5QQ.9ba8bfb62d50 --database kGhctA2StutzGX6UjXzrGZ --execute CREATE TABLE IF NOT EXISTS gtm_events (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  event_name VARCHAR(100) NOT NULL,\n  event_data JSON,\n  user_id VARCHAR(255),\n  session_id VARCHAR(255),\n  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,\n  ip_address VARCHAR(45),\n  user_agent TEXT,\n  page_url TEXT,\n  referrer TEXT,\n  INDEX idx_event_name (event_name),\n  INDEX idx_timestamp (timestamp),\n  INDEX idx_user_id (user_id)\n)",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1569
+}

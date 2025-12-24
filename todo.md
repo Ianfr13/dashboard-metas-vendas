@@ -108,3 +108,14 @@
 - [x] Adicionar funil de vendas
 - [x] Adicionar performance por gateway
 - [ ] Adicionar gráficos de evolução
+
+## Integração com Google Tag Manager
+- [x] Criar tabela gtm_events no banco de dados
+- [x] Criar endpoints REST para receber eventos do GTM
+  - [x] POST /api/gtm/page-view (Views VSL)
+  - [x] POST /api/gtm/generate-lead (Leads Gerados)
+  - [x] POST /api/gtm/begin-checkout (Checkout Iniciado)
+  - [x] POST /api/gtm/purchase (Vendas Concluídas)
+- [ ] Integrar eventos com página de Métricas
+- [x] Criar documentação para gestor de tráfego
+- [x] Testar endpoints

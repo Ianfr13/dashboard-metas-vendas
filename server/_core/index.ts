@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import webhooksRouter from "../routes/webhooks.js";
+import gtmRouter from "../routes/gtm.js";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,6 +39,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Webhooks API (public endpoints)
   app.use("/api/webhooks", webhooksRouter);
+  // GTM Events API (public endpoints)
+  app.use("/api/gtm", gtmRouter);
   // tRPC API
   app.use(
     "/api/trpc",
