@@ -218,3 +218,15 @@
 - [x] Criar barra gradiente: 0-33% vermelho, 33-66% amarelo, 66-100% verde
 - [x] Clarear/escurecer cores dentro de cada faixa de 33%
 - [x] Mostrar quantas vendas devem ser feitas e quanto falta
+
+## Reestruturação Métricas - Funis Separados
+- [x] Criar tab "Funil de Marketing"
+- [x] Mostrar etapas: Views VSL → Leads → Checkout → Vendas
+- [x] Breakdown por produto em cada etapa
+- [x] Métricas: CPL, CPA, ROI, ROAS, taxas de conversão
+- [x] Criar tab "Funil Comercial"
+- [x] Mostrar etapas: Leads → Reuniões Agendadas → Reuniões Realizadas → Propostas → Vendas
+- [x] Breakdown por produto em cada etapa
+- [x] Métricas: Show-up rate, taxa de fechamento, ticket médio
+- [x] Barra gradiente em cada produto
+- [x] Quanto falta para meta por produto
