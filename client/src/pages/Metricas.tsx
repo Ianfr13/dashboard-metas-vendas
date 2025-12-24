@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Target, BarChart3, Home as HomeIcon, Settings, Moon, Sun } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import MobileNav from "@/components/MobileNav";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -89,7 +90,10 @@ export default function Metricas() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Navegação */}
+              {/* Menu Mobile */}
+              <MobileNav />
+              
+              {/* Navegação Desktop */}
               <nav className="hidden md:flex items-center gap-2">
                 <Link href="/">
                   <Button variant={location === "/" ? "default" : "ghost"} className="gap-2">

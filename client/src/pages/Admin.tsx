@@ -10,6 +10,7 @@ import { Plus, Trash2, Save, Edit, Package, Home as HomeIcon, BarChart3, Setting
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
+import MobileNav from "@/components/MobileNav";
 
 export default function Admin() {
   const [location] = useLocation();
@@ -202,7 +203,11 @@ export default function Admin() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <nav className="flex items-center gap-2">
+              {/* Menu Mobile */}
+              <MobileNav />
+              
+              {/* Navegação Desktop */}
+              <nav className="hidden md:flex items-center gap-2">
                 <Link href="/">
                   <Button variant={location === "/" ? "default" : "ghost"} className="gap-2">
                     <HomeIcon className="h-4 w-4" />

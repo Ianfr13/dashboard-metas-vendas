@@ -133,3 +133,10 @@
 ## Toggle de Tema - Página Admin
 - [x] Adicionar toggle dark/light no header da página Admin
 - [x] Garantir consistência visual com outras páginas
+
+## Otimização Mobile - Navegação
+- [x] Criar componente MobileNav com menu hambúrguer
+- [x] Adicionar Sheet/Drawer para menu lateral
+- [x] Integrar em todas as páginas (Home, Métricas, Admin)
+- [x] Garantir que navegação desktop permaneça visível em telas grandes
+- [x] Testar responsividade em diferentes tamanhos de tela

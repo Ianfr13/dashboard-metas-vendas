@@ -8,6 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Moon, Sun, TrendingUp, Users, DollarSign, Target, CalendarIcon, Home as HomeIcon, BarChart3, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import MobileNav from "@/components/MobileNav";
 import GoalGauge from "@/components/GoalGauge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -81,7 +82,10 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Navegação */}
+              {/* Menu Mobile */}
+              <MobileNav />
+              
+              {/* Navegação Desktop */}
               <nav className="hidden md:flex items-center gap-2">
                 <Link href="/">
                   <Button
