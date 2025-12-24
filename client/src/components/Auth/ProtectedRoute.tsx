@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { supabase } from '@/lib/supabase';
 
 interface ProtectedRouteProps {
@@ -55,8 +55,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
+  const [, setLocation] = useLocation();
+
   if (!authenticated) {
-    return <Navigate to="/login" replace />;
+    setLocation('/login');
+    return null;
   }
 
   return <>{children}</>;
