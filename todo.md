@@ -159,3 +159,10 @@
 - [x] Aumentar espessura/opacidade da barra vazia (background)
 - [x] Melhorar contraste em dark mode
 - [x] Melhorar contraste em light mode
+
+## Dropdown de Período e Métricas Detalhadas
+- [x] Adicionar dropdown de período (Dia/Semana/Mês) abaixo das sub-metas
+- [x] Criar cards de métricas: Total, Marketing, Comercial, Ticket Médio
+- [x] Implementar visualização de métricas por período selecionado
+- [x] Adicionar ícones e cores distintas para cada card
+- [x] Mostrar valores esperados vs realizados

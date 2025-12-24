@@ -43,11 +43,32 @@ const scenarios = {
 export default function Home() {
   const [selectedScenario, setSelectedScenario] = useState<"3M" | "4M" | "5M">("3M");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedPeriod, setSelectedPeriod] = useState<"day" | "week" | "month">("month");
   const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
 
   const scenario = scenarios[selectedScenario];
   const avgTicket = 1000;
+
+  // Calcular valores baseados no período selecionado
+  const getPeriodValues = () => {
+    const divisor = selectedPeriod === "day" ? 30 : selectedPeriod === "week" ? 4 : 1;
+    return {
+      total: scenario.total / divisor,
+      marketing: scenario.marketing / divisor,
+      commercial: scenario.commercial / divisor,
+      marketingSales: Math.round(scenario.marketingSales / divisor),
+      commercialSales: Math.round(scenario.commercialSales / divisor),
+      // Valores realizados (mockados - 28.3% do esperado)
+      totalRealized: (scenario.total / divisor) * 0.283,
+      marketingRealized: Math.round((scenario.marketingSales / divisor) * 0.283),
+      commercialRealized: Math.round((scenario.commercialSales / divisor) * 0.283),
+      revenueRealized: (scenario.marketing / divisor) * 0.283,
+    };
+  };
+
+  const periodValues = getPeriodValues();
+  const periodLabel = selectedPeriod === "day" ? "diária" : selectedPeriod === "week" ? "semanal" : "mensal";
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -186,7 +207,21 @@ export default function Home() {
           ]}
         />
 
-        {/* Cards de Overview */}
+        {/* Seletor de Período */}
+        <div className="flex justify-center">
+          <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as "day" | "week" | "month")}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Selecione o período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">Diário</SelectItem>
+              <SelectItem value="week">Semanal</SelectItem>
+              <SelectItem value="month">Mensal</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Cards de Overview - Período Selecionado */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-l-4 border-l-green-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -197,10 +232,10 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                {formatCurrency(scenario.total)}
+                {formatCurrency(periodValues.total)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Meta mensal completa
+                Meta {periodLabel} completa
               </p>
             </CardContent>
           </Card>
@@ -214,7 +249,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                {scenario.marketingSales}
+                {periodValues.marketingSales}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Vendas diretas esperadas
@@ -231,7 +266,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                {scenario.commercialSales}
+                {periodValues.commercialSales}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Vendas high-ticket esperadas
@@ -276,22 +311,22 @@ export default function Home() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Vendas Esperadas</p>
-                    <p className="text-xl font-bold text-foreground">{scenario.marketingSales.toLocaleString('pt-BR')}</p>
+                    <p className="text-xl font-bold text-foreground">{periodValues.marketingSales.toLocaleString('pt-BR')}</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Receita Esperada</p>
                     <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(scenario.marketing)}
+                      {formatCurrency(periodValues.marketing)}
                     </p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Vendas</p>
-                    <p className="text-xl font-bold text-green-500">0</p>
+                    <p className="text-xl font-bold text-green-500">{periodValues.marketingRealized}</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Receita</p>
                     <p className="text-xl font-bold text-green-500">
-                      R$ 0
+                      {formatCurrency(periodValues.revenueRealized)}
                     </p>
                   </div>
                 </div>
@@ -308,22 +343,22 @@ export default function Home() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Vendas Esperadas</p>
-                    <p className="text-xl font-bold text-foreground">{scenario.commercialSales.toLocaleString('pt-BR')}</p>
+                    <p className="text-xl font-bold text-foreground">{periodValues.commercialSales.toLocaleString('pt-BR')}</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Receita Esperada</p>
                     <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(scenario.commercial)}
+                      {formatCurrency(periodValues.commercial)}
                     </p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Vendas</p>
-                    <p className="text-xl font-bold text-green-500">0</p>
+                    <p className="text-xl font-bold text-green-500">{periodValues.commercialRealized}</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Receita</p>
                     <p className="text-xl font-bold text-green-500">
-                      R$ 0
+                      {formatCurrency(periodValues.commercial * 0.283)}
                     </p>
                   </div>
                 </div>
