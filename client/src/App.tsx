@@ -7,14 +7,46 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import Metricas from "./pages/Metricas";
+import { LoginPage } from "./components/Auth/LoginPage";
+import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
+import { Header } from "./components/Auth/Header";
 
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/admin"} component={Admin} />
-      <Route path={"/metricas"} component={Metricas} />
-      <Route path={"/404"} component={NotFound} />
+      {/* Rota pública de login */}
+      <Route path="/login" component={LoginPage} />
+      
+      {/* Rotas protegidas */}
+      <Route path="/">
+        {() => (
+          <ProtectedRoute>
+            <Header />
+            <Home />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      <Route path="/admin">
+        {() => (
+          <ProtectedRoute>
+            <Header />
+            <Admin />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      <Route path="/metricas">
+        {() => (
+          <ProtectedRoute>
+            <Header />
+            <Metricas />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      <Route path="/404" component={NotFound} />
+      
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
