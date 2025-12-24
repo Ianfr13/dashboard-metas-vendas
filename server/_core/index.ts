@@ -7,7 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import webhooksRouter from "../routes/webhooks.js";
+// Webhooks removidos - dados vêm via GTM
 import gtmRouter from "../routes/gtm.js";
 import funilMetricasRouter from "../routes/funil-metricas.js";
 import funisRouter from "../routes/funis.js";
@@ -39,8 +39,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
-  // Webhooks API (public endpoints)
-  app.use("/api/webhooks", webhooksRouter);
+  // Webhooks removidos - dados vêm via GTM
   // GTM Events API (public endpoints)
   app.use("/api/gtm", gtmRouter);
   // Funil Metricas API (public endpoints)

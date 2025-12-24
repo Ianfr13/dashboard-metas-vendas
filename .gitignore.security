@@ -1,0 +1,70 @@
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# ⚠️ NUNCA commite estes arquivos:
+.env.production.local
+.env.development.local
+
+# Service role key (se existir arquivo separado)
+service-role-key.txt
+supabase-service-key.txt
+
+# Logs que podem conter informações sensíveis
+*.log
+logs/
+*.log.*
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.backup
+*.bak
+
+# ============================================
+# NOTA IMPORTANTE SOBRE SEGURANÇA
+# ============================================
+# 
+# ✅ É SEGURO commitar:
+#    - .env.example (com valores de exemplo)
+#    - Anon keys do Supabase
+#    - URLs públicas
+#
+# ❌ NUNCA commite:
+#    - .env (valores reais)
+#    - Service role keys
+#    - Senhas
+#    - Tokens de API privados
+#    - Chaves de criptografia
+#

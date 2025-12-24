@@ -1,7 +1,5 @@
 import { Router } from "express";
 import { getDb } from "../db";
-import { gtmEvents, products } from "../../drizzle/schema";
-import { sql, count, gte, lte, eq, like } from "drizzle-orm";
 
 const router = Router();
 
@@ -24,21 +22,25 @@ router.post("/event", async (req, res) => {
       return res.status(400).json({ error: "event_name is required" });
     }
 
-    const db = await getDb();
-    if (!db) {
+    const supabase = await getDb();
+    if (!supabase) {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    await db.insert(gtmEvents).values({
-      eventName: event_name,
-      eventData: event_data ? JSON.stringify(event_data) : null,
-      userId: user_id || null,
-      sessionId: session_id || null,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] as string || null,
-      userAgent: req.headers["user-agent"] || null,
-      pageUrl: page_url || null,
-      referrer: referrer || null,
-    });
+    const { error } = await supabase
+      .from('gtm_events')
+      .insert({
+        event_name: event_name,
+        event_data: event_data ? JSON.stringify(event_data) : null,
+        user_id: user_id || null,
+        session_id: session_id || null,
+        ip_address: req.ip || req.headers["x-forwarded-for"] as string || null,
+        user_agent: req.headers["user-agent"] || null,
+        page_url: page_url || null,
+        referrer: referrer || null,
+      });
+
+    if (error) throw error;
 
     res.json({ success: true, message: "Event recorded successfully" });
   } catch (error) {
@@ -61,25 +63,29 @@ router.post("/page-view", async (req, res) => {
       referrer,
     } = req.body;
 
-    const db = await getDb();
-    if (!db) {
+    const supabase = await getDb();
+    if (!supabase) {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    await db.insert(gtmEvents).values({
-      eventName: "page_view",
-      eventData: JSON.stringify({
-        page_url,
-        page_title,
-        referrer,
-      }),
-      userId: user_id || null,
-      sessionId: session_id || null,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] as string || null,
-      userAgent: req.headers["user-agent"] || null,
-      pageUrl: page_url || null,
-      referrer: referrer || null,
-    });
+    const { error } = await supabase
+      .from('gtm_events')
+      .insert({
+        event_name: "page_view",
+        event_data: JSON.stringify({
+          page_url,
+          page_title,
+          referrer,
+        }),
+        user_id: user_id || null,
+        session_id: session_id || null,
+        ip_address: req.ip || req.headers["x-forwarded-for"] as string || null,
+        user_agent: req.headers["user-agent"] || null,
+        page_url: page_url || null,
+        referrer: referrer || null,
+      });
+
+    if (error) throw error;
 
     res.json({ success: true, message: "Page view recorded" });
   } catch (error) {
@@ -105,26 +111,30 @@ router.post("/generate-lead", async (req, res) => {
       referrer,
     } = req.body;
 
-    const db = await getDb();
-    if (!db) {
+    const supabase = await getDb();
+    if (!supabase) {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    await db.insert(gtmEvents).values({
-      eventName: "generate_lead",
-      eventData: JSON.stringify({
-        email,
-        name,
-        phone,
-        source,
-      }),
-      userId: user_id || null,
-      sessionId: session_id || null,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] as string || null,
-      userAgent: req.headers["user-agent"] || null,
-      pageUrl: page_url || null,
-      referrer: referrer || null,
-    });
+    const { error } = await supabase
+      .from('gtm_events')
+      .insert({
+        event_name: "generate_lead",
+        event_data: JSON.stringify({
+          email,
+          name,
+          phone,
+          source,
+        }),
+        user_id: user_id || null,
+        session_id: session_id || null,
+        ip_address: req.ip || req.headers["x-forwarded-for"] as string || null,
+        user_agent: req.headers["user-agent"] || null,
+        page_url: page_url || null,
+        referrer: referrer || null,
+      });
+
+    if (error) throw error;
 
     res.json({ success: true, message: "Lead recorded" });
   } catch (error) {
@@ -150,26 +160,30 @@ router.post("/begin-checkout", async (req, res) => {
       referrer,
     } = req.body;
 
-    const db = await getDb();
-    if (!db) {
+    const supabase = await getDb();
+    if (!supabase) {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    await db.insert(gtmEvents).values({
-      eventName: "begin_checkout",
-      eventData: JSON.stringify({
-        product_id,
-        product_name,
-        value,
-        currency: currency || "BRL",
-      }),
-      userId: user_id || null,
-      sessionId: session_id || null,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] as string || null,
-      userAgent: req.headers["user-agent"] || null,
-      pageUrl: page_url || null,
-      referrer: referrer || null,
-    });
+    const { error } = await supabase
+      .from('gtm_events')
+      .insert({
+        event_name: "begin_checkout",
+        event_data: JSON.stringify({
+          product_id,
+          product_name,
+          value,
+          currency: currency || "BRL",
+        }),
+        user_id: user_id || null,
+        session_id: session_id || null,
+        ip_address: req.ip || req.headers["x-forwarded-for"] as string || null,
+        user_agent: req.headers["user-agent"] || null,
+        page_url: page_url || null,
+        referrer: referrer || null,
+      });
+
+    if (error) throw error;
 
     res.json({ success: true, message: "Checkout initiated recorded" });
   } catch (error) {
@@ -201,8 +215,8 @@ router.post("/purchase", async (req, res) => {
       return res.status(400).json({ error: "transaction_id and value are required" });
     }
 
-    const db = await getDb();
-    if (!db) {
+    const supabase = await getDb();
+    if (!supabase) {
       return res.status(500).json({ error: "Database not available" });
     }
 
@@ -211,42 +225,46 @@ router.post("/purchase", async (req, res) => {
     let identifiedFunilNome: string | null = null;
     
     if (page_url) {
-      // Buscar funis cadastrados no localStorage (simulando busca no banco)
-      // Em produção, isso viria de uma tabela de funis no banco
-      // Por enquanto, vamos armazenar apenas a URL no event_data
-      // e processar depois na página de Métricas
+      // Buscar funis cadastrados
+      const { data: funis } = await supabase
+        .from('funis')
+        .select('*')
+        .not('url', 'is', null)
+        .neq('url', '');
       
-      // TODO: Criar tabela de funis no banco e buscar aqui
-      // const matchedFunil = await db.query.funis.findFirst({
-      //   where: (funis, { and, isNotNull, ne, like }) =>
-      //     and(
-      //       isNotNull(funis.url),
-      //       ne(funis.url, ''),
-      //       like(page_url, `%${funis.url}%`)
-      //     )
-      // });
+      if (funis) {
+        const matchedFunil = funis.find(f => page_url.includes(f.url));
+        if (matchedFunil) {
+          identifiedFunilId = matchedFunil.id.toString();
+          identifiedFunilNome = matchedFunil.nome;
+        }
+      }
     }
 
-    await db.insert(gtmEvents).values({
-      eventName: "purchase",
-      eventData: JSON.stringify({
-        transaction_id,
-        value,
-        currency: currency || "BRL",
-        product_id: product_id || null,
-        product_name: product_name || null,
-        quantity: quantity || 1,
-        funil_id: identifiedFunilId,
-        funil_nome: identifiedFunilNome,
-        page_url, // Armazenar URL para identificar funil depois
-      }),
-      userId: user_id || null,
-      sessionId: session_id || null,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] as string || null,
-      userAgent: req.headers["user-agent"] || null,
-      pageUrl: page_url || null,
-      referrer: referrer || null,
-    });
+    const { error } = await supabase
+      .from('gtm_events')
+      .insert({
+        event_name: "purchase",
+        event_data: JSON.stringify({
+          transaction_id,
+          value,
+          currency: currency || "BRL",
+          product_id: product_id || null,
+          product_name: product_name || null,
+          quantity: quantity || 1,
+          funil_id: identifiedFunilId,
+          funil_nome: identifiedFunilNome,
+          page_url,
+        }),
+        user_id: user_id || null,
+        session_id: session_id || null,
+        ip_address: req.ip || req.headers["x-forwarded-for"] as string || null,
+        user_agent: req.headers["user-agent"] || null,
+        page_url: page_url || null,
+        referrer: referrer || null,
+      });
+
+    if (error) throw error;
 
     res.json({ 
       success: true, 
@@ -255,7 +273,7 @@ router.post("/purchase", async (req, res) => {
         id: identifiedFunilId,
         nome: identifiedFunilNome
       } : null,
-      note: "Funil será identificado pela URL na página de Métricas"
+      note: identifiedFunilId ? "Funil identificado pela URL" : "Funil será identificado pela URL na página de Métricas"
     });
   } catch (error) {
     console.error("Error recording purchase:", error);
@@ -271,24 +289,32 @@ router.get("/stats", async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
 
-    const db = await getDb();
-    if (!db) {
+    const supabase = await getDb();
+    if (!supabase) {
       return res.status(500).json({ error: "Database not available" });
     }
 
-    // Usar Drizzle ORM para query
-    const results = await db
-      .select({
-        event_name: gtmEvents.eventName,
-        count: count(),
-      })
-      .from(gtmEvents)
-      .where(
-        sql`${gtmEvents.timestamp} >= ${start_date || "2025-01-01"} AND ${gtmEvents.timestamp} <= ${end_date || "2025-12-31"}`
-      )
-      .groupBy(gtmEvents.eventName);
+    // Query com agregação
+    const { data, error } = await supabase
+      .from('gtm_events')
+      .select('event_name, timestamp')
+      .gte('timestamp', start_date || '2025-01-01')
+      .lte('timestamp', end_date || '2025-12-31');
 
-    res.json({ success: true, data: results });
+    if (error) throw error;
+
+    // Agregar os resultados manualmente
+    const aggregated = data?.reduce((acc: any, row: any) => {
+      const existing = acc.find((item: any) => item.event_name === row.event_name);
+      if (existing) {
+        existing.count++;
+      } else {
+        acc.push({ event_name: row.event_name, count: 1 });
+      }
+      return acc;
+    }, []);
+
+    res.json({ success: true, data: aggregated || [] });
   } catch (error) {
     console.error("Error fetching GTM stats:", error);
     res.status(500).json({ error: "Failed to fetch stats" });

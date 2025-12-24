@@ -1,28 +1,37 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { products } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
 
 export const productsRouter = router({
   // Listar todos os produtos
   list: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    const supabase = await getDb();
+    if (!supabase) throw new Error("Database not available");
     
-    const allProducts = await db.select().from(products).where(eq(products.active, 1));
-    return allProducts;
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('active', 1);
+    
+    if (error) throw error;
+    return data || [];
   }),
 
   // Obter um produto específico
   get: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const supabase = await getDb();
+      if (!supabase) throw new Error("Database not available");
       
-      const [product] = await db.select().from(products).where(eq(products.id, input.id));
-      return product;
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', input.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
     }),
 
   // Criar novo produto
@@ -36,18 +45,23 @@ export const productsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const supabase = await getDb();
+      if (!supabase) throw new Error("Database not available");
       
-      const result = await db.insert(products).values({
-        name: input.name,
-        price: input.price.toString(),
-        type: input.type,
-        channel: input.channel,
-        active: 1,
-      });
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          name: input.name,
+          price: input.price.toString(),
+          type: input.type,
+          channel: input.channel,
+          active: 1,
+        })
+        .select()
+        .single();
       
-      return { id: Number(result[0].insertId), ...input };
+      if (error) throw error;
+      return data;
     }),
 
   // Atualizar produto
@@ -63,8 +77,8 @@ export const productsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const supabase = await getDb();
+      if (!supabase) throw new Error("Database not available");
       
       const { id, ...updateData } = input;
       const updates: any = {};
@@ -75,20 +89,30 @@ export const productsRouter = router({
       if (updateData.channel) updates.channel = updateData.channel;
       if (updateData.active !== undefined) updates.active = updateData.active;
       
-      await db.update(products).set(updates).where(eq(products.id, id));
+      const { data, error } = await supabase
+        .from('products')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
       
-      return { id, ...updates };
+      if (error) throw error;
+      return data;
     }),
 
   // Deletar produto (soft delete)
   delete: publicProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      const supabase = await getDb();
+      if (!supabase) throw new Error("Database not available");
       
-      await db.update(products).set({ active: 0 }).where(eq(products.id, input.id));
+      const { error } = await supabase
+        .from('products')
+        .update({ active: 0 })
+        .eq('id', input.id);
       
+      if (error) throw error;
       return { success: true };
     }),
 });
