@@ -68,3 +68,15 @@
 - [x] Permitir comparação entre períodos
 - [x] Adaptar dashboard para uso permanente (não apenas janeiro)
 - [x] Buscar dados reais do banco por período selecionado
+
+## Página Admin e Ajustes de Sub-metas
+- [x] Criar rota /admin para configuração de metas
+- [x] Criar interface para definir meta principal
+- [x] Criar interface para adicionar/remover sub-metas personalizadas
+- [x] Salvar configurações no banco de dados
+- [x] Remover "Próximas Metas" do Home
+- [x] Mostrar apenas sub-metas no Home
+- [x] Aumentar tamanho do gauge
+- [x] Adicionar valor da meta final no gauge
+- [ ] Implementar lógica para riscar sub-metas atingidas
+- [ ] Buscar dados reais do banco para calcular progresso

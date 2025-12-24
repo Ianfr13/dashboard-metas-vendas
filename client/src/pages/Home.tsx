@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Moon, Sun, TrendingUp, Users, DollarSign, Target, CalendarIcon } from "lucide-react";
-import { GoalGauge } from "@/components/GoalGauge";
+import GoalGauge from "@/components/GoalGauge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -141,18 +141,17 @@ export default function Home() {
 
         {/* Goal Gauge */}
         <GoalGauge
+          percentage={(850000 / scenario.total) * 100}
           current={850000}
           target={scenario.total}
-          completedMilestones={[
-            100000,
-            250000,
-            500000,
-          ]}
-          upcomingMilestones={[
-            1000000,
-            1500000,
-            2000000,
-            scenario.total,
+          subGoals={[
+            { value: 100000, achieved: true },
+            { value: 250000, achieved: true },
+            { value: 500000, achieved: true },
+            { value: 1000000, achieved: false },
+            { value: 1500000, achieved: false },
+            { value: 2000000, achieved: false },
+            { value: scenario.total, achieved: false },
           ]}
         />
 

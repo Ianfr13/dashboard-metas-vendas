@@ -72,6 +72,7 @@ export const goalsRouter = router({
         targetCommercialSales: z.number(),
         startDate: z.date(),
         endDate: z.date(),
+        subGoals: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
