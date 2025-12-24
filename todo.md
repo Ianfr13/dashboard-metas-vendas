@@ -175,3 +175,8 @@
 - [x] Detectar quando meta é batida no período selecionado
 - [x] Ajustar gauge para mostrar valores além de 100%
 - [x] Continuar contagem e mostrar quanto excedeu a meta
+
+## Correção de Erro - Canvas Confetti
+- [x] Criar canvas element explicitamente para confetti
+- [x] Garantir que canvas existe antes de chamar confetti
+- [x] Adicionar cleanup do canvas ao desmontar componente
