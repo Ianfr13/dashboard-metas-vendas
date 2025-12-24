@@ -111,43 +111,13 @@ export default function Metricas() {
                 </Link>
               </nav>
 
-              {/* Filtro de Período */}
-              <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Diário</SelectItem>
-                  <SelectItem value="weekly">Semanal</SelectItem>
-                  <SelectItem value="monthly">Mensal</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Calendário */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <CalendarIcon className="h-4 w-4" />
-                    {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-
               {/* Toggle Tema */}
-              <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                {theme === "dark" ? "🌞" : "🌙"}
-              </Button>
-
-              <Button asChild variant="outline">
-                <a href="/">← Dashboard</a>
+              <Button variant="outline" size="icon" onClick={toggleTheme} className="rounded-full">
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
               </Button>
             </div>
           </div>
@@ -156,6 +126,46 @@ export default function Metricas() {
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
+        {/* Filtros */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold">Análise de Performance</h2>
+            <p className="text-sm text-muted-foreground">Acompanhe suas métricas em tempo real</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {/* Filtro de Período */}
+            <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Diário</SelectItem>
+                <SelectItem value="weekly">Semanal</SelectItem>
+                <SelectItem value="monthly">Mensal</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Calendário */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
         <Tabs defaultValue="geral" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="geral">Visão Geral</TabsTrigger>

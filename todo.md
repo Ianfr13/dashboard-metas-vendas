@@ -124,3 +124,8 @@
 - [x] Adicionar botões de navegação no header (Home, Métricas, Admin)
 - [x] Destacar página ativa
 - [x] Garantir responsividade em mobile
+
+## Correção de Layout - Página Métricas
+- [x] Remover filtros de data/período do header
+- [x] Mover filtros para área de conteúdo principal
+- [x] Manter apenas navegação e toggle de tema no header
