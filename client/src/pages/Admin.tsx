@@ -30,10 +30,17 @@ interface Funil {
   produtos: ProdutoNoFunil[];
 }
 
+interface SubMeta {
+  id: string;
+  valor: number;
+  cor: string;
+}
+
 interface Configuracao {
   metaMensal: number;
   produtos: Produto[];
   funis: Funil[];
+  subMetas: SubMeta[];
   distribuicao: {
     marketing: number;
     comercial: number;
@@ -98,6 +105,15 @@ export default function Admin() {
       ano: 2025,
       diasUteis: 22,
     },
+    subMetas: [
+      { id: "1", valor: 100000, cor: "#10b981" },
+      { id: "2", valor: 250000, cor: "#10b981" },
+      { id: "3", valor: 500000, cor: "#10b981" },
+      { id: "4", valor: 1000000, cor: "#3b82f6" },
+      { id: "5", valor: 1500000, cor: "#3b82f6" },
+      { id: "6", valor: 2000000, cor: "#3b82f6" },
+      { id: "7", valor: 3000000, cor: "#3b82f6" },
+    ],
   });
 
   // Estados para formulários
@@ -422,8 +438,9 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="metas" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="metas">Metas</TabsTrigger>
+            <TabsTrigger value="submetas">Sub-Metas</TabsTrigger>
             <TabsTrigger value="produtos">Produtos</TabsTrigger>
             <TabsTrigger value="funis">Funis</TabsTrigger>
             <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
@@ -510,6 +527,129 @@ export default function Admin() {
                       onChange={(e) => setConfig({ ...config, periodo: { ...config.periodo, diasUteis: parseInt(e.target.value) || 22 } })}
                     />
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab Sub-Metas */}
+          <TabsContent value="submetas" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Adicionar Sub-Meta</CardTitle>
+                <CardDescription>Crie marcos de progresso para motivar a equipe</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Valor (R$)</Label>
+                    <Input
+                      type="number"
+                      placeholder="100000"
+                      id="novaSubMetaValor"
+                    />
+                  </div>
+                  <div>
+                    <Label>Cor</Label>
+                    <Input
+                      type="color"
+                      defaultValue="#10b981"
+                      id="novaSubMetaCor"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={() => {
+                        const valorInput = document.getElementById("novaSubMetaValor") as HTMLInputElement;
+                        const corInput = document.getElementById("novaSubMetaCor") as HTMLInputElement;
+                        const valor = parseFloat(valorInput.value);
+                        if (!valor) {
+                          toast.error("Digite o valor da sub-meta");
+                          return;
+                        }
+                        const nova: SubMeta = {
+                          id: Date.now().toString(),
+                          valor,
+                          cor: corInput.value,
+                        };
+                        setConfig({ ...config, subMetas: [...config.subMetas, nova].sort((a, b) => a.valor - b.valor) });
+                        valorInput.value = "";
+                        corInput.value = "#10b981";
+                        toast.success("Sub-meta adicionada!");
+                      }}
+                      className="gap-2 w-full"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Adicionar
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Sub-Metas Configuradas</CardTitle>
+                <CardDescription>{config.subMetas.length} sub-metas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {config.subMetas.map((subMeta) => (
+                    <div key={subMeta.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                      <div
+                        className="w-8 h-8 rounded-full border-2"
+                        style={{ backgroundColor: subMeta.cor }}
+                      />
+                      <div className="flex-1">
+                        <Label className="text-xs">Valor</Label>
+                        <Input
+                          type="number"
+                          value={subMeta.valor}
+                          onChange={(e) => {
+                            const novoValor = parseFloat(e.target.value) || 0;
+                            setConfig({
+                              ...config,
+                              subMetas: config.subMetas
+                                .map(sm => (sm.id === subMeta.id ? { ...sm, valor: novoValor } : sm))
+                                .sort((a, b) => a.valor - b.valor),
+                            });
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-xs">Cor</Label>
+                        <Input
+                          type="color"
+                          value={subMeta.cor}
+                          onChange={(e) => {
+                            setConfig({
+                              ...config,
+                              subMetas: config.subMetas.map(sm =>
+                                sm.id === subMeta.id ? { ...sm, cor: e.target.value } : sm
+                              ),
+                            });
+                          }}
+                        />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Valor</p>
+                        <p className="text-lg font-bold">{formatCurrency(subMeta.valor)}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm("Remover esta sub-meta?")) {
+                            setConfig({ ...config, subMetas: config.subMetas.filter(sm => sm.id !== subMeta.id) });
+                            toast.success("Sub-meta removida!");
+                          }
+                        }}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

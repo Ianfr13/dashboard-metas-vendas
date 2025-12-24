@@ -42,6 +42,19 @@ const scenarios = {
 
 
 export default function Home() {
+  // Ler configurações da Admin
+  const [config, setConfig] = useState(() => {
+    const saved = localStorage.getItem("dashboard-config");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Erro ao ler config:", e);
+      }
+    }
+    return null;
+  });
+
   const [selectedScenario, setSelectedScenario] = useState<"3M" | "4M" | "5M">("3M");
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: new Date(2025, 0, 1), // 1 de janeiro
@@ -228,15 +241,16 @@ export default function Home() {
           percentage={(periodValues.totalRealized / periodValues.total) * 100}
           current={periodValues.totalRealized}
           target={periodValues.total}
-          subGoals={[
-            { value: 100000, achieved: true },
-            { value: 250000, achieved: true },
-            { value: 500000, achieved: true },
-            { value: 1000000, achieved: false },
-            { value: 1500000, achieved: false },
-            { value: 2000000, achieved: false },
-            { value: scenario.total, achieved: false },
-          ]}
+          subGoals={(config?.subMetas || [
+            { id: "1", valor: 100000, cor: "#10b981" },
+            { id: "2", valor: 250000, cor: "#10b981" },
+            { id: "3", valor: 500000, cor: "#10b981" },
+            { id: "4", valor: 1000000, cor: "#3b82f6" },
+            { id: "5", valor: 1500000, cor: "#3b82f6" },
+            { id: "6", valor: 2000000, cor: "#3b82f6" },
+            { id: "7", valor: 3000000, cor: "#3b82f6" },
+          ]).map((sm: any) => ({ value: sm.valor, achieved: periodValues.totalRealized >= sm.valor })).slice(0, 6)
+          }
         />
 
         {/* Seletor de Período */}

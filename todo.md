@@ -289,3 +289,14 @@
 - [x] Permitir deletar funil completo
 - [x] Calcular ticket médio por funil
 - [x] Visualização de múltiplos funis
+
+## Integração Admin com Dashboard
+- [x] Adicionar tab "Sub-Metas" na Admin
+- [x] Interface para adicionar/remover/editar sub-metas
+- [x] Configurar valor e cor de cada sub-meta
+- [x] Conectar Home ao localStorage da Admin (ler produtos, funis, metas)
+- [ ] Conectar Métricas ao localStorage da Admin
+- [ ] Adicionar seletor de funil na página Métricas
+- [ ] Mostrar métricas de funil completo (todas etapas juntas)
+- [ ] Mostrar métricas por etapa individual do funil
+- [ ] Calcular ticket médio real do funil nas métricas
