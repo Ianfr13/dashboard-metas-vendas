@@ -66,7 +66,8 @@ export default function Home() {
               <img
                 src="/LOGO_-21.png"
                 alt="DouraVita"
-                className="h-10 w-auto transition-all dark:brightness-110 dark:contrast-110"
+                className="h-10 w-auto transition-all filter drop-shadow-md"
+                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
               />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">
@@ -101,21 +102,21 @@ export default function Home() {
         <GoalGauge
           current={850000}
           target={scenario.total}
-          completedGoals={[
-            "Validar VSL principal (R$ 100k)",
-            "Primeiras 50 vendas orgânicas",
-            "Configurar time comercial",
+          completedMilestones={[
+            100000,
+            250000,
+            500000,
           ]}
-          upcomingGoals={[
-            "Atingir R$ 1M em vendas diretas",
-            "Escalar para R$ 50k/dia",
-            "Fechar 10 vendas high-ticket",
-            "Atingir meta mensal de R$ 3M",
+          upcomingMilestones={[
+            1000000,
+            1500000,
+            2000000,
+            scenario.total,
           ]}
         />
 
         {/* Seletor de Cenários */}
-        <Card className="border-2">
+        <Card className="border border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />

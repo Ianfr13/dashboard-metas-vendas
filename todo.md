@@ -38,3 +38,13 @@
 - [x] Adicionar lista de metas batidas (com linha riscada)
 - [x] Adicionar lista de próximas metas
 - [x] Posicionar gauge e listas no topo da página
+
+## Correções Urgentes de Design
+- [x] Corrigir formato do gauge para semicírculo correto (.-.)  
+- [x] Mostrar apenas % da meta no centro do gauge
+- [x] Metas devem ser apenas valores monetários (R$ 500k, R$ 1M, etc)
+- [x] Corrigir fundo branco puro (sem tom verde)
+- [x] Tornar logo visível em ambos os temas
+- [x] Adicionar filtro de período (diário, semanal, mensal)
+- [x] Otimizar paleta de cores completa
+- [x] Melhorar contraste e legibilidade
