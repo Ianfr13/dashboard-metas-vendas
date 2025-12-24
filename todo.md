@@ -276,3 +276,16 @@
 - [x] Calcular ticket médio real baseado em: valor base + (backend × taxa) + (downsell × taxa)
 - [x] Mostrar preview do ticket médio calculado
 - [x] Permitir edição manual do ticket médio (flag customizado)
+
+## Refatoração Sistema de Funis
+- [x] Separar produtos de funis (produtos simples: nome + valor + canal)
+- [x] Criar entidade "Funil" com nome e lista de produtos
+- [x] Interface para criar novo funil (nome do funil)
+- [x] Interface para adicionar produtos existentes ao funil
+- [x] Definir tipo de cada produto no funil (Frontend/Backend/Downsell)
+- [x] Definir taxa de take para Backend/Downsell
+- [x] Permitir remover produtos do funil
+- [x] Permitir editar nome do funil
+- [x] Permitir deletar funil completo
+- [x] Calcular ticket médio por funil
+- [x] Visualização de múltiplos funis

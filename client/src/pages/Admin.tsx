@@ -5,8 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Home as HomeIcon, BarChart3, Settings, Moon, Sun, Save, RotateCcw, Plus, Trash2, Calculator, TrendingUp, ArrowRight } from "lucide-react";
+import { Home as HomeIcon, BarChart3, Settings, Moon, Sun, Save, RotateCcw, Plus, Trash2, Calculator, Edit2, Check, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -15,18 +14,26 @@ import MobileNav from "@/components/MobileNav";
 interface Produto {
   id: string;
   nome: string;
-  valor: number; // Preço fixo do produto
-  tipoFunil: "frontend" | "backend" | "downsell";
-  produtoPai?: string; // ID do produto frontend (para backend/downsell)
-  taxaTake: number; // % esperada de conversão para backend/downsell
+  valor: number;
   canal: "marketing" | "comercial" | "ambos";
-  ticketMedioReal?: number; // Calculado automaticamente ou customizado
-  customizado: boolean;
+}
+
+interface ProdutoNoFunil {
+  produtoId: string;
+  tipo: "frontend" | "backend" | "downsell";
+  taxaTake: number; // % para backend/downsell
+}
+
+interface Funil {
+  id: string;
+  nome: string;
+  produtos: ProdutoNoFunil[];
 }
 
 interface Configuracao {
   metaMensal: number;
   produtos: Produto[];
+  funis: Funil[];
   distribuicao: {
     marketing: number;
     comercial: number;
@@ -57,43 +64,20 @@ export default function Admin() {
   const [config, setConfig] = useState<Configuracao>({
     metaMensal: 3000000,
     produtos: [
-      { 
-        id: "1", 
-        nome: "Creatina Pro 797", 
-        valor: 797, 
-        tipoFunil: "frontend",
-        taxaTake: 100,
-        canal: "ambos", 
-        customizado: false 
-      },
-      { 
-        id: "2", 
-        nome: "Creatina Pro + Whey Combo", 
-        valor: 1200, 
-        tipoFunil: "backend",
-        produtoPai: "1",
-        taxaTake: 30,
-        canal: "marketing", 
-        customizado: false 
-      },
-      { 
-        id: "3", 
-        nome: "Creatina Basic", 
-        valor: 397, 
-        tipoFunil: "downsell",
-        produtoPai: "1",
-        taxaTake: 20,
-        canal: "marketing", 
-        customizado: false 
-      },
-      { 
-        id: "4", 
-        nome: "Ômega-3 Ultra", 
-        valor: 180, 
-        tipoFunil: "frontend",
-        taxaTake: 100,
-        canal: "comercial", 
-        customizado: false 
+      { id: "1", nome: "Creatina Pro 797", valor: 797, canal: "marketing" },
+      { id: "2", nome: "Creatina Pro + Whey Combo", valor: 1200, canal: "marketing" },
+      { id: "3", nome: "Creatina Basic", valor: 397, canal: "marketing" },
+      { id: "4", nome: "Ômega-3 Ultra", valor: 180, canal: "comercial" },
+    ],
+    funis: [
+      {
+        id: "f1",
+        nome: "Funil Creatina",
+        produtos: [
+          { produtoId: "1", tipo: "frontend", taxaTake: 100 },
+          { produtoId: "2", tipo: "backend", taxaTake: 30 },
+          { produtoId: "3", tipo: "downsell", taxaTake: 20 },
+        ],
       },
     ],
     distribuicao: {
@@ -117,14 +101,10 @@ export default function Admin() {
   });
 
   // Estados para formulários
-  const [novoProduto, setNovoProduto] = useState({ 
-    nome: "", 
-    valor: "", 
-    tipoFunil: "frontend" as const,
-    produtoPai: "",
-    taxaTake: "100",
-    canal: "ambos" as const 
-  });
+  const [novoProduto, setNovoProduto] = useState({ nome: "", valor: "", canal: "ambos" as const });
+  const [novoFunil, setNovoFunil] = useState({ nome: "" });
+  const [editandoFunil, setEditandoFunil] = useState<string | null>(null);
+  const [nomeEditado, setNomeEditado] = useState("");
 
   // Carregar configuração do localStorage
   useEffect(() => {
@@ -138,30 +118,43 @@ export default function Admin() {
     }
   }, []);
 
-  // Calcular ticket médio real de um funil
-  const calcularTicketMedio = (produtoId: string): number => {
-    const produto = config.produtos.find(p => p.id === produtoId);
-    if (!produto) return 0;
+  // Calcular ticket médio de um funil
+  const calcularTicketMedioFunil = (funil: Funil): number => {
+    const frontend = funil.produtos.find(p => p.tipo === "frontend");
+    if (!frontend) return 0;
 
-    // Se tem ticket médio customizado, usa ele
-    if (produto.ticketMedioReal && produto.customizado) {
-      return produto.ticketMedioReal;
-    }
+    const produtoFrontend = config.produtos.find(p => p.id === frontend.produtoId);
+    if (!produtoFrontend) return 0;
 
-    // Se é frontend, calcula: valor base + backends + downsells
-    if (produto.tipoFunil === "frontend") {
-      const backends = config.produtos.filter(p => p.tipoFunil === "backend" && p.produtoPai === produtoId);
-      const downsells = config.produtos.filter(p => p.tipoFunil === "downsell" && p.produtoPai === produtoId);
+    let ticketMedio = produtoFrontend.valor;
 
-      const valorBackends = backends.reduce((acc, b) => acc + ((b.valor - produto.valor) * b.taxaTake / 100), 0);
-      const valorDownsells = downsells.reduce((acc, d) => acc + ((d.valor - produto.valor) * d.taxaTake / 100), 0);
+    // Adicionar backends
+    funil.produtos
+      .filter(p => p.tipo === "backend")
+      .forEach(backend => {
+        const produtoBackend = config.produtos.find(p => p.id === backend.produtoId);
+        if (produtoBackend) {
+          ticketMedio += (produtoBackend.valor - produtoFrontend.valor) * backend.taxaTake / 100;
+        }
+      });
 
-      return produto.valor + valorBackends + valorDownsells;
-    }
+    // Adicionar downsells
+    funil.produtos
+      .filter(p => p.tipo === "downsell")
+      .forEach(downsell => {
+        const produtoDownsell = config.produtos.find(p => p.id === downsell.produtoId);
+        if (produtoDownsell) {
+          ticketMedio += (produtoDownsell.valor - produtoFrontend.valor) * downsell.taxaTake / 100;
+        }
+      });
 
-    // Se é backend ou downsell, retorna o valor dele
-    return produto.valor;
+    return ticketMedio;
   };
+
+  // Calcular ticket médio geral (média de todos os funis)
+  const ticketMedioGeral = config.funis.length > 0
+    ? config.funis.reduce((acc, f) => acc + calcularTicketMedioFunil(f), 0) / config.funis.length
+    : 1;
 
   // Salvar configuração
   const salvarConfiguracao = () => {
@@ -178,11 +171,6 @@ export default function Admin() {
   };
 
   // Cálculos automáticos
-  const ticketMedioGeral = config.produtos
-    .filter(p => p.tipoFunil === "frontend")
-    .reduce((acc, p) => acc + calcularTicketMedio(p.id), 0) / 
-    config.produtos.filter(p => p.tipoFunil === "frontend").length || 1;
-
   const calculos = {
     metaDiaria: config.metaMensal / 30,
     metaSemanal: config.metaMensal / 4,
@@ -199,15 +187,10 @@ export default function Admin() {
     },
   };
 
-  // Adicionar produto
+  // ===== PRODUTOS =====
   const adicionarProduto = () => {
     if (!novoProduto.nome || !novoProduto.valor) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
-    }
-
-    if (novoProduto.tipoFunil !== "frontend" && !novoProduto.produtoPai) {
-      toast.error("Selecione o produto frontend pai");
+      toast.error("Preencha todos os campos");
       return;
     }
 
@@ -215,31 +198,19 @@ export default function Admin() {
       id: Date.now().toString(),
       nome: novoProduto.nome,
       valor: parseFloat(novoProduto.valor),
-      tipoFunil: novoProduto.tipoFunil,
-      produtoPai: novoProduto.produtoPai || undefined,
-      taxaTake: parseFloat(novoProduto.taxaTake),
       canal: novoProduto.canal,
-      customizado: false,
     };
 
     setConfig({ ...config, produtos: [...config.produtos, novo] });
-    setNovoProduto({ 
-      nome: "", 
-      valor: "", 
-      tipoFunil: "frontend",
-      produtoPai: "",
-      taxaTake: "100",
-      canal: "ambos" 
-    });
+    setNovoProduto({ nome: "", valor: "", canal: "ambos" });
     toast.success("Produto adicionado!");
   };
 
-  // Remover produto
   const removerProduto = (id: string) => {
-    // Verificar se tem produtos dependentes
-    const dependentes = config.produtos.filter(p => p.produtoPai === id);
-    if (dependentes.length > 0) {
-      toast.error(`Remova primeiro os produtos dependentes: ${dependentes.map(p => p.nome).join(", ")}`);
+    // Verificar se produto está em algum funil
+    const emUso = config.funis.some(f => f.produtos.some(p => p.produtoId === id));
+    if (emUso) {
+      toast.error("Remova o produto dos funis antes de deletá-lo");
       return;
     }
 
@@ -249,26 +220,105 @@ export default function Admin() {
     }
   };
 
-  // Atualizar produto
   const atualizarProduto = (id: string, campo: keyof Produto, valor: any) => {
     setConfig({
       ...config,
-      produtos: config.produtos.map(p =>
-        p.id === id ? { ...p, [campo]: valor, customizado: campo === "ticketMedioReal" } : p
-      ),
+      produtos: config.produtos.map(p => (p.id === id ? { ...p, [campo]: valor } : p)),
     });
   };
 
-  // Obter produtos frontend para dropdown
-  const produtosFrontend = config.produtos.filter(p => p.tipoFunil === "frontend");
+  // ===== FUNIS =====
+  const adicionarFunil = () => {
+    if (!novoFunil.nome) {
+      toast.error("Digite o nome do funil");
+      return;
+    }
 
-  // Agrupar produtos por funil
-  const funis = produtosFrontend.map(frontend => ({
-    frontend,
-    backends: config.produtos.filter(p => p.tipoFunil === "backend" && p.produtoPai === frontend.id),
-    downsells: config.produtos.filter(p => p.tipoFunil === "downsell" && p.produtoPai === frontend.id),
-    ticketMedio: calcularTicketMedio(frontend.id),
-  }));
+    const novo: Funil = {
+      id: Date.now().toString(),
+      nome: novoFunil.nome,
+      produtos: [],
+    };
+
+    setConfig({ ...config, funis: [...config.funis, novo] });
+    setNovoFunil({ nome: "" });
+    toast.success("Funil criado!");
+  };
+
+  const removerFunil = (id: string) => {
+    if (confirm("Tem certeza que deseja remover este funil?")) {
+      setConfig({ ...config, funis: config.funis.filter(f => f.id !== id) });
+      toast.success("Funil removido!");
+    }
+  };
+
+  const editarNomeFunil = (id: string) => {
+    if (!nomeEditado.trim()) {
+      toast.error("Nome não pode ser vazio");
+      return;
+    }
+
+    setConfig({
+      ...config,
+      funis: config.funis.map(f => (f.id === id ? { ...f, nome: nomeEditado } : f)),
+    });
+    setEditandoFunil(null);
+    setNomeEditado("");
+    toast.success("Nome atualizado!");
+  };
+
+  const adicionarProdutoAoFunil = (funilId: string, produtoId: string, tipo: "frontend" | "backend" | "downsell", taxaTake: number) => {
+    // Verificar se produto já está no funil
+    const funil = config.funis.find(f => f.id === funilId);
+    if (funil?.produtos.some(p => p.produtoId === produtoId)) {
+      toast.error("Produto já está neste funil");
+      return;
+    }
+
+    // Se é frontend, verificar se já existe um frontend
+    if (tipo === "frontend" && funil?.produtos.some(p => p.tipo === "frontend")) {
+      toast.error("Funil já tem um produto frontend");
+      return;
+    }
+
+    setConfig({
+      ...config,
+      funis: config.funis.map(f =>
+        f.id === funilId
+          ? { ...f, produtos: [...f.produtos, { produtoId, tipo, taxaTake }] }
+          : f
+      ),
+    });
+    toast.success("Produto adicionado ao funil!");
+  };
+
+  const removerProdutoDoFunil = (funilId: string, produtoId: string) => {
+    setConfig({
+      ...config,
+      funis: config.funis.map(f =>
+        f.id === funilId
+          ? { ...f, produtos: f.produtos.filter(p => p.produtoId !== produtoId) }
+          : f
+      ),
+    });
+    toast.success("Produto removido do funil!");
+  };
+
+  const atualizarProdutoNoFunil = (funilId: string, produtoId: string, campo: keyof ProdutoNoFunil, valor: any) => {
+    setConfig({
+      ...config,
+      funis: config.funis.map(f =>
+        f.id === funilId
+          ? {
+              ...f,
+              produtos: f.produtos.map(p =>
+                p.produtoId === produtoId ? { ...p, [campo]: valor } : p
+              ),
+            }
+          : f
+      ),
+    });
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -287,9 +337,18 @@ export default function Admin() {
     const labels = {
       frontend: "Frontend",
       backend: "Backend (Upsell)",
-      downsell: "Downsell"
+      downsell: "Downsell",
     };
     return labels[tipo as keyof typeof labels] || tipo;
+  };
+
+  const getTipoColor = (tipo: string) => {
+    const colors = {
+      frontend: "bg-green-500/20 text-green-500",
+      backend: "bg-orange-500/20 text-orange-500",
+      downsell: "bg-yellow-500/20 text-yellow-500",
+    };
+    return colors[tipo as keyof typeof colors] || "";
   };
 
   return (
@@ -312,7 +371,7 @@ export default function Admin() {
 
             <div className="flex items-center gap-3">
               <MobileNav />
-              
+
               <nav className="hidden md:flex items-center gap-2">
                 <Link href="/">
                   <Button variant={location === "/" ? "default" : "ghost"} className="gap-2">
@@ -347,7 +406,7 @@ export default function Admin() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl font-bold">Configurações do Dashboard</h2>
-            <p className="text-sm text-muted-foreground">Defina metas, produtos e custos com cálculos automáticos</p>
+            <p className="text-sm text-muted-foreground">Gerencie produtos, funis, metas e custos</p>
           </div>
 
           <div className="flex gap-2">
@@ -363,9 +422,10 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="metas" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="metas">Metas</TabsTrigger>
             <TabsTrigger value="produtos">Produtos</TabsTrigger>
+            <TabsTrigger value="funis">Funis</TabsTrigger>
             <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
             <TabsTrigger value="custos">Custos</TabsTrigger>
             <TabsTrigger value="cenarios">Cenários</TabsTrigger>
@@ -403,7 +463,7 @@ export default function Admin() {
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Vendas Necessárias</p>
                     <p className="text-2xl font-bold text-primary">{formatNumber(calculos.vendasNecessarias)}</p>
-                    <p className="text-xs text-muted-foreground">Baseado no ticket médio: {formatCurrency(ticketMedioGeral)}</p>
+                    <p className="text-xs text-muted-foreground">Ticket médio: {formatCurrency(ticketMedioGeral)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -460,10 +520,10 @@ export default function Admin() {
             <Card>
               <CardHeader>
                 <CardTitle>Adicionar Produto</CardTitle>
-                <CardDescription>Configure produtos e funis de vendas</CardDescription>
+                <CardDescription>Cadastre produtos simples (nome + valor + canal)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Nome do Produto</Label>
                     <Input
@@ -473,7 +533,7 @@ export default function Admin() {
                     />
                   </div>
                   <div>
-                    <Label>Valor do Produto (R$)</Label>
+                    <Label>Valor (R$)</Label>
                     <Input
                       type="number"
                       value={novoProduto.valor}
@@ -481,59 +541,6 @@ export default function Admin() {
                       placeholder="797"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Tipo no Funil</Label>
-                    <Select
-                      value={novoProduto.tipoFunil}
-                      onValueChange={(v: any) => setNovoProduto({ ...novoProduto, tipoFunil: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="frontend">Frontend</SelectItem>
-                        <SelectItem value="backend">Backend (Upsell)</SelectItem>
-                        <SelectItem value="downsell">Downsell</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {(novoProduto.tipoFunil !== "frontend") && (
-                    <div>
-                      <Label>Produto Frontend Pai</Label>
-                      <Select
-                        value={novoProduto.produtoPai}
-                        onValueChange={(v) => setNovoProduto({ ...novoProduto, produtoPai: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {produtosFrontend.map(p => (
-                            <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {novoProduto.tipoFunil !== "frontend" && (
-                    <div>
-                      <Label>Taxa de Take (%)</Label>
-                      <Input
-                        type="number"
-                        value={novoProduto.taxaTake}
-                        onChange={(e) => setNovoProduto({ ...novoProduto, taxaTake: e.target.value })}
-                        placeholder="30"
-                        max={100}
-                        min={0}
-                      />
-                    </div>
-                  )}
-
                   <div>
                     <Label>Canal</Label>
                     <Select
@@ -561,173 +568,291 @@ export default function Admin() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Funis de Produtos</CardTitle>
-                <CardDescription>{funis.length} funis configurados</CardDescription>
+                <CardTitle>Produtos Cadastrados</CardTitle>
+                <CardDescription>{config.produtos.length} produtos</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {funis.map((funil) => (
-                    <div key={funil.frontend.id} className="border rounded-lg p-4 space-y-4">
-                      {/* Frontend */}
-                      <div className="flex items-start gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xs font-semibold px-2 py-1 bg-green-500/20 text-green-500 rounded">
-                              FRONTEND
-                            </span>
-                            <span className="text-xs font-semibold px-2 py-1 bg-blue-500/20 text-blue-500 rounded">
-                              {funil.frontend.canal.toUpperCase()}
-                            </span>
-                          </div>
+                <div className="space-y-3">
+                  {config.produtos.map((produto) => (
+                    <div key={produto.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-xs">Nome</Label>
                           <Input
-                            value={funil.frontend.nome}
-                            onChange={(e) => atualizarProduto(funil.frontend.id, "nome", e.target.value)}
-                            className="font-semibold mb-2"
+                            value={produto.nome}
+                            onChange={(e) => atualizarProduto(produto.id, "nome", e.target.value)}
                           />
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <Label className="text-xs">Valor</Label>
-                              <Input
-                                type="number"
-                                value={funil.frontend.valor}
-                                onChange={(e) => atualizarProduto(funil.frontend.id, "valor", parseFloat(e.target.value) || 0)}
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Ticket Médio Calculado</Label>
-                              <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted">
-                                <Calculator className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-semibold text-primary">{formatCurrency(funil.ticketMedio)}</span>
-                              </div>
-                            </div>
-                          </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removerProduto(funil.frontend.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Backends */}
-                      {funil.backends.map((backend) => (
-                        <div key={backend.id} className="flex items-start gap-4 ml-8 pl-4 border-l-2 border-orange-500">
-                          <ArrowRight className="h-5 w-5 text-orange-500 mt-2" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-xs font-semibold px-2 py-1 bg-orange-500/20 text-orange-500 rounded">
-                                BACKEND (UPSELL)
-                              </span>
-                            </div>
-                            <Input
-                              value={backend.nome}
-                              onChange={(e) => atualizarProduto(backend.id, "nome", e.target.value)}
-                              className="mb-2"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-xs">Valor</Label>
-                                <Input
-                                  type="number"
-                                  value={backend.valor}
-                                  onChange={(e) => atualizarProduto(backend.id, "valor", parseFloat(e.target.value) || 0)}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Taxa de Take (%)</Label>
-                                <Input
-                                  type="number"
-                                  value={backend.taxaTake}
-                                  onChange={(e) => atualizarProduto(backend.id, "taxaTake", parseFloat(e.target.value) || 0)}
-                                  max={100}
-                                  min={0}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removerProduto(backend.id)}
-                            className="text-destructive hover:text-destructive"
+                        <div>
+                          <Label className="text-xs">Valor</Label>
+                          <Input
+                            type="number"
+                            value={produto.valor}
+                            onChange={(e) => atualizarProduto(produto.id, "valor", parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Canal</Label>
+                          <Select
+                            value={produto.canal}
+                            onValueChange={(v: any) => atualizarProduto(produto.id, "canal", v)}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-
-                      {/* Downsells */}
-                      {funil.downsells.map((downsell) => (
-                        <div key={downsell.id} className="flex items-start gap-4 ml-8 pl-4 border-l-2 border-yellow-500">
-                          <ArrowRight className="h-5 w-5 text-yellow-500 mt-2" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-xs font-semibold px-2 py-1 bg-yellow-500/20 text-yellow-500 rounded">
-                                DOWNSELL
-                              </span>
-                            </div>
-                            <Input
-                              value={downsell.nome}
-                              onChange={(e) => atualizarProduto(downsell.id, "nome", e.target.value)}
-                              className="mb-2"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-xs">Valor</Label>
-                                <Input
-                                  type="number"
-                                  value={downsell.valor}
-                                  onChange={(e) => atualizarProduto(downsell.id, "valor", parseFloat(e.target.value) || 0)}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Taxa de Take (%)</Label>
-                                <Input
-                                  type="number"
-                                  value={downsell.taxaTake}
-                                  onChange={(e) => atualizarProduto(downsell.id, "taxaTake", parseFloat(e.target.value) || 0)}
-                                  max={100}
-                                  min={0}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removerProduto(downsell.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-
-                      {/* Cálculo do Funil */}
-                      <div className="bg-muted/50 rounded-lg p-4 mt-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <TrendingUp className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-semibold">Cálculo do Ticket Médio</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <p>• Valor base: {formatCurrency(funil.frontend.valor)}</p>
-                          {funil.backends.map(b => (
-                            <p key={b.id}>• {b.nome}: +{formatCurrency((b.valor - funil.frontend.valor) * b.taxaTake / 100)} ({b.taxaTake}% de take)</p>
-                          ))}
-                          {funil.downsells.map(d => (
-                            <p key={d.id}>• {d.nome}: {formatCurrency((d.valor - funil.frontend.valor) * d.taxaTake / 100)} ({d.taxaTake}% de take)</p>
-                          ))}
-                          <p className="font-semibold text-primary pt-2 border-t">= Ticket Médio: {formatCurrency(funil.ticketMedio)}</p>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="marketing">Marketing</SelectItem>
+                              <SelectItem value="comercial">Comercial</SelectItem>
+                              <SelectItem value="ambos">Ambos</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removerProduto(produto.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Tab Funis */}
+          <TabsContent value="funis" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Criar Novo Funil</CardTitle>
+                <CardDescription>Dê um nome ao funil e adicione produtos depois</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Label>Nome do Funil</Label>
+                    <Input
+                      value={novoFunil.nome}
+                      onChange={(e) => setNovoFunil({ nome: e.target.value })}
+                      placeholder="Ex: Funil Creatina"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={adicionarFunil} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Criar Funil
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {config.funis.map((funil) => (
+              <Card key={funil.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {editandoFunil === funil.id ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={nomeEditado}
+                            onChange={(e) => setNomeEditado(e.target.value)}
+                            className="w-64"
+                            autoFocus
+                          />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => editarNomeFunil(funil.id)}
+                            className="text-green-500"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditandoFunil(null);
+                              setNomeEditado("");
+                            }}
+                            className="text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <CardTitle>{funil.nome}</CardTitle>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditandoFunil(funil.id);
+                              setNomeEditado(funil.nome);
+                            }}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                        <p className="text-lg font-bold text-primary">
+                          {formatCurrency(calcularTicketMedioFunil(funil))}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removerFunil(funil.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <CardDescription>{funil.produtos.length} produtos no funil</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Adicionar Produto ao Funil */}
+                  <div className="border-t pt-4">
+                    <Label className="mb-2 block">Adicionar Produto ao Funil</Label>
+                    <AdicionarProdutoForm
+                      funil={funil}
+                      produtos={config.produtos}
+                      onAdicionar={(produtoId, tipo, taxaTake) =>
+                        adicionarProdutoAoFunil(funil.id, produtoId, tipo, taxaTake)
+                      }
+                    />
+                  </div>
+
+                  {/* Produtos no Funil */}
+                  {funil.produtos.length > 0 && (
+                    <div className="space-y-3">
+                      {funil.produtos
+                        .sort((a, b) => {
+                          const ordem = { frontend: 0, backend: 1, downsell: 2 };
+                          return ordem[a.tipo] - ordem[b.tipo];
+                        })
+                        .map((produtoNoFunil) => {
+                          const produto = config.produtos.find(p => p.id === produtoNoFunil.produtoId);
+                          if (!produto) return null;
+
+                          return (
+                            <div key={produtoNoFunil.produtoId} className="flex items-start gap-4 p-4 border rounded-lg">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`text-xs font-semibold px-2 py-1 rounded ${getTipoColor(produtoNoFunil.tipo)}`}>
+                                    {getTipoLabel(produtoNoFunil.tipo).toUpperCase()}
+                                  </span>
+                                  <span className="text-sm font-medium">{produto.nome}</span>
+                                  <span className="text-sm text-muted-foreground">
+                                    {formatCurrency(produto.valor)}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="text-xs">Tipo no Funil</Label>
+                                    <Select
+                                      value={produtoNoFunil.tipo}
+                                      onValueChange={(v: any) =>
+                                        atualizarProdutoNoFunil(funil.id, produtoNoFunil.produtoId, "tipo", v)
+                                      }
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="frontend">Frontend</SelectItem>
+                                        <SelectItem value="backend">Backend (Upsell)</SelectItem>
+                                        <SelectItem value="downsell">Downsell</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  {produtoNoFunil.tipo !== "frontend" && (
+                                    <div>
+                                      <Label className="text-xs">Taxa de Take (%)</Label>
+                                      <Input
+                                        type="number"
+                                        value={produtoNoFunil.taxaTake}
+                                        onChange={(e) =>
+                                          atualizarProdutoNoFunil(
+                                            funil.id,
+                                            produtoNoFunil.produtoId,
+                                            "taxaTake",
+                                            parseFloat(e.target.value) || 0
+                                          )
+                                        }
+                                        max={100}
+                                        min={0}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removerProdutoDoFunil(funil.id, produtoNoFunil.produtoId)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+
+                  {/* Cálculo do Funil */}
+                  {funil.produtos.length > 0 && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calculator className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold">Cálculo do Ticket Médio</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        {funil.produtos
+                          .sort((a, b) => {
+                            const ordem = { frontend: 0, backend: 1, downsell: 2 };
+                            return ordem[a.tipo] - ordem[b.tipo];
+                          })
+                          .map((pf) => {
+                            const produto = config.produtos.find(p => p.id === pf.produtoId);
+                            if (!produto) return null;
+
+                            const frontend = funil.produtos.find(p => p.tipo === "frontend");
+                            const produtoFrontend = frontend ? config.produtos.find(p => p.id === frontend.produtoId) : null;
+
+                            if (pf.tipo === "frontend") {
+                              return <p key={pf.produtoId}>• Valor base: {formatCurrency(produto.valor)}</p>;
+                            } else {
+                              const diferenca = produtoFrontend ? produto.valor - produtoFrontend.valor : 0;
+                              const contribuicao = diferenca * pf.taxaTake / 100;
+                              return (
+                                <p key={pf.produtoId}>
+                                  • {produto.nome}: {formatCurrency(contribuicao)} ({pf.taxaTake}% de take)
+                                </p>
+                              );
+                            }
+                          })}
+                        <p className="font-semibold text-primary pt-2 border-t">
+                          = Ticket Médio: {formatCurrency(calcularTicketMedioFunil(funil))}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
           </TabsContent>
 
           {/* Tab Distribuição */}
@@ -894,6 +1019,92 @@ export default function Admin() {
           </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+// Componente auxiliar para adicionar produto ao funil
+function AdicionarProdutoForm({
+  funil,
+  produtos,
+  onAdicionar,
+}: {
+  funil: Funil;
+  produtos: Produto[];
+  onAdicionar: (produtoId: string, tipo: "frontend" | "backend" | "downsell", taxaTake: number) => void;
+}) {
+  const [produtoId, setProdutoId] = useState("");
+  const [tipo, setTipo] = useState<"frontend" | "backend" | "downsell">("frontend");
+  const [taxaTake, setTaxaTake] = useState("100");
+
+  const handleAdicionar = () => {
+    if (!produtoId) {
+      toast.error("Selecione um produto");
+      return;
+    }
+
+    onAdicionar(produtoId, tipo, parseFloat(taxaTake) || 100);
+    setProdutoId("");
+    setTipo("frontend");
+    setTaxaTake("100");
+  };
+
+  // Produtos disponíveis (não estão no funil)
+  const produtosDisponiveis = produtos.filter(
+    p => !funil.produtos.some(fp => fp.produtoId === p.id)
+  );
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <Label className="text-xs">Produto</Label>
+        <Select value={produtoId} onValueChange={setProdutoId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione..." />
+          </SelectTrigger>
+          <SelectContent>
+            {produtosDisponiveis.map(p => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-xs">Tipo</Label>
+        <Select value={tipo} onValueChange={(v: any) => setTipo(v)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="frontend">Frontend</SelectItem>
+            <SelectItem value="backend">Backend (Upsell)</SelectItem>
+            <SelectItem value="downsell">Downsell</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {tipo !== "frontend" && (
+        <div>
+          <Label className="text-xs">Taxa de Take (%)</Label>
+          <Input
+            type="number"
+            value={taxaTake}
+            onChange={(e) => setTaxaTake(e.target.value)}
+            max={100}
+            min={0}
+          />
+        </div>
+      )}
+
+      <div className="flex items-end">
+        <Button onClick={handleAdicionar} className="gap-2 w-full">
+          <Plus className="h-4 w-4" />
+          Adicionar
+        </Button>
+      </div>
     </div>
   );
 }
