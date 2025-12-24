@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Target, BarChart3 } from "lucide-react";
+import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Target, BarChart3, Home as HomeIcon, Settings, Moon, Sun } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -15,6 +16,7 @@ export default function Metricas() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("monthly");
   const { theme, toggleTheme } = useTheme();
+  const [location] = useLocation();
 
   // Mock data - substituir por dados reais da API
   const mockMetrics = {
@@ -87,6 +89,28 @@ export default function Metricas() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Navegação */}
+              <nav className="hidden md:flex items-center gap-2">
+                <Link href="/">
+                  <Button variant={location === "/" ? "default" : "ghost"} className="gap-2">
+                    <HomeIcon className="h-4 w-4" />
+                    Home
+                  </Button>
+                </Link>
+                <Link href="/metricas">
+                  <Button variant={location === "/metricas" ? "default" : "ghost"} className="gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Métricas
+                  </Button>
+                </Link>
+                <Link href="/admin">
+                  <Button variant={location === "/admin" ? "default" : "ghost"} className="gap-2">
+                    <Settings className="h-4 w-4" />
+                    Admin
+                  </Button>
+                </Link>
+              </nav>
+
               {/* Filtro de Período */}
               <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
                 <SelectTrigger className="w-32">

@@ -119,3 +119,8 @@
 - [ ] Integrar eventos com página de Métricas
 - [x] Criar documentação para gestor de tráfego
 - [x] Testar endpoints
+
+## Navegação no Header
+- [x] Adicionar botões de navegação no header (Home, Métricas, Admin)
+- [x] Destacar página ativa
+- [x] Garantir responsividade em mobile

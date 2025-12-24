@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Moon, Sun, TrendingUp, Users, DollarSign, Target, CalendarIcon } from "lucide-react";
+import { Moon, Sun, TrendingUp, Users, DollarSign, Target, CalendarIcon, Home as HomeIcon, BarChart3, Settings } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import GoalGauge from "@/components/GoalGauge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -42,6 +43,7 @@ export default function Home() {
   const [selectedScenario, setSelectedScenario] = useState<"3M" | "4M" | "5M">("3M");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { theme, toggleTheme } = useTheme();
+  const [location] = useLocation();
 
   const scenario = scenarios[selectedScenario];
   const avgTicket = 1000;
@@ -79,6 +81,38 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Navegação */}
+              <nav className="hidden md:flex items-center gap-2">
+                <Link href="/">
+                  <Button
+                    variant={location === "/" ? "default" : "ghost"}
+                    className="gap-2"
+                  >
+                    <HomeIcon className="h-4 w-4" />
+                    Home
+                  </Button>
+                </Link>
+                <Link href="/metricas">
+                  <Button
+                    variant={location === "/metricas" ? "default" : "ghost"}
+                    className="gap-2"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Métricas
+                  </Button>
+                </Link>
+                <Link href="/admin">
+                  <Button
+                    variant={location === "/admin" ? "default" : "ghost"}
+                    className="gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Admin
+                  </Button>
+                </Link>
+              </nav>
+
+              {/* Toggle de Tema */}
               <Button
                 variant="outline"
                 size="icon"
