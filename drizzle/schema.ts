@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -190,3 +190,21 @@ export const calculatedMetrics = mysqlTable("calculated_metrics", {
 
 export type CalculatedMetrics = typeof calculatedMetrics.$inferSelect;
 export type InsertCalculatedMetrics = typeof calculatedMetrics.$inferInsert;
+
+/**
+ * Products Table
+ * Stores products that can be sold (front, upsell, high-ticket)
+ */
+export const products = mysqlTable("products", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  type: mysqlEnum("type", ["front", "upsell", "high-ticket"]).notNull(),
+  channel: mysqlEnum("channel", ["marketing", "comercial", "both"]).notNull().default("both"),
+  active: int("active").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = typeof products.$inferInsert;

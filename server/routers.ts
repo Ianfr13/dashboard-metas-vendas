@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { simulationsRouter } from "./routes/simulations.js";
 import { goalsRouter } from "./routes/goals.js";
 import { analyticsRouter } from "./routes/analytics.js";
+import { productsRouter } from "./routes/products.js";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -28,6 +29,9 @@ export const appRouter = router({
   
   // Analytics router for fetching sales data by date/period
   analytics: analyticsRouter,
+  
+  // Products router for CRUD operations on products
+  products: productsRouter,
 });
 
 export type AppRouter = typeof appRouter;

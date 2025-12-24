@@ -92,3 +92,19 @@
 - [x] Reduzir tamanho da fonte dos números (de 3xl para xl)
 - [x] Garantir que valores grandes caibam sem quebrar layout
 - [x] Testar com valores grandes (R$ 2.550.000+)
+
+## Reestruturação do Dashboard
+- [x] Remover "Metas Semanais" do Home
+- [x] Remover "Resumo Semanal" do Home
+- [x] Criar schema de produtos no banco
+- [x] Criar API CRUD de produtos
+- [x] Adicionar gerenciamento de produtos no Admin
+- [x] Criar página /metricas
+- [x] Adicionar vendas por produto
+- [x] Adicionar métricas de leads
+- [x] Adicionar taxa de conversão
+- [x] Adicionar CPA real
+- [x] Adicionar ticket médio por produto
+- [x] Adicionar funil de vendas
+- [x] Adicionar performance por gateway
+- [ ] Adicionar gráficos de evolução

@@ -36,16 +36,10 @@ const scenarios = {
   },
 };
 
-const weeks = [
-  { id: 1, label: "Semana 1", period: "01-07 Jan", days: 7 },
-  { id: 2, label: "Semana 2", period: "08-14 Jan", days: 7 },
-  { id: 3, label: "Semana 3", period: "15-21 Jan", days: 7 },
-  { id: 4, label: "Semana 4", period: "22-31 Jan", days: 10 },
-];
+
 
 export default function Home() {
   const [selectedScenario, setSelectedScenario] = useState<"3M" | "4M" | "5M">("3M");
-  const [selectedWeek, setSelectedWeek] = useState(1);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { theme, toggleTheme } = useTheme();
 
@@ -226,31 +220,7 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Metas Semanais */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Metas Semanais</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {weeks.map((week) => (
-                <button
-                  key={week.id}
-                  onClick={() => setSelectedWeek(week.id)}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    selectedWeek === week.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <h3 className="font-semibold text-foreground">{week.label}</h3>
-                  <p className="text-sm text-muted-foreground">{week.period}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{week.days} dias</p>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+
 
         {/* Tabs de Detalhamento */}
         <Tabs defaultValue="marketing" className="w-full">
@@ -341,44 +311,7 @@ export default function Home() {
           </TabsContent>
         </Tabs>
 
-        {/* Tabela de Resumo Semanal */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumo Semanal - Cenário {formatCurrency(scenario.total)}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 text-muted-foreground font-medium">Semana</th>
-                    <th className="text-right p-3 text-muted-foreground font-medium">Meta</th>
-                    <th className="text-right p-3 text-muted-foreground font-medium">Marketing</th>
-                    <th className="text-right p-3 text-muted-foreground font-medium">Comercial</th>
-                    <th className="text-right p-3 text-muted-foreground font-medium">Dias</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {weeks.map((week) => {
-                    const weeklyTarget = scenario.total / 4;
-                    const weeklyMarketing = scenario.marketing / 4;
-                    const weeklyCommercial = scenario.commercial / 4;
-                    
-                    return (
-                      <tr key={week.id} className="border-b hover:bg-accent/50">
-                        <td className="p-3 font-medium text-foreground">{week.label}</td>
-                        <td className="text-right p-3 text-foreground">{formatCurrency(weeklyTarget)}</td>
-                        <td className="text-right p-3 text-foreground">{formatCurrency(weeklyMarketing)}</td>
-                        <td className="text-right p-3 text-foreground">{formatCurrency(weeklyCommercial)}</td>
-                        <td className="text-right p-3 text-muted-foreground">{week.days}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+
       </main>
     </div>
   );
