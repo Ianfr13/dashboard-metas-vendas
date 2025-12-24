@@ -129,3 +129,7 @@
 - [x] Remover filtros de data/período do header
 - [x] Mover filtros para área de conteúdo principal
 - [x] Manter apenas navegação e toggle de tema no header
+
+## Toggle de Tema - Página Admin
+- [x] Adicionar toggle dark/light no header da página Admin
+- [x] Garantir consistência visual com outras páginas

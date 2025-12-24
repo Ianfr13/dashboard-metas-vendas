@@ -6,12 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, Edit, Package, Home as HomeIcon, BarChart3, Settings } from "lucide-react";
+import { Plus, Trash2, Save, Edit, Package, Home as HomeIcon, BarChart3, Settings, Moon, Sun } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Admin() {
   const [location] = useLocation();
+  const { theme, toggleTheme } = useTheme();
   
   // Metas
   const [mainGoal, setMainGoal] = useState("5000000");
@@ -199,26 +201,42 @@ export default function Admin() {
                 </p>
               </div>
             </div>
-            <nav className="flex items-center gap-2">
-              <Link href="/">
-                <Button variant={location === "/" ? "default" : "ghost"} className="gap-2">
-                  <HomeIcon className="h-4 w-4" />
-                  Home
-                </Button>
-              </Link>
-              <Link href="/metricas">
-                <Button variant={location === "/metricas" ? "default" : "ghost"} className="gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Métricas
-                </Button>
-              </Link>
-              <Link href="/admin">
-                <Button variant={location === "/admin" ? "default" : "ghost"} className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  Admin
-                </Button>
-              </Link>
-            </nav>
+            <div className="flex items-center gap-3">
+              <nav className="flex items-center gap-2">
+                <Link href="/">
+                  <Button variant={location === "/" ? "default" : "ghost"} className="gap-2">
+                    <HomeIcon className="h-4 w-4" />
+                    Home
+                  </Button>
+                </Link>
+                <Link href="/metricas">
+                  <Button variant={location === "/metricas" ? "default" : "ghost"} className="gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Métricas
+                  </Button>
+                </Link>
+                <Link href="/admin">
+                  <Button variant={location === "/admin" ? "default" : "ghost"} className="gap-2">
+                    <Settings className="h-4 w-4" />
+                    Admin
+                  </Button>
+                </Link>
+              </nav>
+
+              {/* Toggle de Tema */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleTheme}
+                className="rounded-full"
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
