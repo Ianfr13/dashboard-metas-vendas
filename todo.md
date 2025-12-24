@@ -29,3 +29,12 @@
 - [x] Garantir que textos e números se adaptem ao tema
 - [x] Melhorar espaçamento e hierarquia visual
 - [x] Adicionar animações e transições suaves
+
+## Correções de Design e Contador de Metas
+- [x] Corrigir cor de fundo para branco (light) e preto (dark)
+- [x] Remover gradiente verde do fundo
+- [x] Criar componente de gauge semicircular
+- [x] Mostrar % da meta total atingida no gauge
+- [x] Adicionar lista de metas batidas (com linha riscada)
+- [x] Adicionar lista de próximas metas
+- [x] Posicionar gauge e listas no topo da página

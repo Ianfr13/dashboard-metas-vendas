@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Moon, Sun, TrendingUp, Users, DollarSign, Target } from "lucide-react";
 import { MetricsSimulator } from "@/components/MetricsSimulator";
+import { GoalGauge } from "@/components/GoalGauge";
 
 // Dados dos cenários
 const scenarios = {
@@ -56,7 +57,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -96,6 +97,23 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Goal Gauge */}
+        <GoalGauge
+          current={850000}
+          target={scenario.total}
+          completedGoals={[
+            "Validar VSL principal (R$ 100k)",
+            "Primeiras 50 vendas orgânicas",
+            "Configurar time comercial",
+          ]}
+          upcomingGoals={[
+            "Atingir R$ 1M em vendas diretas",
+            "Escalar para R$ 50k/dia",
+            "Fechar 10 vendas high-ticket",
+            "Atingir meta mensal de R$ 3M",
+          ]}
+        />
+
         {/* Seletor de Cenários */}
         <Card className="border-2">
           <CardHeader>
