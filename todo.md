@@ -247,3 +247,10 @@
 - [x] Adicionar métricas de qualidade: Taxa Chargeback, Taxa Reembolso
 - [x] Adicionar métricas temporais: Melhor hora, Melhor dia, Tempo médio lead→venda, Velocidade conversão
 - [x] Distribuir métricas apropriadamente entre as etapas
+
+## Otimização Layout Página Métricas
+- [x] Reorganizar grid de métricas com melhor espaçamento
+- [x] Agrupar métricas por categoria (Financeiras, Qualidade, Temporais)
+- [x] Adicionar separadores visuais entre grupos
+- [x] Melhorar tipografia e hierarquia visual
+- [x] Otimizar para mobile

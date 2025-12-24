@@ -533,40 +533,94 @@ export default function Metricas() {
   const renderMetricas = (metricas: any) => {
     if (!metricas) return null;
 
-    const metricasArray = Object.entries(metricas).filter(([key]) => 
-      key !== 'total' && key !== 'meta' && key !== 'percentual'
-    );
+    // Categorizar métricas
+    const categorias = {
+      principais: ['taxaConversao', 'cpl', 'cpa', 'custoTotal', 'receita', 'ticketMedio', 'roi', 'roas'],
+      performance: ['vendasDia', 'leadsDia', 'checkoutsDia', 'agendamentosDia', 'melhorDia', 'melhorHora', 'piorDia', 'crescimento'],
+      financeiras: ['ltv', 'cac', 'paybackPeriod', 'margemContribuicao', 'breakEven'],
+      qualidade: ['taxaChargeback', 'taxaReembolso', 'abandonos', 'taxaAbandono', 'showUpRate', 'taxaFechamento', 'qualificacao', 'noShows'],
+      temporais: ['tempoMedioLeadVenda', 'velocidadeConversao', 'tempoMedioAgendamento', 'cicloVendaMedio']
+    };
+
+    const labelMap: Record<string, string> = {
+      taxaConversao: 'Taxa Conversão',
+      cpl: 'CPL',
+      cpa: 'CPA',
+      custoTotal: 'Custo Total',
+      receita: 'Receita',
+      ticketMedio: 'Ticket Médio',
+      roi: 'ROI',
+      roas: 'ROAS',
+      vendasDia: 'Vendas/Dia',
+      leadsDia: 'Leads/Dia',
+      checkoutsDia: 'Checkouts/Dia',
+      agendamentosDia: 'Agendamentos/Dia',
+      melhorDia: 'Melhor Dia',
+      melhorHora: 'Melhor Horário',
+      piorDia: 'Pior Dia',
+      crescimento: 'Crescimento',
+      ltv: 'LTV (Lifetime Value)',
+      cac: 'CAC',
+      paybackPeriod: 'Payback Period',
+      margemContribuicao: 'Margem Contribuição',
+      breakEven: 'Break-even',
+      taxaChargeback: 'Taxa Chargeback',
+      taxaReembolso: 'Taxa Reembolso',
+      abandonos: 'Abandonos',
+      taxaAbandono: 'Taxa Abandono',
+      showUpRate: 'Show-up Rate',
+      taxaFechamento: 'Taxa Fechamento',
+      qualificacao: 'Qualificação',
+      noShows: 'No-shows',
+      tempoMedioLeadVenda: 'Tempo Lead→Venda',
+      velocidadeConversao: 'Velocidade Conversão',
+      tempoMedioAgendamento: 'Tempo Médio Agendamento',
+      cicloVendaMedio: 'Ciclo Venda Médio'
+    };
+
+    const formatValue = (key: string, value: any) => {
+      if (typeof value === 'number') {
+        if (key.includes('cpl') || key.includes('cpa') || key.includes('custo') || key.includes('receita') || key.includes('ticket') || key === 'ltv' || key === 'cac' || key === 'breakEven') {
+          return formatCurrency(value);
+        } else if (key.includes('taxa') || key.includes('roi') || key.includes('roas') || key.includes('crescimento') || key.includes('qualificacao') || key.includes('margem')) {
+          return formatPercent(value);
+        } else {
+          return formatNumber(value);
+        }
+      }
+      return String(value);
+    };
+
+    const renderCategoria = (titulo: string, keys: string[]) => {
+      const metricasCategoria = keys.filter(key => metricas[key] !== undefined);
+      if (metricasCategoria.length === 0) return null;
+
+      return (
+        <div key={titulo} className="space-y-3">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{titulo}</h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {metricasCategoria.map((key) => (
+              <Card key={key} className="hover:border-primary/50 transition-colors">
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-xs">{labelMap[key] || key}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xl font-bold">{formatValue(key, metricas[key])}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      );
+    };
 
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {metricasArray.map(([key, value]) => {
-          const label = key
-            .replace(/([A-Z])/g, ' $1')
-            .replace(/^./, (str) => str.toUpperCase())
-            .trim();
-          
-          let displayValue = value;
-          if (typeof value === 'number') {
-            if (key.includes('cpl') || key.includes('cpa') || key.includes('custo') || key.includes('receita') || key.includes('ticket')) {
-              displayValue = formatCurrency(value as number);
-            } else if (key.includes('taxa') || key.includes('roi') || key.includes('roas') || key.includes('crescimento') || key.includes('qualificacao')) {
-              displayValue = formatPercent(value as number);
-            } else {
-              displayValue = formatNumber(value as number);
-            }
-          }
-
-          return (
-            <Card key={key}>
-              <CardHeader className="pb-2">
-                <CardDescription className="text-xs">{label}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{String(displayValue)}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className="space-y-6">
+        {renderCategoria('📊 Métricas Principais', categorias.principais)}
+        {renderCategoria('🚀 Performance', categorias.performance)}
+        {renderCategoria('💰 Métricas Financeiras', categorias.financeiras)}
+        {renderCategoria('✅ Qualidade', categorias.qualidade)}
+        {renderCategoria('⏱️ Métricas Temporais', categorias.temporais)}
       </div>
     );
   };
