@@ -180,3 +180,9 @@
 - [x] Criar canvas element explicitamente para confetti
 - [x] Garantir que canvas existe antes de chamar confetti
 - [x] Adicionar cleanup do canvas ao desmontar componente
+
+## Otimização Banner de Celebração
+- [x] Redesenhar banner para melhor visual em desktop
+- [x] Ajustar tamanho e padding para mobile
+- [x] Melhorar posicionamento e responsividade
+- [x] Ajustar tamanho da fonte para diferentes telas
