@@ -11,25 +11,16 @@ import {
   Home as HomeIcon, 
   Settings, 
   Moon, 
-  Sun, 
-  TrendingUp, 
-  Eye,
-  UserPlus,
-  ShoppingCart,
-  DollarSign,
-  Users,
-  Calendar as CalendarCheck,
-  FileText,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp
+  Sun,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import MobileNav from "@/components/MobileNav";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function Metricas() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -37,124 +28,463 @@ export default function Metricas() {
   const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
   
-  // Estados para controlar expansão dos produtos
-  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
+  // Estados para seleção
+  const [selectedEtapaMarketing, setSelectedEtapaMarketing] = useState("leads");
+  const [selectedProdutoMarketing, setSelectedProdutoMarketing] = useState("todos");
+  const [selectedEtapaComercial, setSelectedEtapaComercial] = useState("leads");
+  const [selectedProdutoComercial, setSelectedProdutoComercial] = useState("todos");
 
-  // Mock data - Funil de Marketing
-  const marketingFunnel = {
-    etapas: [
-      {
-        nome: "Views VSL",
-        icon: Eye,
-        total: 12500,
-        produtos: [
-          { nome: "Creatina Pro 797", valor: 5000, meta: 6000, percentual: 83.3 },
-          { nome: "High-Ticket VIP", valor: 3500, meta: 3000, percentual: 116.7 },
-          { nome: "Upsell Premium", valor: 3000, meta: 2500, percentual: 120 },
-          { nome: "Outros", valor: 1000, meta: 1000, percentual: 100 },
-        ],
-      },
-      {
-        nome: "Leads Gerados",
-        icon: UserPlus,
+  // Definição de produtos por canal
+  const produtosMarketing = [
+    { id: "creatina", nome: "Creatina Pro 797" },
+    { id: "upsell", nome: "Upsell Premium" },
+    { id: "outros-mkt", nome: "Outros Marketing" },
+  ];
+
+  const produtosComercial = [
+    { id: "high-ticket", nome: "High-Ticket VIP" },
+    { id: "creatina", nome: "Creatina Pro 797" }, // Também vendido pelo comercial
+    { id: "outros-com", nome: "Outros Comercial" },
+  ];
+
+  // Etapas dos funis
+  const etapasMarketing = [
+    { id: "leads", nome: "Leads Gerados" },
+    { id: "checkout", nome: "Checkout Iniciado" },
+    { id: "vendas", nome: "Vendas Concluídas" },
+  ];
+
+  const etapasComercial = [
+    { id: "leads", nome: "Leads Qualificados" },
+    { id: "agendadas", nome: "Reuniões Agendadas" },
+    { id: "realizadas", nome: "Reuniões Realizadas" },
+    { id: "propostas", nome: "Propostas Enviadas" },
+    { id: "vendas", nome: "Vendas Fechadas" },
+  ];
+
+  // Mock data - Gráfico de evolução (últimos 7 dias)
+  const graficoEvol = [
+    { dia: "Dia 1", valor: 45, meta: 50 },
+    { dia: "Dia 2", valor: 52, meta: 50 },
+    { dia: "Dia 3", valor: 48, meta: 50 },
+    { dia: "Dia 4", valor: 61, meta: 50 },
+    { dia: "Dia 5", valor: 55, meta: 50 },
+    { dia: "Dia 6", valor: 58, meta: 50 },
+    { dia: "Dia 7", valor: 63, meta: 50 },
+  ];
+
+  // Mock data - Métricas detalhadas por produto
+  const metricasMarketing: Record<string, any> = {
+    leads: {
+      todos: {
         total: 4368,
-        taxaConversao: 34.9,
+        meta: 4368,
+        percentual: 100,
         cpl: 85,
-        produtos: [
-          { nome: "Creatina Pro 797", valor: 1800, meta: 2100, percentual: 85.7, cpl: 82 },
-          { nome: "High-Ticket VIP", valor: 1200, meta: 1050, percentual: 114.3, cpl: 95 },
-          { nome: "Upsell Premium", valor: 1000, meta: 875, percentual: 114.3, cpl: 78 },
-          { nome: "Outros", valor: 368, meta: 343, percentual: 107.3, cpl: 88 },
-        ],
+        custoTotal: 371280,
+        taxaConversao: 34.9,
+        leadsDia: 145.6,
+        melhorDia: "Segunda",
+        piorDia: "Domingo",
+        crescimento: 12.5,
       },
-      {
-        nome: "Checkout Iniciado",
-        icon: ShoppingCart,
+      creatina: {
+        total: 1800,
+        meta: 2100,
+        percentual: 85.7,
+        cpl: 82,
+        custoTotal: 147600,
+        taxaConversao: 36,
+        leadsDia: 60,
+        melhorDia: "Segunda",
+        piorDia: "Domingo",
+        crescimento: 8.3,
+      },
+      upsell: {
+        total: 1000,
+        meta: 875,
+        percentual: 114.3,
+        cpl: 78,
+        custoTotal: 78000,
+        taxaConversao: 33.3,
+        leadsDia: 33.3,
+        melhorDia: "Terça",
+        piorDia: "Sábado",
+        crescimento: 22.1,
+      },
+      "outros-mkt": {
+        total: 1568,
+        meta: 1393,
+        percentual: 112.6,
+        cpl: 88,
+        custoTotal: 137984,
+        taxaConversao: 35.2,
+        leadsDia: 52.3,
+        melhorDia: "Quarta",
+        piorDia: "Domingo",
+        crescimento: 15.7,
+      },
+    },
+    checkout: {
+      todos: {
         total: 1200,
+        meta: 1529,
+        percentual: 78.5,
         taxaConversao: 27.5,
-        produtos: [
-          { nome: "Creatina Pro 797", valor: 500, meta: 735, percentual: 68, taxaConversao: 27.8 },
-          { nome: "High-Ticket VIP", valor: 350, meta: 368, percentual: 95.1, taxaConversao: 29.2 },
-          { nome: "Upsell Premium", valor: 280, meta: 306, percentual: 91.5, taxaConversao: 28 },
-          { nome: "Outros", valor: 70, meta: 120, percentual: 58.3, taxaConversao: 19 },
-        ],
+        checkoutsDia: 40,
+        melhorDia: "Segunda",
+        piorDia: "Domingo",
+        crescimento: 5.2,
+        abandonos: 329,
+        taxaAbandono: 21.5,
       },
-      {
-        nome: "Vendas Concluídas",
-        icon: CheckCircle,
+      creatina: {
+        total: 500,
+        meta: 735,
+        percentual: 68,
+        taxaConversao: 27.8,
+        checkoutsDia: 16.7,
+        melhorDia: "Segunda",
+        piorDia: "Domingo",
+        crescimento: 3.1,
+        abandonos: 150,
+        taxaAbandono: 23.1,
+      },
+      upsell: {
+        total: 280,
+        meta: 306,
+        percentual: 91.5,
+        taxaConversao: 28,
+        checkoutsDia: 9.3,
+        melhorDia: "Terça",
+        piorDia: "Sábado",
+        crescimento: 8.5,
+        abandonos: 45,
+        taxaAbandono: 13.8,
+      },
+      "outros-mkt": {
+        total: 420,
+        meta: 488,
+        percentual: 86.1,
+        taxaConversao: 26.8,
+        checkoutsDia: 14,
+        melhorDia: "Quarta",
+        piorDia: "Domingo",
+        crescimento: 4.9,
+        abandonos: 134,
+        taxaAbandono: 24.2,
+      },
+    },
+    vendas: {
+      todos: {
         total: 850,
+        meta: 1092,
+        percentual: 77.8,
         taxaConversao: 70.8,
         cpa: 430,
-        roas: 1.91,
-        roi: 90.8,
-        produtos: [
-          { nome: "Creatina Pro 797", valor: 350, meta: 525, percentual: 66.7, taxaConversao: 70, cpa: 420, ticketMedio: 797, receita: 278950 },
-          { nome: "High-Ticket VIP", valor: 250, meta: 263, percentual: 95.1, taxaConversao: 71.4, cpa: 480, ticketMedio: 2500, receita: 625000 },
-          { nome: "Upsell Premium", valor: 200, meta: 218, percentual: 91.7, taxaConversao: 71.4, cpa: 390, ticketMedio: 247, receita: 49400 },
-          { nome: "Outros", valor: 50, meta: 86, percentual: 58.1, taxaConversao: 71.4, cpa: 440, ticketMedio: 1339, receita: 66950 },
-        ],
+        custoTotal: 365500,
+        receita: 1020300,
+        ticketMedio: 1200,
+        roi: 179.1,
+        roas: 2.79,
+        vendasDia: 28.3,
+        melhorDia: "Segunda",
+        piorDia: "Domingo",
+        crescimento: 11.2,
       },
-    ],
+      creatina: {
+        total: 350,
+        meta: 525,
+        percentual: 66.7,
+        taxaConversao: 70,
+        cpa: 420,
+        custoTotal: 147000,
+        receita: 278950,
+        ticketMedio: 797,
+        roi: 89.7,
+        roas: 1.90,
+        vendasDia: 11.7,
+        melhorDia: "Segunda",
+        piorDia: "Domingo",
+        crescimento: 7.5,
+      },
+      upsell: {
+        total: 200,
+        meta: 218,
+        percentual: 91.7,
+        taxaConversao: 71.4,
+        cpa: 390,
+        custoTotal: 78000,
+        receita: 49400,
+        ticketMedio: 247,
+        roi: -36.7,
+        roas: 0.63,
+        vendasDia: 6.7,
+        melhorDia: "Terça",
+        piorDia: "Sábado",
+        crescimento: 15.3,
+      },
+      "outros-mkt": {
+        total: 300,
+        meta: 349,
+        percentual: 86,
+        taxaConversao: 71.4,
+        cpa: 460,
+        custoTotal: 138000,
+        receita: 401700,
+        ticketMedio: 1339,
+        roi: 191.1,
+        roas: 2.91,
+        vendasDia: 10,
+        melhorDia: "Quarta",
+        piorDia: "Domingo",
+        crescimento: 12.8,
+      },
+    },
   };
 
-  // Mock data - Funil Comercial
-  const comercialFunnel = {
-    etapas: [
-      {
-        nome: "Leads Qualificados",
-        icon: Users,
+  const metricasComercial: Record<string, any> = {
+    leads: {
+      todos: {
         total: 450,
-        produtos: [
-          { nome: "High-Ticket VIP", valor: 300, meta: 300, percentual: 100 },
-          { nome: "Creatina Pro 797", valor: 100, meta: 100, percentual: 100 },
-          { nome: "Outros", valor: 50, meta: 50, percentual: 100 },
-        ],
+        meta: 450,
+        percentual: 100,
+        leadsDia: 15,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 8.5,
+        qualificacao: 95.5,
       },
-      {
-        nome: "Reuniões Agendadas",
-        icon: CalendarCheck,
+      "high-ticket": {
+        total: 300,
+        meta: 300,
+        percentual: 100,
+        leadsDia: 10,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 10.2,
+        qualificacao: 97.3,
+      },
+      creatina: {
+        total: 100,
+        meta: 100,
+        percentual: 100,
+        leadsDia: 3.3,
+        melhorDia: "Terça",
+        piorDia: "Sexta",
+        crescimento: 5.1,
+        qualificacao: 92.8,
+      },
+      "outros-com": {
+        total: 50,
+        meta: 50,
+        percentual: 100,
+        leadsDia: 1.7,
+        melhorDia: "Quarta",
+        piorDia: "Sexta",
+        crescimento: 7.3,
+        qualificacao: 94.2,
+      },
+    },
+    agendadas: {
+      todos: {
         total: 360,
+        meta: 360,
+        percentual: 100,
         taxaConversao: 80,
-        produtos: [
-          { nome: "High-Ticket VIP", valor: 240, meta: 240, percentual: 100, taxaConversao: 80 },
-          { nome: "Creatina Pro 797", valor: 80, meta: 80, percentual: 100, taxaConversao: 80 },
-          { nome: "Outros", valor: 40, meta: 40, percentual: 100, taxaConversao: 80 },
-        ],
+        agendamentosDia: 12,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 6.8,
+        tempoMedioAgendamento: "2.5 horas",
       },
-      {
-        nome: "Reuniões Realizadas",
-        icon: Users,
+      "high-ticket": {
+        total: 240,
+        meta: 240,
+        percentual: 100,
+        taxaConversao: 80,
+        agendamentosDia: 8,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 8.1,
+        tempoMedioAgendamento: "2.3 horas",
+      },
+      creatina: {
+        total: 80,
+        meta: 80,
+        percentual: 100,
+        taxaConversao: 80,
+        agendamentosDia: 2.7,
+        melhorDia: "Terça",
+        piorDia: "Sexta",
+        crescimento: 4.5,
+        tempoMedioAgendamento: "2.8 horas",
+      },
+      "outros-com": {
+        total: 40,
+        meta: 40,
+        percentual: 100,
+        taxaConversao: 80,
+        agendamentosDia: 1.3,
+        melhorDia: "Quarta",
+        piorDia: "Sexta",
+        crescimento: 6.2,
+        tempoMedioAgendamento: "2.6 horas",
+      },
+    },
+    realizadas: {
+      todos: {
         total: 288,
+        meta: 288,
+        percentual: 100,
         taxaShowUp: 80,
-        produtos: [
-          { nome: "High-Ticket VIP", valor: 192, meta: 192, percentual: 100, taxaShowUp: 80 },
-          { nome: "Creatina Pro 797", valor: 64, meta: 64, percentual: 100, taxaShowUp: 80 },
-          { nome: "Outros", valor: 32, meta: 32, percentual: 100, taxaShowUp: 80 },
-        ],
+        reunioesDia: 9.6,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 5.5,
+        duracaoMedia: "45 min",
+        noShows: 72,
       },
-      {
-        nome: "Propostas Enviadas",
-        icon: FileText,
+      "high-ticket": {
+        total: 192,
+        meta: 192,
+        percentual: 100,
+        taxaShowUp: 80,
+        reunioesDia: 6.4,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 6.8,
+        duracaoMedia: "52 min",
+        noShows: 48,
+      },
+      creatina: {
+        total: 64,
+        meta: 64,
+        percentual: 100,
+        taxaShowUp: 80,
+        reunioesDia: 2.1,
+        melhorDia: "Terça",
+        piorDia: "Sexta",
+        crescimento: 3.2,
+        duracaoMedia: "35 min",
+        noShows: 16,
+      },
+      "outros-com": {
+        total: 32,
+        meta: 32,
+        percentual: 100,
+        taxaShowUp: 80,
+        reunioesDia: 1.1,
+        melhorDia: "Quarta",
+        piorDia: "Sexta",
+        crescimento: 5.1,
+        duracaoMedia: "40 min",
+        noShows: 8,
+      },
+    },
+    propostas: {
+      todos: {
         total: 230,
+        meta: 231,
+        percentual: 99.6,
         taxaConversao: 79.9,
-        produtos: [
-          { nome: "High-Ticket VIP", valor: 154, meta: 154, percentual: 100, taxaConversao: 80.2 },
-          { nome: "Creatina Pro 797", valor: 51, meta: 51, percentual: 100, taxaConversao: 79.7 },
-          { nome: "Outros", valor: 25, meta: 26, percentual: 96.2, taxaConversao: 78.1 },
-        ],
+        propostasDia: 7.7,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 4.2,
+        tempoMedioEnvio: "1.2 dias",
+        valorMedioPropostas: 2150,
       },
-      {
-        nome: "Vendas Fechadas",
-        icon: CheckCircle,
+      "high-ticket": {
+        total: 154,
+        meta: 154,
+        percentual: 100,
+        taxaConversao: 80.2,
+        propostasDia: 5.1,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 5.5,
+        tempoMedioEnvio: "1.1 dias",
+        valorMedioPropostas: 2500,
+      },
+      creatina: {
+        total: 51,
+        meta: 51,
+        percentual: 100,
+        taxaConversao: 79.7,
+        propostasDia: 1.7,
+        melhorDia: "Terça",
+        piorDia: "Sexta",
+        crescimento: 2.1,
+        tempoMedioEnvio: "1.3 dias",
+        valorMedioPropostas: 797,
+      },
+      "outros-com": {
+        total: 25,
+        meta: 26,
+        percentual: 96.2,
+        propostasDia: 0.8,
+        melhorDia: "Quarta",
+        piorDia: "Sexta",
+        crescimento: 3.8,
+        tempoMedioEnvio: "1.4 dias",
+        valorMedioPropostas: 1800,
+      },
+    },
+    vendas: {
+      todos: {
         total: 200,
+        meta: 203,
+        percentual: 98.5,
         taxaFechamento: 87,
-        produtos: [
-          { nome: "High-Ticket VIP", valor: 140, meta: 135, percentual: 103.7, taxaFechamento: 90.9, ticketMedio: 2500, receita: 350000 },
-          { nome: "Creatina Pro 797", valor: 45, meta: 45, percentual: 100, taxaFechamento: 88.2, ticketMedio: 797, receita: 35865 },
-          { nome: "Outros", valor: 15, meta: 23, percentual: 65.2, taxaFechamento: 60, ticketMedio: 1339, receita: 20085 },
-        ],
+        vendasDia: 6.7,
+        ticketMedio: 2030,
+        receita: 406000,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 9.2,
+        cicloVendaMedio: "8.5 dias",
       },
-    ],
+      "high-ticket": {
+        total: 140,
+        meta: 135,
+        percentual: 103.7,
+        taxaFechamento: 90.9,
+        vendasDia: 4.7,
+        ticketMedio: 2500,
+        receita: 350000,
+        melhorDia: "Segunda",
+        piorDia: "Sexta",
+        crescimento: 12.5,
+        cicloVendaMedio: "9.2 dias",
+      },
+      creatina: {
+        total: 45,
+        meta: 45,
+        percentual: 100,
+        taxaFechamento: 88.2,
+        vendasDia: 1.5,
+        ticketMedio: 797,
+        receita: 35865,
+        melhorDia: "Terça",
+        piorDia: "Sexta",
+        crescimento: 4.8,
+        cicloVendaMedio: "7.1 dias",
+      },
+      "outros-com": {
+        total: 15,
+        meta: 23,
+        percentual: 65.2,
+        taxaFechamento: 60,
+        vendasDia: 0.5,
+        ticketMedio: 1339,
+        receita: 20085,
+        melhorDia: "Quarta",
+        piorDia: "Sexta",
+        crescimento: 2.1,
+        cicloVendaMedio: "6.8 dias",
+      },
+    },
   };
 
   const formatNumber = (value: number) => {
@@ -200,17 +530,45 @@ export default function Metricas() {
     };
   };
 
-  const toggleProduct = (etapaIndex: number, produtoNome: string) => {
-    const key = `${etapaIndex}-${produtoNome}`;
-    setExpandedProducts(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
+  const renderMetricas = (metricas: any) => {
+    if (!metricas) return null;
 
-  const isProductExpanded = (etapaIndex: number, produtoNome: string) => {
-    const key = `${etapaIndex}-${produtoNome}`;
-    return expandedProducts[key] || false;
+    const metricasArray = Object.entries(metricas).filter(([key]) => 
+      key !== 'total' && key !== 'meta' && key !== 'percentual'
+    );
+
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {metricasArray.map(([key, value]) => {
+          const label = key
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, (str) => str.toUpperCase())
+            .trim();
+          
+          let displayValue = value;
+          if (typeof value === 'number') {
+            if (key.includes('cpl') || key.includes('cpa') || key.includes('custo') || key.includes('receita') || key.includes('ticket')) {
+              displayValue = formatCurrency(value as number);
+            } else if (key.includes('taxa') || key.includes('roi') || key.includes('roas') || key.includes('crescimento') || key.includes('qualificacao')) {
+              displayValue = formatPercent(value as number);
+            } else {
+              displayValue = formatNumber(value as number);
+            }
+          }
+
+          return (
+            <Card key={key}>
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs">{label}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{String(displayValue)}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -274,8 +632,8 @@ export default function Metricas() {
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold">Funis de Vendas</h2>
-            <p className="text-sm text-muted-foreground">Acompanhe cada etapa e produto detalhadamente</p>
+            <h2 className="text-2xl font-bold">Análise Detalhada por Produto</h2>
+            <p className="text-sm text-muted-foreground">Selecione etapa e produto para ver métricas completas</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -317,214 +675,234 @@ export default function Metricas() {
 
           {/* Tab Funil de Marketing */}
           <TabsContent value="marketing" className="space-y-6 mt-6">
-            {marketingFunnel.etapas.map((etapa, etapaIndex) => {
-              const EtapaIcon = etapa.icon;
-              
+            {/* Seletores */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Etapa do Funil</label>
+                <Select value={selectedEtapaMarketing} onValueChange={setSelectedEtapaMarketing}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {etapasMarketing.map((etapa) => (
+                      <SelectItem key={etapa.id} value={etapa.id}>
+                        {etapa.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Produto</label>
+                <Select value={selectedProdutoMarketing} onValueChange={setSelectedProdutoMarketing}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os Produtos</SelectItem>
+                    {produtosMarketing.map((produto) => (
+                      <SelectItem key={produto.id} value={produto.id}>
+                        {produto.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Card Principal com Resumo */}
+            {(() => {
+              const metricas = metricasMarketing[selectedEtapaMarketing]?.[selectedProdutoMarketing];
+              if (!metricas) return null;
+
               return (
-                <Card key={etapaIndex} className="border-l-4 border-l-green-500">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <EtapaIcon className="h-5 w-5 text-green-500" />
-                      {etapa.nome}
-                      <span className="ml-auto text-2xl font-bold">{formatNumber(etapa.total)}</span>
-                    </CardTitle>
-                    <CardDescription className="flex gap-4">
-                      {etapa.taxaConversao && (
-                        <span>Taxa de Conversão: <strong>{formatPercent(etapa.taxaConversao)}</strong></span>
-                      )}
-                      {etapa.cpl && (
-                        <span>CPL: <strong>{formatCurrency(etapa.cpl)}</strong></span>
-                      )}
-                      {etapa.cpa && (
-                        <span>CPA: <strong>{formatCurrency(etapa.cpa)}</strong></span>
-                      )}
-                      {etapa.roas && (
-                        <span>ROAS: <strong>{etapa.roas.toFixed(2)}x</strong></span>
-                      )}
-                      {etapa.roi && (
-                        <span>ROI: <strong>{formatPercent(etapa.roi)}</strong></span>
-                      )}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {etapa.produtos.map((produto, produtoIndex) => {
-                      const isExpanded = isProductExpanded(etapaIndex, produto.nome);
-                      
-                      return (
-                        <Collapsible key={produtoIndex} open={isExpanded} onOpenChange={() => toggleProduct(etapaIndex, produto.nome)}>
-                          <Card className={produto.percentual >= 100 ? "border border-green-500/50" : ""}>
-                            <CollapsibleTrigger className="w-full">
-                              <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
-                                  <CardTitle className="text-base">{produto.nome}</CardTitle>
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-sm text-muted-foreground">
-                                      {formatNumber(produto.valor)} / {formatNumber(produto.meta)}
-                                    </span>
-                                    <span className="text-lg font-bold">{formatPercent(produto.percentual)}</span>
-                                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                  </div>
-                                </div>
-                                <div className="w-full bg-muted/30 rounded-full h-3 overflow-hidden mt-2">
-                                  <div 
-                                    className="h-3 rounded-full transition-all duration-500"
-                                    style={getProgressGradient(produto.percentual)}
-                                  />
-                                </div>
-                              </CardHeader>
-                            </CollapsibleTrigger>
-                            
-                            <CollapsibleContent>
-                              <CardContent className="pt-0">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                  {('cpl' in produto) && produto.cpl && (
-                                    <div>
-                                      <p className="text-muted-foreground">CPL</p>
-                                      <p className="font-semibold">{formatCurrency(produto.cpl)}</p>
-                                    </div>
-                                  )}
-                                  {('cpa' in produto) && produto.cpa && (
-                                    <div>
-                                      <p className="text-muted-foreground">CPA</p>
-                                      <p className="font-semibold">{formatCurrency(produto.cpa)}</p>
-                                    </div>
-                                  )}
-                                  {('taxaConversao' in produto) && produto.taxaConversao && (
-                                    <div>
-                                      <p className="text-muted-foreground">Taxa Conv.</p>
-                                      <p className="font-semibold">{formatPercent(produto.taxaConversao)}</p>
-                                    </div>
-                                  )}
-                                  {('ticketMedio' in produto) && produto.ticketMedio && (
-                                    <div>
-                                      <p className="text-muted-foreground">Ticket Médio</p>
-                                      <p className="font-semibold">{formatCurrency(produto.ticketMedio)}</p>
-                                    </div>
-                                  )}
-                                  {('receita' in produto) && produto.receita && (
-                                    <div>
-                                      <p className="text-muted-foreground">Receita</p>
-                                      <p className="font-semibold text-green-500">{formatCurrency(produto.receita)}</p>
-                                    </div>
-                                  )}
-                                  <div>
-                                    <p className="text-muted-foreground">Faltam</p>
-                                    <p className="font-semibold text-orange-500">{formatNumber(Math.max(0, produto.meta - produto.valor))}</p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </CollapsibleContent>
-                          </Card>
-                        </Collapsible>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
+                <>
+                  <Card className="border-l-4 border-l-green-500">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>
+                          {etapasMarketing.find(e => e.id === selectedEtapaMarketing)?.nome}
+                          {selectedProdutoMarketing !== "todos" && ` - ${produtosMarketing.find(p => p.id === selectedProdutoMarketing)?.nome}`}
+                        </span>
+                        <span className="text-3xl font-bold">{formatNumber(metricas.total)}</span>
+                      </CardTitle>
+                      <CardDescription className="flex gap-4 items-center">
+                        <span>Meta: <strong>{formatNumber(metricas.meta)}</strong></span>
+                        <span className={metricas.crescimento >= 0 ? "text-green-500" : "text-red-500"} >
+                          {metricas.crescimento >= 0 ? <TrendingUp className="h-4 w-4 inline" /> : <TrendingDown className="h-4 w-4 inline" />}
+                          {formatPercent(Math.abs(metricas.crescimento))} vs período anterior
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Barra de Progresso */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progresso</span>
+                          <span className="font-bold">{formatPercent(metricas.percentual)}</span>
+                        </div>
+                        <div className="w-full bg-muted/30 rounded-full h-4 overflow-hidden">
+                          <div 
+                            className="h-4 rounded-full transition-all duration-500"
+                            style={getProgressGradient(metricas.percentual)}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>0%</span>
+                          <span>33%</span>
+                          <span>66%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Gráfico de Evolução */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Evolução nos Últimos 7 Dias</CardTitle>
+                      <CardDescription>Acompanhe o desempenho diário</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={graficoEvol}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="dia" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Line type="monotone" dataKey="valor" stroke="#10b981" strokeWidth={2} name="Realizado" />
+                          <Line type="monotone" dataKey="meta" stroke="#6b7280" strokeWidth={2} strokeDasharray="5 5" name="Meta Diária" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Grid de Métricas Detalhadas */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Métricas Detalhadas</h3>
+                    {renderMetricas(metricas)}
+                  </div>
+                </>
               );
-            })}
+            })()}
           </TabsContent>
 
           {/* Tab Funil Comercial */}
           <TabsContent value="comercial" className="space-y-6 mt-6">
-            {comercialFunnel.etapas.map((etapa, etapaIndex) => {
-              const EtapaIcon = etapa.icon;
-              
+            {/* Seletores */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Etapa do Funil</label>
+                <Select value={selectedEtapaComercial} onValueChange={setSelectedEtapaComercial}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {etapasComercial.map((etapa) => (
+                      <SelectItem key={etapa.id} value={etapa.id}>
+                        {etapa.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Produto</label>
+                <Select value={selectedProdutoComercial} onValueChange={setSelectedProdutoComercial}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os Produtos</SelectItem>
+                    {produtosComercial.map((produto) => (
+                      <SelectItem key={produto.id} value={produto.id}>
+                        {produto.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Card Principal com Resumo */}
+            {(() => {
+              const metricas = metricasComercial[selectedEtapaComercial]?.[selectedProdutoComercial];
+              if (!metricas) return null;
+
               return (
-                <Card key={etapaIndex} className="border-l-4 border-l-blue-500">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <EtapaIcon className="h-5 w-5 text-blue-500" />
-                      {etapa.nome}
-                      <span className="ml-auto text-2xl font-bold">{formatNumber(etapa.total)}</span>
-                    </CardTitle>
-                    <CardDescription className="flex gap-4">
-                      {etapa.taxaConversao && (
-                        <span>Taxa de Conversão: <strong>{formatPercent(etapa.taxaConversao)}</strong></span>
-                      )}
-                      {etapa.taxaShowUp && (
-                        <span>Show-up Rate: <strong>{formatPercent(etapa.taxaShowUp)}</strong></span>
-                      )}
-                      {etapa.taxaFechamento && (
-                        <span>Taxa de Fechamento: <strong>{formatPercent(etapa.taxaFechamento)}</strong></span>
-                      )}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {etapa.produtos.map((produto, produtoIndex) => {
-                      const isExpanded = isProductExpanded(etapaIndex + 100, produto.nome); // +100 para não conflitar com marketing
-                      
-                      return (
-                        <Collapsible key={produtoIndex} open={isExpanded} onOpenChange={() => toggleProduct(etapaIndex + 100, produto.nome)}>
-                          <Card className={produto.percentual >= 100 ? "border border-green-500/50" : ""}>
-                            <CollapsibleTrigger className="w-full">
-                              <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
-                                  <CardTitle className="text-base">{produto.nome}</CardTitle>
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-sm text-muted-foreground">
-                                      {formatNumber(produto.valor)} / {formatNumber(produto.meta)}
-                                    </span>
-                                    <span className="text-lg font-bold">{formatPercent(produto.percentual)}</span>
-                                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                  </div>
-                                </div>
-                                <div className="w-full bg-muted/30 rounded-full h-3 overflow-hidden mt-2">
-                                  <div 
-                                    className="h-3 rounded-full transition-all duration-500"
-                                    style={getProgressGradient(produto.percentual)}
-                                  />
-                                </div>
-                              </CardHeader>
-                            </CollapsibleTrigger>
-                            
-                            <CollapsibleContent>
-                              <CardContent className="pt-0">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                  {('taxaConversao' in produto) && produto.taxaConversao && (
-                                    <div>
-                                      <p className="text-muted-foreground">Taxa Conv.</p>
-                                      <p className="font-semibold">{formatPercent(produto.taxaConversao)}</p>
-                                    </div>
-                                  )}
-                                  {('taxaShowUp' in produto) && produto.taxaShowUp && (
-                                    <div>
-                                      <p className="text-muted-foreground">Show-up</p>
-                                      <p className="font-semibold">{formatPercent(produto.taxaShowUp)}</p>
-                                    </div>
-                                  )}
-                                  {('taxaFechamento' in produto) && produto.taxaFechamento && (
-                                    <div>
-                                      <p className="text-muted-foreground">Fechamento</p>
-                                      <p className="font-semibold">{formatPercent(produto.taxaFechamento)}</p>
-                                    </div>
-                                  )}
-                                  {('ticketMedio' in produto) && produto.ticketMedio && (
-                                    <div>
-                                      <p className="text-muted-foreground">Ticket Médio</p>
-                                      <p className="font-semibold">{formatCurrency(produto.ticketMedio)}</p>
-                                    </div>
-                                  )}
-                                  {('receita' in produto) && produto.receita && (
-                                    <div>
-                                      <p className="text-muted-foreground">Receita</p>
-                                      <p className="font-semibold text-green-500">{formatCurrency(produto.receita)}</p>
-                                    </div>
-                                  )}
-                                  <div>
-                                    <p className="text-muted-foreground">Faltam</p>
-                                    <p className="font-semibold text-orange-500">{formatNumber(Math.max(0, produto.meta - produto.valor))}</p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </CollapsibleContent>
-                          </Card>
-                        </Collapsible>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
+                <>
+                  <Card className="border-l-4 border-l-blue-500">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>
+                          {etapasComercial.find(e => e.id === selectedEtapaComercial)?.nome}
+                          {selectedProdutoComercial !== "todos" && ` - ${produtosComercial.find(p => p.id === selectedProdutoComercial)?.nome}`}
+                        </span>
+                        <span className="text-3xl font-bold">{formatNumber(metricas.total)}</span>
+                      </CardTitle>
+                      <CardDescription className="flex gap-4 items-center">
+                        <span>Meta: <strong>{formatNumber(metricas.meta)}</strong></span>
+                        <span className={metricas.crescimento >= 0 ? "text-green-500" : "text-red-500"}>
+                          {metricas.crescimento >= 0 ? <TrendingUp className="h-4 w-4 inline" /> : <TrendingDown className="h-4 w-4 inline" />}
+                          {formatPercent(Math.abs(metricas.crescimento))} vs período anterior
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Barra de Progresso */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progresso</span>
+                          <span className="font-bold">{formatPercent(metricas.percentual)}</span>
+                        </div>
+                        <div className="w-full bg-muted/30 rounded-full h-4 overflow-hidden">
+                          <div 
+                            className="h-4 rounded-full transition-all duration-500"
+                            style={getProgressGradient(metricas.percentual)}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>0%</span>
+                          <span>33%</span>
+                          <span>66%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Gráfico de Evolução */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Evolução nos Últimos 7 Dias</CardTitle>
+                      <CardDescription>Acompanhe o desempenho diário</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={graficoEvol}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="dia" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="valor" fill="#3b82f6" name="Realizado" />
+                          <Bar dataKey="meta" fill="#9ca3af" name="Meta Diária" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Grid de Métricas Detalhadas */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Métricas Detalhadas</h3>
+                    {renderMetricas(metricas)}
+                  </div>
+                </>
               );
-            })}
+            })()}
           </TabsContent>
         </Tabs>
       </main>

@@ -230,3 +230,13 @@
 - [x] Métricas: Show-up rate, taxa de fechamento, ticket médio
 - [x] Barra gradiente em cada produto
 - [x] Quanto falta para meta por produto
+
+## Refatoração Métricas - Dropdowns e Gráficos
+- [x] Remover "Views VSL" do funil de Marketing
+- [x] Separar produtos por canal (Marketing/Comercial/Ambos)
+- [x] Adicionar dropdown para selecionar etapa do funil
+- [x] Adicionar dropdown para selecionar produto (ou "Todos")
+- [x] Criar gráfico de evolução temporal da etapa selecionada
+- [x] Adicionar grid completo de métricas por produto
+- [x] Métricas: CPL, CPA, Taxa Conversão, Custo Total, Receita, ROI, ROAS, Ticket Médio, etc
+- [x] Layout responsivo com gráfico + métricas
