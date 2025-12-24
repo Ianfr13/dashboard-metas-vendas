@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Home as HomeIcon, BarChart3, Settings, Moon, Sun, Save, RotateCcw, Plus, Trash2, Calculator, TrendingUp, ArrowRight } from "lucide-react";
+import { Home as HomeIcon, BarChart3, Settings, Moon, Sun, Save, RotateCcw, Plus, Trash2, Calculator } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -57,44 +57,10 @@ export default function Admin() {
   const [config, setConfig] = useState<Configuracao>({
     metaMensal: 3000000,
     produtos: [
-      { 
-        id: "1", 
-        nome: "Creatina Pro 797", 
-        valor: 797, 
-        tipoFunil: "frontend",
-        taxaTake: 100,
-        canal: "ambos", 
-        customizado: false 
-      },
-      { 
-        id: "2", 
-        nome: "Creatina Pro + Whey Combo", 
-        valor: 1200, 
-        tipoFunil: "backend",
-        produtoPai: "1",
-        taxaTake: 30,
-        canal: "marketing", 
-        customizado: false 
-      },
-      { 
-        id: "3", 
-        nome: "Creatina Basic", 
-        valor: 397, 
-        tipoFunil: "downsell",
-        produtoPai: "1",
-        taxaTake: 20,
-        canal: "marketing", 
-        customizado: false 
-      },
-      { 
-        id: "4", 
-        nome: "Ômega-3 Ultra", 
-        valor: 180, 
-        tipoFunil: "frontend",
-        taxaTake: 100,
-        canal: "comercial", 
-        customizado: false 
-      },
+      { id: "1", nome: "Creatina Pro 797", ticketMedio: 797, canal: "ambos", customizado: false },
+      { id: "2", nome: "Whey Premium", ticketMedio: 450, canal: "marketing", customizado: false },
+      { id: "3", nome: "Colágeno Hidrolisado", ticketMedio: 350, canal: "marketing", customizado: false },
+      { id: "4", nome: "Ômega-3 Ultra", ticketMedio: 180, canal: "comercial", customizado: false },
     ],
     distribuicao: {
       marketing: 85,
@@ -117,14 +83,8 @@ export default function Admin() {
   });
 
   // Estados para formulários
-  const [novoProduto, setNovoProduto] = useState({ 
-    nome: "", 
-    valor: "", 
-    tipoFunil: "frontend" as const,
-    produtoPai: "",
-    taxaTake: "100",
-    canal: "ambos" as const 
-  });
+  const [novoProduto, setNovoProduto] = useState({ nome: "", ticketMedio: "", canal: "ambos" as const });
+  const [editandoProduto, setEditandoProduto] = useState<string | null>(null);
 
   // Carregar configuração do localStorage
   useEffect(() => {
@@ -137,31 +97,6 @@ export default function Admin() {
       }
     }
   }, []);
-
-  // Calcular ticket médio real de um funil
-  const calcularTicketMedio = (produtoId: string): number => {
-    const produto = config.produtos.find(p => p.id === produtoId);
-    if (!produto) return 0;
-
-    // Se tem ticket médio customizado, usa ele
-    if (produto.ticketMedioReal && produto.customizado) {
-      return produto.ticketMedioReal;
-    }
-
-    // Se é frontend, calcula: valor base + backends + downsells
-    if (produto.tipoFunil === "frontend") {
-      const backends = config.produtos.filter(p => p.tipoFunil === "backend" && p.produtoPai === produtoId);
-      const downsells = config.produtos.filter(p => p.tipoFunil === "downsell" && p.produtoPai === produtoId);
-
-      const valorBackends = backends.reduce((acc, b) => acc + ((b.valor - produto.valor) * b.taxaTake / 100), 0);
-      const valorDownsells = downsells.reduce((acc, d) => acc + ((d.valor - produto.valor) * d.taxaTake / 100), 0);
-
-      return produto.valor + valorBackends + valorDownsells;
-    }
-
-    // Se é backend ou downsell, retorna o valor dele
-    return produto.valor;
-  };
 
   // Salvar configuração
   const salvarConfiguracao = () => {
@@ -178,19 +113,16 @@ export default function Admin() {
   };
 
   // Cálculos automáticos
-  const ticketMedioGeral = config.produtos
-    .filter(p => p.tipoFunil === "frontend")
-    .reduce((acc, p) => acc + calcularTicketMedio(p.id), 0) / 
-    config.produtos.filter(p => p.tipoFunil === "frontend").length || 1;
-
   const calculos = {
     metaDiaria: config.metaMensal / 30,
     metaSemanal: config.metaMensal / 4,
     metaMarketing: (config.metaMensal * config.distribuicao.marketing) / 100,
     metaComercial: (config.metaMensal * config.distribuicao.comercial) / 100,
-    vendasNecessarias: Math.ceil(config.metaMensal / ticketMedioGeral),
+    vendasNecessarias: Math.ceil(
+      config.metaMensal / (config.produtos.reduce((acc, p) => acc + p.ticketMedio, 0) / config.produtos.length)
+    ),
     orcamentoMarketing: function() {
-      const vendasMkt = Math.ceil(this.metaMarketing / ticketMedioGeral);
+      const vendasMkt = Math.ceil(this.metaMarketing / (config.produtos.filter(p => p.canal === "marketing" || p.canal === "ambos").reduce((acc, p) => acc + p.ticketMedio, 0) / config.produtos.filter(p => p.canal === "marketing" || p.canal === "ambos").length || 1));
       return vendasMkt * config.custos.cpaMarketing;
     },
     roiEsperado: function() {
@@ -201,48 +133,26 @@ export default function Admin() {
 
   // Adicionar produto
   const adicionarProduto = () => {
-    if (!novoProduto.nome || !novoProduto.valor) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
-    }
-
-    if (novoProduto.tipoFunil !== "frontend" && !novoProduto.produtoPai) {
-      toast.error("Selecione o produto frontend pai");
+    if (!novoProduto.nome || !novoProduto.ticketMedio) {
+      toast.error("Preencha todos os campos");
       return;
     }
 
     const novo: Produto = {
       id: Date.now().toString(),
       nome: novoProduto.nome,
-      valor: parseFloat(novoProduto.valor),
-      tipoFunil: novoProduto.tipoFunil,
-      produtoPai: novoProduto.produtoPai || undefined,
-      taxaTake: parseFloat(novoProduto.taxaTake),
+      ticketMedio: parseFloat(novoProduto.ticketMedio),
       canal: novoProduto.canal,
       customizado: false,
     };
 
     setConfig({ ...config, produtos: [...config.produtos, novo] });
-    setNovoProduto({ 
-      nome: "", 
-      valor: "", 
-      tipoFunil: "frontend",
-      produtoPai: "",
-      taxaTake: "100",
-      canal: "ambos" 
-    });
+    setNovoProduto({ nome: "", ticketMedio: "", canal: "ambos" });
     toast.success("Produto adicionado!");
   };
 
   // Remover produto
   const removerProduto = (id: string) => {
-    // Verificar se tem produtos dependentes
-    const dependentes = config.produtos.filter(p => p.produtoPai === id);
-    if (dependentes.length > 0) {
-      toast.error(`Remova primeiro os produtos dependentes: ${dependentes.map(p => p.nome).join(", ")}`);
-      return;
-    }
-
     if (confirm("Tem certeza que deseja remover este produto?")) {
       setConfig({ ...config, produtos: config.produtos.filter(p => p.id !== id) });
       toast.success("Produto removido!");
@@ -254,21 +164,10 @@ export default function Admin() {
     setConfig({
       ...config,
       produtos: config.produtos.map(p =>
-        p.id === id ? { ...p, [campo]: valor, customizado: campo === "ticketMedioReal" } : p
+        p.id === id ? { ...p, [campo]: valor, customizado: true } : p
       ),
     });
   };
-
-  // Obter produtos frontend para dropdown
-  const produtosFrontend = config.produtos.filter(p => p.tipoFunil === "frontend");
-
-  // Agrupar produtos por funil
-  const funis = produtosFrontend.map(frontend => ({
-    frontend,
-    backends: config.produtos.filter(p => p.tipoFunil === "backend" && p.produtoPai === frontend.id),
-    downsells: config.produtos.filter(p => p.tipoFunil === "downsell" && p.produtoPai === frontend.id),
-    ticketMedio: calcularTicketMedio(frontend.id),
-  }));
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -281,15 +180,6 @@ export default function Admin() {
 
   const formatNumber = (value: number) => {
     return new Intl.NumberFormat("pt-BR").format(Math.round(value));
-  };
-
-  const getTipoLabel = (tipo: string) => {
-    const labels = {
-      frontend: "Frontend",
-      backend: "Backend (Upsell)",
-      downsell: "Downsell"
-    };
-    return labels[tipo as keyof typeof labels] || tipo;
   };
 
   return (
@@ -403,7 +293,7 @@ export default function Admin() {
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Vendas Necessárias</p>
                     <p className="text-2xl font-bold text-primary">{formatNumber(calculos.vendasNecessarias)}</p>
-                    <p className="text-xs text-muted-foreground">Baseado no ticket médio: {formatCurrency(ticketMedioGeral)}</p>
+                    <p className="text-xs text-muted-foreground">Baseado no ticket médio</p>
                   </div>
                 </div>
               </CardContent>
@@ -460,11 +350,11 @@ export default function Admin() {
             <Card>
               <CardHeader>
                 <CardTitle>Adicionar Produto</CardTitle>
-                <CardDescription>Configure produtos e funis de vendas</CardDescription>
+                <CardDescription>Configure produtos e tickets médios</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2">
                     <Label>Nome do Produto</Label>
                     <Input
                       value={novoProduto.nome}
@@ -473,67 +363,14 @@ export default function Admin() {
                     />
                   </div>
                   <div>
-                    <Label>Valor do Produto (R$)</Label>
+                    <Label>Ticket Médio (R$)</Label>
                     <Input
                       type="number"
-                      value={novoProduto.valor}
-                      onChange={(e) => setNovoProduto({ ...novoProduto, valor: e.target.value })}
+                      value={novoProduto.ticketMedio}
+                      onChange={(e) => setNovoProduto({ ...novoProduto, ticketMedio: e.target.value })}
                       placeholder="797"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Tipo no Funil</Label>
-                    <Select
-                      value={novoProduto.tipoFunil}
-                      onValueChange={(v: any) => setNovoProduto({ ...novoProduto, tipoFunil: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="frontend">Frontend</SelectItem>
-                        <SelectItem value="backend">Backend (Upsell)</SelectItem>
-                        <SelectItem value="downsell">Downsell</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {(novoProduto.tipoFunil !== "frontend") && (
-                    <div>
-                      <Label>Produto Frontend Pai</Label>
-                      <Select
-                        value={novoProduto.produtoPai}
-                        onValueChange={(v) => setNovoProduto({ ...novoProduto, produtoPai: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {produtosFrontend.map(p => (
-                            <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {novoProduto.tipoFunil !== "frontend" && (
-                    <div>
-                      <Label>Taxa de Take (%)</Label>
-                      <Input
-                        type="number"
-                        value={novoProduto.taxaTake}
-                        onChange={(e) => setNovoProduto({ ...novoProduto, taxaTake: e.target.value })}
-                        placeholder="30"
-                        max={100}
-                        min={0}
-                      />
-                    </div>
-                  )}
-
                   <div>
                     <Label>Canal</Label>
                     <Select
@@ -551,8 +388,7 @@ export default function Admin() {
                     </Select>
                   </div>
                 </div>
-
-                <Button onClick={adicionarProduto} className="gap-2">
+                <Button onClick={adicionarProduto} className="mt-4 gap-2">
                   <Plus className="h-4 w-4" />
                   Adicionar Produto
                 </Button>
@@ -561,168 +397,56 @@ export default function Admin() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Funis de Produtos</CardTitle>
-                <CardDescription>{funis.length} funis configurados</CardDescription>
+                <CardTitle>Produtos Cadastrados</CardTitle>
+                <CardDescription>{config.produtos.length} produtos configurados</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {funis.map((funil) => (
-                    <div key={funil.frontend.id} className="border rounded-lg p-4 space-y-4">
-                      {/* Frontend */}
-                      <div className="flex items-start gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xs font-semibold px-2 py-1 bg-green-500/20 text-green-500 rounded">
-                              FRONTEND
-                            </span>
-                            <span className="text-xs font-semibold px-2 py-1 bg-blue-500/20 text-blue-500 rounded">
-                              {funil.frontend.canal.toUpperCase()}
-                            </span>
-                          </div>
+                <div className="space-y-3">
+                  {config.produtos.map((produto) => (
+                    <div key={produto.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Nome</Label>
                           <Input
-                            value={funil.frontend.nome}
-                            onChange={(e) => atualizarProduto(funil.frontend.id, "nome", e.target.value)}
-                            className="font-semibold mb-2"
+                            value={produto.nome}
+                            onChange={(e) => atualizarProduto(produto.id, "nome", e.target.value)}
+                            className="mt-1"
                           />
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <Label className="text-xs">Valor</Label>
-                              <Input
-                                type="number"
-                                value={funil.frontend.valor}
-                                onChange={(e) => atualizarProduto(funil.frontend.id, "valor", parseFloat(e.target.value) || 0)}
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Ticket Médio Calculado</Label>
-                              <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted">
-                                <Calculator className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-semibold text-primary">{formatCurrency(funil.ticketMedio)}</span>
-                              </div>
-                            </div>
-                          </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removerProduto(funil.frontend.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Backends */}
-                      {funil.backends.map((backend) => (
-                        <div key={backend.id} className="flex items-start gap-4 ml-8 pl-4 border-l-2 border-orange-500">
-                          <ArrowRight className="h-5 w-5 text-orange-500 mt-2" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-xs font-semibold px-2 py-1 bg-orange-500/20 text-orange-500 rounded">
-                                BACKEND (UPSELL)
-                              </span>
-                            </div>
-                            <Input
-                              value={backend.nome}
-                              onChange={(e) => atualizarProduto(backend.id, "nome", e.target.value)}
-                              className="mb-2"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-xs">Valor</Label>
-                                <Input
-                                  type="number"
-                                  value={backend.valor}
-                                  onChange={(e) => atualizarProduto(backend.id, "valor", parseFloat(e.target.value) || 0)}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Taxa de Take (%)</Label>
-                                <Input
-                                  type="number"
-                                  value={backend.taxaTake}
-                                  onChange={(e) => atualizarProduto(backend.id, "taxaTake", parseFloat(e.target.value) || 0)}
-                                  max={100}
-                                  min={0}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removerProduto(backend.id)}
-                            className="text-destructive hover:text-destructive"
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Ticket Médio</Label>
+                          <Input
+                            type="number"
+                            value={produto.ticketMedio}
+                            onChange={(e) => atualizarProduto(produto.id, "ticketMedio", parseFloat(e.target.value) || 0)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Canal</Label>
+                          <Select
+                            value={produto.canal}
+                            onValueChange={(v: any) => atualizarProduto(produto.id, "canal", v)}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-
-                      {/* Downsells */}
-                      {funil.downsells.map((downsell) => (
-                        <div key={downsell.id} className="flex items-start gap-4 ml-8 pl-4 border-l-2 border-yellow-500">
-                          <ArrowRight className="h-5 w-5 text-yellow-500 mt-2" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-xs font-semibold px-2 py-1 bg-yellow-500/20 text-yellow-500 rounded">
-                                DOWNSELL
-                              </span>
-                            </div>
-                            <Input
-                              value={downsell.nome}
-                              onChange={(e) => atualizarProduto(downsell.id, "nome", e.target.value)}
-                              className="mb-2"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-xs">Valor</Label>
-                                <Input
-                                  type="number"
-                                  value={downsell.valor}
-                                  onChange={(e) => atualizarProduto(downsell.id, "valor", parseFloat(e.target.value) || 0)}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Taxa de Take (%)</Label>
-                                <Input
-                                  type="number"
-                                  value={downsell.taxaTake}
-                                  onChange={(e) => atualizarProduto(downsell.id, "taxaTake", parseFloat(e.target.value) || 0)}
-                                  max={100}
-                                  min={0}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removerProduto(downsell.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-
-                      {/* Cálculo do Funil */}
-                      <div className="bg-muted/50 rounded-lg p-4 mt-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <TrendingUp className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-semibold">Cálculo do Ticket Médio</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <p>• Valor base: {formatCurrency(funil.frontend.valor)}</p>
-                          {funil.backends.map(b => (
-                            <p key={b.id}>• {b.nome}: +{formatCurrency((b.valor - funil.frontend.valor) * b.taxaTake / 100)} ({b.taxaTake}% de take)</p>
-                          ))}
-                          {funil.downsells.map(d => (
-                            <p key={d.id}>• {d.nome}: {formatCurrency((d.valor - funil.frontend.valor) * d.taxaTake / 100)} ({d.taxaTake}% de take)</p>
-                          ))}
-                          <p className="font-semibold text-primary pt-2 border-t">= Ticket Médio: {formatCurrency(funil.ticketMedio)}</p>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="marketing">Marketing</SelectItem>
+                              <SelectItem value="comercial">Comercial</SelectItem>
+                              <SelectItem value="ambos">Ambos</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removerProduto(produto.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>

@@ -266,3 +266,13 @@
 - [x] Preview em tempo real das configurações
 - [x] Botão "Salvar Configurações" com persistência
 - [x] Botão "Resetar para Cálculos Automáticos"
+
+## Sistema de Funil de Produtos
+- [x] Alterar "Ticket Médio" para "Valor do Produto" (preço fixo)
+- [x] Adicionar campo "Tipo no Funil": Frontend / Backend (Upsell) / Downsell
+- [x] Adicionar campo "Produto Pai" para vincular backend/downsell ao frontend
+- [x] Criar visualização de funil completo (frontend → backend → downsell)
+- [x] Adicionar campo "Taxa de Take" esperada para backend/downsell
+- [x] Calcular ticket médio real baseado em: valor base + (backend × taxa) + (downsell × taxa)
+- [x] Mostrar preview do ticket médio calculado
+- [x] Permitir edição manual do ticket médio (flag customizado)
