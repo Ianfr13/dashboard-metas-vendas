@@ -9,32 +9,43 @@ export function LoginPage() {
 
   useEffect(() => {
     // Verificar se já está autenticado
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        setLocation('/');
+        const email = session.user.email || '';
+        const domain = email.split('@')[1];
+        
+        if (domain === 'douravita.com.br') {
+          setLocation('/');
+        } else {
+          await supabase.auth.signOut();
+          setError('Acesso negado. Apenas emails @douravita.com.br são permitidos.');
+        }
       }
-    });
+    };
+
+    checkSession();
 
     // Listener para mudanças de autenticação
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        // Verificar se o email é do domínio permitido
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event, session);
+      
+      if (event === 'SIGNED_IN' && session) {
         const email = session.user.email || '';
         const domain = email.split('@')[1];
 
         if (domain === 'douravita.com.br') {
+          console.log('Redirecting to /');
           setLocation('/');
         } else {
           setError('Acesso negado. Apenas emails @douravita.com.br são permitidos.');
-          supabase.auth.signOut();
+          await supabase.auth.signOut();
         }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [setLocation]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -48,7 +59,7 @@ export function LoginPage() {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-            hd: 'douravita.com.br', // Restringe para o domínio
+            hd: 'douravita.com.br',
           },
         },
       });
