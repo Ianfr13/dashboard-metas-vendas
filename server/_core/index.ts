@@ -9,6 +9,8 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import webhooksRouter from "../routes/webhooks.js";
 import gtmRouter from "../routes/gtm.js";
+import funilMetricasRouter from "../routes/funil-metricas.js";
+import funisRouter from "../routes/funis.js";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -41,6 +43,10 @@ async function startServer() {
   app.use("/api/webhooks", webhooksRouter);
   // GTM Events API (public endpoints)
   app.use("/api/gtm", gtmRouter);
+  // Funil Metricas API (public endpoints)
+  app.use("/api/funil", funilMetricasRouter);
+  // Funis CRUD API
+  app.use("/api/funis", funisRouter);
   // tRPC API
   app.use(
     "/api/trpc",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,6 +44,8 @@ export default function Metricas() {
   // Estados para seleção
   const [selectedFunil, setSelectedFunil] = useState<string | null>(null);
   const [showFunilCompleto, setShowFunilCompleto] = useState(false);
+  const [metricasReais, setMetricasReais] = useState<any>(null);
+  const [loadingMetricas, setLoadingMetricas] = useState(false);
   const [selectedEtapaMarketing, setSelectedEtapaMarketing] = useState("leads");
   const [selectedProdutoMarketing, setSelectedProdutoMarketing] = useState("todos");
   const [selectedEtapaComercial, setSelectedEtapaComercial] = useState("agendadas");
@@ -75,6 +77,43 @@ export default function Metricas() {
     { id: "propostas", nome: "Propostas Enviadas" },
     { id: "vendas", nome: "Vendas Fechadas" },
   ];
+
+  // Buscar métricas reais da API quando showFunilCompleto é ativado
+  useEffect(() => {
+    if (showFunilCompleto && selectedFunil && config) {
+      const funil = config.funis?.find((f: any) => f.id === selectedFunil);
+      if (!funil || !funil.url) return;
+
+      setLoadingMetricas(true);
+      
+      // Preparar produtos do funil para enviar à API
+      const produtosParaAPI = funil.produtos.map((p: any) => {
+        const produto = config.produtos?.find((pr: any) => pr.id === p.produtoId);
+        return {
+          valor: produto?.valor || 0,
+          tipo: p.tipo, // frontend, backend, downsell
+        };
+      });
+
+      // Chamar API
+      fetch('/api/funil/metricas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          funilUrl: funil.url,
+          produtos: produtosParaAPI,
+        }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setMetricasReais(data);
+          }
+        })
+        .catch(err => console.error('Erro ao buscar métricas:', err))
+        .finally(() => setLoadingMetricas(false));
+    }
+  }, [showFunilCompleto, selectedFunil, config]);
 
   // Mock data - Gráfico de evolução (últimos 7 dias)
   const graficoEvol = [

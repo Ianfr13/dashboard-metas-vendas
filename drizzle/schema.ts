@@ -230,3 +230,107 @@ export const gtmEvents = mysqlTable("gtm_events", {
 
 export type GtmEvent = typeof gtmEvents.$inferSelect;
 export type InsertGtmEvent = typeof gtmEvents.$inferInsert;
+/**
+ * Funis Table
+ * Stores sales funnels with their configuration
+ */
+export const funis = mysqlTable("funis", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 255 }).notNull(),
+  url: text("url"), // URL base do funil para rastreamento (ex: /checkout/creatina)
+  ticketMedio: decimal("ticket_medio", { precision: 10, scale: 2 }),
+  active: int("active").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Funil = typeof funis.$inferSelect;
+export type InsertFunil = typeof funis.$inferInsert;
+
+/**
+ * Funil Produtos Table
+ * Relationship table between funis and products
+ */
+export const funilProdutos = mysqlTable("funil_produtos", {
+  id: int("id").autoincrement().primaryKey(),
+  funilId: int("funil_id").notNull(),
+  produtoId: int("produto_id").notNull(),
+  tipo: mysqlEnum("tipo", ["frontend", "backend", "downsell"]).notNull(),
+  taxaTake: decimal("taxa_take", { precision: 5, scale: 2 }), // Taxa de conversão esperada (%)
+  ordem: int("ordem").notNull().default(0), // Ordem no funil
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FunilProduto = typeof funilProdutos.$inferSelect;
+export type InsertFunilProduto = typeof funilProdutos.$inferInsert;
+
+/**
+ * Metas Principais Table
+ * Stores main revenue goals for the dashboard
+ */
+export const metasPrincipais = mysqlTable("metas_principais", {
+  id: int("id").autoincrement().primaryKey(),
+  mes: int("mes").notNull(), // 1-12
+  ano: int("ano").notNull(),
+  valorMeta: decimal("valor_meta", { precision: 12, scale: 2 }).notNull(),
+  valorAtual: decimal("valor_atual", { precision: 12, scale: 2 }).default("0"),
+  active: int("active").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MetaPrincipal = typeof metasPrincipais.$inferSelect;
+export type InsertMetaPrincipal = typeof metasPrincipais.$inferInsert;
+
+/**
+ * Sub Metas Table
+ * Stores milestone sub-goals
+ */
+export const subMetas = mysqlTable("sub_metas", {
+  id: int("id").autoincrement().primaryKey(),
+  metaPrincipalId: int("meta_principal_id").notNull(),
+  valor: decimal("valor", { precision: 12, scale: 2 }).notNull(),
+  atingida: int("atingida").notNull().default(0),
+  dataAtingida: timestamp("data_atingida"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SubMeta = typeof subMetas.$inferSelect;
+export type InsertSubMeta = typeof subMetas.$inferInsert;
+
+/**
+ * Custos Table
+ * Stores cost tracking for different channels
+ */
+export const custos = mysqlTable("custos", {
+  id: int("id").autoincrement().primaryKey(),
+  canal: mysqlEnum("canal", ["marketing", "comercial"]).notNull(),
+  tipo: varchar("tipo", { length: 100 }).notNull(), // Ex: "Tráfego Pago", "SDR", "Closer"
+  valorMensal: decimal("valor_mensal", { precision: 10, scale: 2 }).notNull(),
+  mes: int("mes").notNull(),
+  ano: int("ano").notNull(),
+  active: int("active").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Custo = typeof custos.$inferSelect;
+export type InsertCusto = typeof custos.$inferInsert;
+
+/**
+ * Distribuição Canal Table
+ * Stores revenue distribution targets between marketing and commercial channels
+ */
+export const distribuicaoCanal = mysqlTable("distribuicao_canal", {
+  id: int("id").autoincrement().primaryKey(),
+  mes: int("mes").notNull(),
+  ano: int("ano").notNull(),
+  percentualMarketing: decimal("percentual_marketing", { precision: 5, scale: 2 }).notNull(),
+  percentualComercial: decimal("percentual_comercial", { precision: 5, scale: 2 }).notNull(),
+  active: int("active").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DistribuicaoCanal = typeof distribuicaoCanal.$inferSelect;
+export type InsertDistribuicaoCanal = typeof distribuicaoCanal.$inferInsert;

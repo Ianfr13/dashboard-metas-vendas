@@ -329,3 +329,34 @@
 - [ ] Criar API para calcular métricas do funil: taxa de take real, ticket médio real, conversão
 - [ ] Conectar página Métricas aos dados reais do banco
 - [ ] Testar fluxo completo: GTM envia purchase com URL → identifica funil → calcula métricas
+
+## Implementação de Métricas Reais do Funil
+- [ ] Criar API endpoint GET /api/funil/metricas?funilUrl=X&startDate=Y&endDate=Z
+- [ ] Buscar vendas do GTM filtradas por período
+- [ ] Identificar funil pela URL (match parcial: page_url contém funilUrl)
+- [ ] Separar vendas por tipo (frontend/upsell/downsell) baseado no valor
+- [ ] Calcular taxa de take real de upsell e downsell
+- [ ] Calcular ticket médio real do funil
+- [ ] Calcular conversão end-to-end (leads → vendas)
+- [ ] Atualizar página Métricas para consumir API real
+- [ ] Substituir dados mockados por dados reais
+- [ ] Testar com dados de exemplo
+
+## Migração Completa para Banco de Dados
+- [x] Criar tabela funis no schema
+- [x] Criar tabela funil_produtos no schema (relacionamento)
+- [x] Criar tabela metas no schema
+- [x] Criar tabela sub_metas no schema
+- [x] Criar tabela custos no schema
+- [x] Criar tabela distribuicao_canal no schema
+- [x] Aplicar migrations no banco
+- [x] Criar API CRUD para funis
+- [ ] Criar API CRUD para metas
+- [ ] Criar API CRUD para sub_metas
+- [ ] Criar API CRUD para custos
+- [ ] Criar API CRUD para distribuição
+- [ ] Refatorar Admin para usar APIs ao invés de localStorage
+- [ ] Refatorar Home para buscar dados do banco
+- [ ] Refatorar Métricas para buscar dados do banco
+- [ ] Remover completamente localStorage
+- [ ] Testar fluxo completo

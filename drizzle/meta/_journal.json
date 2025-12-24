@@ -15,6 +15,13 @@
       "when": 1766610589623,
       "tag": "0001_dusty_the_call",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1766612075676,
+      "tag": "0002_optimal_bloodstorm",
+      "breakpoints": true
     }
   ]
 }
