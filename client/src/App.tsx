@@ -9,6 +9,7 @@ import Admin from "./pages/Admin";
 import Metricas from "./pages/Metricas";
 import { LoginPage } from "./components/Auth/LoginPage";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
+import { AdminRoute } from "./components/Auth/AdminRoute";
 import { Header } from "./components/Auth/Header";
 
 function Router() {
@@ -17,7 +18,7 @@ function Router() {
       {/* Rota pública de login */}
       <Route path="/login" component={LoginPage} />
       
-      {/* Rotas protegidas */}
+      {/* Rotas protegidas (requer autenticação) */}
       <Route path="/">
         {() => (
           <ProtectedRoute>
@@ -27,11 +28,14 @@ function Router() {
         )}
       </Route>
       
+      {/* Rota de admin (requer autenticação + role admin) */}
       <Route path="/admin">
         {() => (
           <ProtectedRoute>
-            <Header />
-            <Admin />
+            <AdminRoute>
+              <Header />
+              <Admin />
+            </AdminRoute>
           </ProtectedRoute>
         )}
       </Route>
