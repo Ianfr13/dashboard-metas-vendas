@@ -21,3 +21,11 @@
 - [ ] Calcular déficit/superávit da semana anterior
 - [ ] Exibir progresso de sub-metas
 - [ ] Calcular ritmo necessário para recuperar atrasos
+
+## Redesign e Tema
+- [x] Implementar toggle de tema dark/light
+- [x] Redesenhar layout do dashboard com design moderno
+- [x] Adaptar logo para responder ao tema (versão dark/light)
+- [x] Garantir que textos e números se adaptem ao tema
+- [x] Melhorar espaçamento e hierarquia visual
+- [x] Adicionar animações e transições suaves
