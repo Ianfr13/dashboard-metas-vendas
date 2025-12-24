@@ -266,24 +266,26 @@ export default function Home() {
                 <CardTitle>Métricas de Marketing Direto</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Vendas Esperadas</p>
-                    <p className="text-2xl font-bold text-foreground">{scenario.marketingSales}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Vendas Esperadas</p>
+                    <p className="text-3xl font-bold text-foreground">{scenario.marketingSales.toLocaleString('pt-BR')}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Receita Esperada</p>
-                    <p className="text-2xl font-bold text-foreground">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Receita Esperada</p>
+                    <p className="text-3xl font-bold text-foreground">
                       {formatCurrency(scenario.marketing)}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Conversão VSL</p>
-                    <p className="text-2xl font-bold text-foreground">1.5%</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Vendas</p>
+                    <p className="text-3xl font-bold text-green-500">0</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">CPA Alvo</p>
-                    <p className="text-2xl font-bold text-foreground">R$ 450</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Receita</p>
+                    <p className="text-3xl font-bold text-green-500">
+                      R$ 0
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -296,24 +298,26 @@ export default function Home() {
                 <CardTitle>Time Comercial</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Vendas Esperadas</p>
-                    <p className="text-2xl font-bold text-foreground">{scenario.commercialSales}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Vendas Esperadas</p>
+                    <p className="text-3xl font-bold text-foreground">{scenario.commercialSales.toLocaleString('pt-BR')}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Receita Esperada</p>
-                    <p className="text-2xl font-bold text-foreground">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Receita Esperada</p>
+                    <p className="text-3xl font-bold text-foreground">
                       {formatCurrency(scenario.commercial)}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">SDRs</p>
-                    <p className="text-2xl font-bold text-foreground">2</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Vendas</p>
+                    <p className="text-3xl font-bold text-green-500">0</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Closers</p>
-                    <p className="text-2xl font-bold text-foreground">2</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Receita</p>
+                    <p className="text-3xl font-bold text-green-500">
+                      R$ 0
+                    </p>
                   </div>
                 </div>
               </CardContent>

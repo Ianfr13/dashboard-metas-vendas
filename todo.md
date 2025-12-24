@@ -80,3 +80,10 @@
 - [x] Adicionar valor da meta final no gauge
 - [ ] Implementar lógica para riscar sub-metas atingidas
 - [ ] Buscar dados reais do banco para calcular progresso
+
+## Simplificação de Métricas
+- [x] Remover conversão VSL da tabela
+- [x] Remover CPA alvo da tabela
+- [x] Manter apenas: Vendas Esperadas, Receita Esperada, Vendas, Receita
+- [x] Otimizar formatação de números
+- [x] Melhorar legibilidade da tabela
