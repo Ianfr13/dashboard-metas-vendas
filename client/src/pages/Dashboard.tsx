@@ -30,6 +30,45 @@ export default function Dashboard() {
   const [selectedYear, setSelectedYear] = useState<number>(hoje.getFullYear());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
 
+  // Funções auxiliares para cálculos
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month, 0).getDate();
+  };
+
+  const getWeeksInMonth = (month: number, year: number) => {
+    const days = getDaysInMonth(month, year);
+    return Math.ceil(days / 7);
+  };
+
+  const getTodaySales = (salesByDay: any) => {
+    const today = new Date().toISOString().split('T')[0];
+    return salesByDay?.[today]?.revenue || 0;
+  };
+
+  const getThisWeekSales = (salesByDay: any) => {
+    if (!salesByDay) return 0;
+    
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Domingo, 6 = Sábado
+    
+    // Encontrar o domingo desta semana
+    const sunday = new Date(now);
+    sunday.setDate(now.getDate() - dayOfWeek);
+    sunday.setHours(0, 0, 0, 0);
+    
+    let weekRevenue = 0;
+    
+    // Somar vendas de domingo até hoje
+    for (let i = 0; i <= dayOfWeek; i++) {
+      const date = new Date(sunday);
+      date.setDate(sunday.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      weekRevenue += salesByDay[dateStr]?.revenue || 0;
+    }
+    
+    return weekRevenue;
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -125,6 +164,47 @@ export default function Dashboard() {
     fetchData();
   };
 
+  // Cálculos baseados no modo de visualização
+  const getDisplayValues = () => {
+    const salesByDay = dashboardData?.salesByDay || {};
+    const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
+    const weeksInMonth = getWeeksInMonth(selectedMonth, selectedYear);
+
+    switch (viewMode) {
+      case 'day':
+        const metaDiaria = valorMeta / daysInMonth;
+        const vendasHoje = getTodaySales(salesByDay);
+        const progressoDiario = metaDiaria > 0 ? (vendasHoje / metaDiaria) * 100 : 0;
+        return {
+          meta: metaDiaria,
+          atual: vendasHoje,
+          progresso: progressoDiario,
+          label: 'Meta Diária'
+        };
+      
+      case 'week':
+        const metaSemanal = valorMeta / weeksInMonth;
+        const vendasSemana = getThisWeekSales(salesByDay);
+        const progressoSemanal = metaSemanal > 0 ? (vendasSemana / metaSemanal) * 100 : 0;
+        return {
+          meta: metaSemanal,
+          atual: vendasSemana,
+          progresso: progressoSemanal,
+          label: 'Meta Semanal'
+        };
+      
+      default: // 'month'
+        return {
+          meta: valorMeta,
+          atual: valorAtual,
+          progresso: progressoReal,
+          label: 'Meta Mensal'
+        };
+    }
+  };
+
+  const displayValues = getDisplayValues();
+
   return (
     <DashboardLayout
       showFilters={true}
@@ -142,9 +222,9 @@ export default function Dashboard() {
         {/* Goal Gauge */}
         <div className="flex justify-center mb-8">
           <GoalGauge 
-            percentage={progressoReal}
-            current={valorAtual}
-            target={valorMeta}
+            percentage={displayValues.progresso}
+            current={displayValues.atual}
+            target={displayValues.meta}
             subGoals={subMetas.map((sm: any) => {
               const statusPremio = calcularStatusPremio(parseFloat(sm.valor), sm.atingida);
               return {
