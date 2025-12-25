@@ -66,11 +66,17 @@ export default function Landing() {
               className="w-64 h-auto mx-auto lg:mx-0 drop-shadow-2xl"
             />
             <h1 className="text-5xl lg:text-6xl font-bold bg-gradient-to-r from-teal-600 to-teal-700 bg-clip-text text-transparent">
-              Dashboard de Metas
+              Dashboard Interno
             </h1>
             <p className="text-xl text-gray-600 max-w-lg">
-              Acompanhe suas metas de vendas em tempo real com análises detalhadas e insights poderosos.
+              Sistema de acompanhamento de metas de vendas exclusivo para colaboradores Douravita.
             </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span className="text-sm font-medium text-amber-800">Acesso restrito a colaboradores</span>
+            </div>
           </div>
 
           {/* Features */}
@@ -123,9 +129,9 @@ export default function Landing() {
             <CardContent className="pt-12 pb-12 px-8">
               <div className="text-center space-y-6">
                 <div className="space-y-2">
-                  <h2 className="text-3xl font-bold text-gray-900">Bem-vindo!</h2>
+                  <h2 className="text-3xl font-bold text-gray-900">Acesso Colaboradores</h2>
                   <p className="text-gray-600">
-                    Faça login para acessar seu dashboard
+                    Entre com seu e-mail corporativo <span className="font-semibold text-teal-700">@douravita.com.br</span>
                   </p>
                 </div>
 
@@ -166,9 +172,11 @@ export default function Landing() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-500 text-center">
-                    Ao fazer login, você concorda com nossos Termos de Serviço e Política de Privacidade.
-                  </p>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs text-blue-800 text-center">
+                      ⚠️ <strong>Acesso restrito:</strong> Apenas colaboradores com e-mail corporativo @douravita.com.br podem acessar este sistema.
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
