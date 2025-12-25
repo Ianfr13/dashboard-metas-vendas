@@ -6,19 +6,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   CalendarIcon, 
-  BarChart3, 
-  Home as HomeIcon, 
-  Settings, 
-  Moon, 
-  Sun,
-  TrendingUp,
   Loader2,
 } from "lucide-react";
-import { Link, useLocation } from "wouter";
-import MobileNav from "@/components/MobileNav";
+import DashboardLayout from "@/components/DashboardLayout";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useTheme } from "@/contexts/ThemeContext";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { gtmAnalyticsAPI } from "@/lib/edge-functions";
 
@@ -32,9 +24,6 @@ export default function Metricas() {
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
   const [groupBy, setGroupBy] = useState<'hour' | 'day' | 'week'>('day');
-  
-  const { theme, toggleTheme } = useTheme();
-  const [location] = useLocation();
 
   // Carregar dados do GTM
   useEffect(() => {
@@ -76,46 +65,8 @@ export default function Metricas() {
   ] : [];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <nav className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Métricas</h1>
-          
-          <div className="hidden md:flex items-center gap-4">
-            <Link href="/">
-              <Button variant={location === "/" ? "default" : "ghost"} size="sm">
-                <HomeIcon className="h-4 w-4 mr-2" />
-                Home
-              </Button>
-            </Link>
-            <Link href="/metricas">
-              <Button variant={location === "/metricas" ? "default" : "ghost"} size="sm">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Métricas
-              </Button>
-            </Link>
-            <Link href="/ranking">
-              <Button variant={location === "/ranking" ? "default" : "ghost"} size="sm">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Ranking
-              </Button>
-            </Link>
-            <Link href="/admin">
-              <Button variant={location === "/admin" ? "default" : "ghost"} size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Admin
-              </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
+    <DashboardLayout>
+      <div className="space-y-6">
         {/* Filtros de Data */}
         <Card className="mb-6">
           <CardHeader>
@@ -411,8 +362,6 @@ export default function Metricas() {
           </Tabs>
         )}
       </div>
-
-      <MobileNav />
-    </div>
+    </DashboardLayout>
   );
 }

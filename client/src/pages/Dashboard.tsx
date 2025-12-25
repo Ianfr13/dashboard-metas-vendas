@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   TrendingUp,
@@ -11,22 +9,14 @@ import {
   Target,
   Calendar,
   Activity,
-  BarChart3,
-  Settings,
-  HomeIcon,
-  Sun,
-  Moon,
 } from "lucide-react";
 import GoalGauge from "@/components/GoalGauge";
 import GoalCelebration from "@/components/GoalCelebration";
-import MobileNav from "@/components/MobileNav";
+import DashboardLayout from "@/components/DashboardLayout";
 import { dashboardAPI } from "@/lib/edge-functions";
-import { useTheme } from "@/contexts/ThemeContext";
 import { safeToFixed } from "@/lib/formatters";
 
 export default function Dashboard() {
-  const [location] = useState(window.location.pathname);
-  const { theme, toggleTheme } = useTheme();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -54,12 +44,14 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando dashboard...</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando dashboard...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -88,59 +80,10 @@ export default function Dashboard() {
   const ritmoNecessario = diasRestantes > 0 ? (valorMeta - valorAtual) / diasRestantes : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <DashboardLayout>
       {showCelebration && <GoalCelebration show={showCelebration} />}
       
-      {/* Header com Logo */}
-      <nav className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img
-              src="/douravita-logo.png"
-              alt="DouraVita"
-              className="h-10 w-auto transition-all filter drop-shadow-md"
-            />
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">Dashboard de Metas</h1>
-              <p className="text-xs font-medium text-muted-foreground">
-                {meta?.mes ? `${meta.mes}/${meta.ano}` : 'Janeiro 2025'}
-              </p>
-            </div>
-          </div>
-          
-          <div className="hidden md:flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant={location === "/dashboard" ? "default" : "ghost"} size="sm">
-                <HomeIcon className="h-4 w-4 mr-2" />
-                Home
-              </Button>
-            </Link>
-            <Link href="/metricas">
-              <Button variant={location === "/metricas" ? "default" : "ghost"} size="sm">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Métricas
-              </Button>
-            </Link>
-            <Link href="/ranking">
-              <Button variant={location === "/ranking" ? "default" : "ghost"} size="sm">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Ranking
-              </Button>
-            </Link>
-            <Link href="/admin">
-              <Button variant={location === "/admin" ? "default" : "ghost"} size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Admin
-              </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-          </div>
-        </div>
-      </nav>
-
-      <main className="container mx-auto px-4 py-8 pb-24">
+      <div className="space-y-6">
         {/* Goal Gauge */}
         <div className="flex justify-center mb-8">
           <GoalGauge 
@@ -401,9 +344,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
-      </main>
-
-      <MobileNav />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
