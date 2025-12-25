@@ -262,6 +262,157 @@ export const dashboardAPI = {
 };
 
 // ============================================
+// API de Analytics do GTM (Edge Functions)
+// ============================================
+
+export interface FunnelMetrics {
+  etapas: {
+    pageViews: number;
+    leads: number;
+    checkouts: number;
+    purchases: number;
+  };
+  conversao: {
+    viewsParaLeads: number;
+    leadsParaCheckout: number;
+    checkoutParaVenda: number;
+    endToEnd: number;
+  };
+  financeiro: {
+    receitaTotal: number;
+    ticketMedio: number;
+  };
+}
+
+export interface EvolutionData {
+  date: string;
+  count: number;
+}
+
+export interface ProductMetricsGTM {
+  produto: string;
+  vendas: number;
+  receita: number;
+  ticketMedio: number;
+}
+
+export const gtmAnalyticsAPI = {
+  /**
+   * Obtém métricas do funil de conversão
+   */
+  getFunnelMetrics: async (startDate: string, endDate: string): Promise<FunnelMetrics> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/gtm-analytics?action=funnel&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch funnel metrics');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Obtém dados de evolução temporal
+   */
+  getEvolutionChart: async (
+    startDate: string,
+    endDate: string,
+    eventName: string,
+    groupBy: 'hour' | 'day' | 'week'
+  ): Promise<EvolutionData[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/gtm-analytics?action=evolution&start_date=${startDate}&end_date=${endDate}&event_name=${eventName}&group_by=${groupBy}`,
+      { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch evolution data');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Obtém métricas por produto
+   */
+  getProductMetrics: async (startDate: string, endDate: string): Promise<ProductMetricsGTM[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/gtm-analytics?action=products&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch product metrics');
+    }
+
+    return response.json();
+  },
+};
+
+// ============================================
+// API de Ranking do Time (Edge Function)
+// ============================================
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string | null;
+  role: string | null;
+  sales_count: number;
+  sales_value: number;
+  gtm_sales_count: number;
+  gtm_sales_value: number;
+  crm_sales_count: number;
+  crm_sales_value: number;
+  discrepancy: number;
+  meetings_count: number;
+  appointments_count: number;
+  conversion_rate: number;
+}
+
+export interface RankingResponse {
+  best_closer: TeamMember | null;
+  best_sdr: TeamMember | null;
+  closers: TeamMember[];
+  sdrs: TeamMember[];
+  period: {
+    start_date: string;
+    end_date: string;
+  };
+  summary: {
+    total_gtm_sales: number;
+    total_crm_sales: number;
+    total_discrepancy: number;
+    match_percentage: number;
+  };
+}
+
+export const teamRankingAPI = {
+  /**
+   * Obtém ranking do time (híbrido GTM + CRM)
+   */
+  getRanking: async (startDate: string, endDate: string): Promise<RankingResponse> => {
+    const response = await fetch(`${FUNCTIONS_URL}/team-ranking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_date: startDate, end_date: endDate }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch team ranking');
+    }
+
+    return response.json();
+  },
+};
+
+// ============================================
 // Exemplo de Uso no Frontend
 // ============================================
 

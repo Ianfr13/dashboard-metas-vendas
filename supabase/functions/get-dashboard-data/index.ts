@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { getMetaPrincipal, getSubMetas } from './handlers/meta.ts';
 import { aggregateSales } from './handlers/sales.ts';
 import { getProducts } from './handlers/products.ts';
+import { calculateMetrics, updateSubMetas } from './handlers/metrics.ts';
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -53,9 +54,16 @@ serve(async (req) => {
     ]);
 
     // Fetch sub-metas only if meta exists
-    const subMetas = metaPrincipal
+    let subMetas = metaPrincipal
       ? await getSubMetas(supabase, metaPrincipal.id)
       : [];
+
+    // Update sub-metas automatically based on current revenue
+    if (metaPrincipal && salesData.revenue > 0) {
+      await updateSubMetas(supabase, metaPrincipal.id, salesData.revenue);
+      // Re-fetch sub-metas after update
+      subMetas = await getSubMetas(supabase, metaPrincipal.id);
+    }
 
     // Calculate progress
     const progress = metaPrincipal
@@ -65,6 +73,11 @@ serve(async (req) => {
     // Calculate date range for response
     const startDate = new Date(year, month - 1, 1).toISOString();
     const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+
+    // Calculate advanced metrics
+    const metrics = metaPrincipal
+      ? await calculateMetrics(supabase, metaPrincipal.id, salesData.revenue, startDate, endDate)
+      : null;
 
     // Return aggregated data
     return new Response(
@@ -76,6 +89,7 @@ serve(async (req) => {
           revenue: salesData.revenue,
           progress: Math.round(progress * 100) / 100,
         },
+        metrics,
         salesByDay: salesData.salesByDay,
         products,
         period: {

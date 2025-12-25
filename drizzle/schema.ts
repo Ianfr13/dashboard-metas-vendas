@@ -334,3 +334,41 @@ export const distribuicaoCanal = mysqlTable("distribuicao_canal", {
 
 export type DistribuicaoCanal = typeof distribuicaoCanal.$inferSelect;
 export type InsertDistribuicaoCanal = typeof distribuicaoCanal.$inferInsert;
+
+/**
+ * Vendedores Table
+ * Stores sales team members (closers, SDRs, managers)
+ */
+export const vendedores = mysqlTable("vendedores", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  tipo: mysqlEnum("tipo", ["closer", "sdr", "gestor"]).notNull().default("closer"),
+  ativo: int("ativo").notNull().default(1),
+  metaMensal: decimal("meta_mensal", { precision: 12, scale: 2 }),
+  comissaoPercentual: decimal("comissao_percentual", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Vendedor = typeof vendedores.$inferSelect;
+export type InsertVendedor = typeof vendedores.$inferInsert;
+
+/**
+ * Vendas por Vendedor Table
+ * Tracks sales attributed to specific salespeople
+ */
+export const vendasVendedor = mysqlTable("vendas_vendedor", {
+  id: int("id").autoincrement().primaryKey(),
+  vendedorId: int("vendedor_id").notNull(),
+  gtmEventId: int("gtm_event_id"),
+  transactionId: varchar("transaction_id", { length: 255 }),
+  valor: decimal("valor", { precision: 12, scale: 2 }).notNull(),
+  produtoNome: varchar("produto_nome", { length: 255 }),
+  dataVenda: timestamp("data_venda").notNull(),
+  origem: mysqlEnum("origem", ["gtm", "webhook", "manual"]).notNull().default("gtm"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type VendaVendedor = typeof vendasVendedor.$inferSelect;
+export type InsertVendaVendedor = typeof vendasVendedor.$inferInsert;

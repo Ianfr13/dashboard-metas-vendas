@@ -8,6 +8,11 @@ interface TeamMember {
   role: string | null
   sales_count: number
   sales_value: number
+  gtm_sales_count: number
+  gtm_sales_value: number
+  crm_sales_count: number
+  crm_sales_value: number
+  discrepancy: number
   meetings_count: number
   appointments_count: number
   conversion_rate: number
@@ -21,6 +26,12 @@ interface RankingResponse {
   period: {
     start_date: string
     end_date: string
+  }
+  summary: {
+    total_gtm_sales: number
+    total_crm_sales: number
+    total_discrepancy: number
+    match_percentage: number
   }
 }
 
@@ -52,21 +63,35 @@ Deno.serve(async (req) => {
       throw new Error(`Error fetching users: ${usersError.message}`)
     }
 
+    // ===== DADOS DO GTM =====
+    // Buscar vendas do GTM (purchase events)
+    const { data: gtmSales, error: gtmError } = await supabase
+      .from('gtm_events')
+      .select('*')
+      .eq('event_name', 'purchase')
+      .gte('timestamp', startDate)
+      .lte('timestamp', endDate)
+
+    if (gtmError) {
+      throw new Error(`Error fetching GTM sales: ${gtmError.message}`)
+    }
+
+    // ===== DADOS DO CRM =====
     // Get sales data from crm_gtm_sync
-    const { data: sales, error: salesError } = await supabase
+    const { data: crmSales, error: crmError } = await supabase
       .from('crm_gtm_sync')
-      .select('contact_id, purchase_value, purchase_date')
+      .select('contact_id, purchase_value, purchase_date, transaction_id')
       .gte('purchase_date', startDate)
       .lte('purchase_date', endDate)
 
-    if (salesError) {
-      throw new Error(`Error fetching sales: ${salesError.message}`)
+    if (crmError) {
+      throw new Error(`Error fetching CRM sales: ${crmError.message}`)
     }
 
     // Get contacts to link sales to users
     const { data: contacts, error: contactsError } = await supabase
       .from('ghl_contacts')
-      .select('id, assigned_user_id')
+      .select('id, assigned_user_id, email, phone')
 
     if (contactsError) {
       throw new Error(`Error fetching contacts: ${contactsError.message}`)
@@ -94,39 +119,107 @@ Deno.serve(async (req) => {
       throw new Error(`Error fetching appointments: ${appointmentsError.message}`)
     }
 
+    // ===== CRUZAMENTO DE DADOS =====
     // Create a map of contact_id to assigned_user_id
     const contactToUser = new Map<string, string>()
+    const contactByEmail = new Map<string, string>()
+    const contactByPhone = new Map<string, string>()
+    
     contacts?.forEach(contact => {
       if (contact.assigned_user_id) {
         contactToUser.set(contact.id, contact.assigned_user_id)
+        if (contact.email) {
+          contactByEmail.set(contact.email.toLowerCase(), contact.assigned_user_id)
+        }
+        if (contact.phone) {
+          contactByPhone.set(contact.phone.replace(/\D/g, ''), contact.assigned_user_id)
+        }
+      }
+    })
+
+    // Create map of transaction_id from CRM
+    const crmTransactionIds = new Set<string>()
+    crmSales?.forEach(sale => {
+      if (sale.transaction_id) {
+        crmTransactionIds.add(sale.transaction_id)
       }
     })
 
     // Calculate stats for each user
     const userStats = new Map<string, {
-      sales_count: number
-      sales_value: number
+      gtm_sales_count: number
+      gtm_sales_value: number
+      crm_sales_count: number
+      crm_sales_value: number
       meetings_count: number
       appointments_count: number
+      matched_transactions: Set<string>
     }>()
 
     // Initialize stats for all users
     users?.forEach(user => {
       userStats.set(user.id, {
-        sales_count: 0,
-        sales_value: 0,
+        gtm_sales_count: 0,
+        gtm_sales_value: 0,
+        crm_sales_count: 0,
+        crm_sales_value: 0,
         meetings_count: 0,
-        appointments_count: 0
+        appointments_count: 0,
+        matched_transactions: new Set()
       })
     })
 
-    // Count sales per user
-    sales?.forEach(sale => {
+    // Process GTM sales - tentar associar a vendedor
+    let totalGtmValue = 0
+    gtmSales?.forEach(sale => {
+      try {
+        const eventData = JSON.parse(sale.event_data || '{}')
+        const value = parseFloat(eventData.value || eventData.transaction_value || '0')
+        const transactionId = eventData.transaction_id
+        const userEmail = eventData.user_email || sale.user_id
+        
+        totalGtmValue += value
+
+        // Tentar encontrar vendedor responsável
+        let userId = null
+        
+        // 1. Tentar por email do usuário
+        if (userEmail && contactByEmail.has(userEmail.toLowerCase())) {
+          userId = contactByEmail.get(userEmail.toLowerCase())
+        }
+        
+        // 2. Se tem transaction_id, verificar no CRM
+        if (!userId && transactionId && crmTransactionIds.has(transactionId)) {
+          const crmSale = crmSales?.find(s => s.transaction_id === transactionId)
+          if (crmSale) {
+            userId = contactToUser.get(crmSale.contact_id) || null
+          }
+        }
+
+        if (userId && userStats.has(userId)) {
+          const stats = userStats.get(userId)!
+          stats.gtm_sales_count++
+          stats.gtm_sales_value += value
+          if (transactionId) {
+            stats.matched_transactions.add(transactionId)
+          }
+        }
+      } catch (e) {
+        console.error('Error processing GTM sale:', e)
+      }
+    })
+
+    // Process CRM sales
+    let totalCrmValue = 0
+    crmSales?.forEach(sale => {
       const userId = contactToUser.get(sale.contact_id)
+      const value = Number(sale.purchase_value || 0)
+      totalCrmValue += value
+      
       if (userId && userStats.has(userId)) {
         const stats = userStats.get(userId)!
-        stats.sales_count++
-        stats.sales_value += Number(sale.purchase_value || 0)
+        stats.crm_sales_count++
+        stats.crm_sales_value += value
       }
     })
 
@@ -146,11 +239,19 @@ Deno.serve(async (req) => {
       }
     })
 
-    // Build team members array
+    // Build team members array with hybrid data
     const teamMembers: TeamMember[] = users?.map(user => {
       const stats = userStats.get(user.id)!
+      
+      // Usar a maior contagem entre GTM e CRM como "oficial"
+      const sales_count = Math.max(stats.gtm_sales_count, stats.crm_sales_count)
+      const sales_value = Math.max(stats.gtm_sales_value, stats.crm_sales_value)
+      
+      // Calcular discrepância
+      const discrepancy = Math.abs(stats.gtm_sales_value - stats.crm_sales_value)
+      
       const conversion_rate = stats.appointments_count > 0
-        ? (stats.sales_count / stats.appointments_count) * 100
+        ? (sales_count / stats.appointments_count) * 100
         : 0
 
       return {
@@ -158,15 +259,20 @@ Deno.serve(async (req) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        sales_count: stats.sales_count,
-        sales_value: stats.sales_value,
+        sales_count,
+        sales_value,
+        gtm_sales_count: stats.gtm_sales_count,
+        gtm_sales_value: stats.gtm_sales_value,
+        crm_sales_count: stats.crm_sales_count,
+        crm_sales_value: stats.crm_sales_value,
+        discrepancy,
         meetings_count: stats.meetings_count,
         appointments_count: stats.appointments_count,
         conversion_rate: Math.round(conversion_rate * 100) / 100
       }
     }) || []
 
-    // Separate closers and SDRs (assuming role field contains this info)
+    // Separate closers and SDRs
     const closers = teamMembers
       .filter(member => member.role?.toLowerCase().includes('closer') || member.role?.toLowerCase().includes('vendedor'))
       .sort((a, b) => b.sales_value - a.sales_value)
@@ -177,13 +283,18 @@ Deno.serve(async (req) => {
 
     // If no role is set, separate by performance
     if (closers.length === 0 && sdrs.length === 0) {
-      // Users with more sales are closers
       const sortedBySales = [...teamMembers].sort((a, b) => b.sales_count - a.sales_count)
       const sortedByAppointments = [...teamMembers].sort((a, b) => b.appointments_count - a.appointments_count)
       
       closers.push(...sortedBySales.filter(m => m.sales_count > 0))
       sdrs.push(...sortedByAppointments.filter(m => m.appointments_count > 0 && !closers.includes(m)))
     }
+
+    // Calculate summary
+    const totalDiscrepancy = Math.abs(totalGtmValue - totalCrmValue)
+    const matchPercentage = totalGtmValue > 0 
+      ? ((Math.min(totalGtmValue, totalCrmValue) / Math.max(totalGtmValue, totalCrmValue)) * 100)
+      : 0
 
     const response: RankingResponse = {
       best_closer: closers[0] || null,
@@ -193,6 +304,12 @@ Deno.serve(async (req) => {
       period: {
         start_date: startDate,
         end_date: endDate
+      },
+      summary: {
+        total_gtm_sales: totalGtmValue,
+        total_crm_sales: totalCrmValue,
+        total_discrepancy: totalDiscrepancy,
+        match_percentage: Math.round(matchPercentage * 100) / 100
       }
     }
 
