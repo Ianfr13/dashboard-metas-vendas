@@ -268,12 +268,4 @@ describe('App', () => {
       expect(screen.getByTestId('not-found-page')).toBeInTheDocument();
     });
   });
-
-  describe('Import Removal Verification', () => {
-    it('should not import Metrics component', () => {
-      // This is implicitly tested by the mock setup
-      // If Metrics was still imported, the test setup would fail
-      expect(true).toBe(true);
-    });
-  });
 });
