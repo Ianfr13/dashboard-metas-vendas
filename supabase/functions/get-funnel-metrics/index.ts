@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     // Calcular período
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
     if (funnel === 'comercial') {
       // FUNIL COMERCIAL
