@@ -16,6 +16,8 @@ interface Meta {
   valor_atual: number;
   active: number;
   grande_premio?: string;
+  percentual_marketing?: number;
+  percentual_comercial?: number;
 }
 
 interface SubMeta {
@@ -38,6 +40,8 @@ export default function AdminMetas() {
     ano: new Date().getFullYear(),
     valor_meta: 0,
     grande_premio: '',
+    percentual_marketing: 85,
+    percentual_comercial: 15,
   });
 
   // Formulário nova sub-meta
@@ -127,6 +131,8 @@ export default function AdminMetas() {
           valor_atual: 0,
           active: 1,
           grande_premio: novaMeta.grande_premio || null,
+          percentual_marketing: novaMeta.percentual_marketing,
+          percentual_comercial: novaMeta.percentual_comercial,
         }])
         .select()
         .single();
@@ -139,6 +145,8 @@ export default function AdminMetas() {
         ano: new Date().getFullYear(),
         valor_meta: 0,
         grande_premio: '',
+        percentual_marketing: 85,
+        percentual_comercial: 15,
       });
       
       await loadMetas();
@@ -233,6 +241,8 @@ export default function AdminMetas() {
           ano: metaEditada.ano,
           valor_meta: metaEditada.valor_meta,
           grande_premio: metaEditada.grande_premio || null,
+          percentual_marketing: metaEditada.percentual_marketing,
+          percentual_comercial: metaEditada.percentual_comercial,
         })
         .eq('id', editandoMeta);
 
@@ -390,6 +400,42 @@ export default function AdminMetas() {
                   onChange={(e) => setNovaMeta({ ...novaMeta, grande_premio: e.target.value })}
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>% Marketing</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={novaMeta.percentual_marketing}
+                    onChange={(e) => {
+                      const marketing = parseInt(e.target.value) || 0;
+                      setNovaMeta({ 
+                        ...novaMeta, 
+                        percentual_marketing: marketing,
+                        percentual_comercial: 100 - marketing
+                      });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>% Comercial</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={novaMeta.percentual_comercial}
+                    onChange={(e) => {
+                      const comercial = parseInt(e.target.value) || 0;
+                      setNovaMeta({ 
+                        ...novaMeta, 
+                        percentual_comercial: comercial,
+                        percentual_marketing: 100 - comercial
+                      });
+                    }}
+                  />
+                </div>
+              </div>
               <Button onClick={criarMeta} disabled={saving} className="w-full">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
                 Criar Meta
@@ -454,6 +500,40 @@ export default function AdminMetas() {
                               value={metaEditada.grande_premio || ''}
                               onChange={(e) => setMetaEditada({ ...metaEditada, grande_premio: e.target.value })}
                             />
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                type="number"
+                                className="text-sm"
+                                placeholder="% Marketing"
+                                min="0"
+                                max="100"
+                                value={metaEditada.percentual_marketing || 85}
+                                onChange={(e) => {
+                                  const marketing = parseInt(e.target.value) || 0;
+                                  setMetaEditada({ 
+                                    ...metaEditada, 
+                                    percentual_marketing: marketing,
+                                    percentual_comercial: 100 - marketing
+                                  });
+                                }}
+                              />
+                              <Input
+                                type="number"
+                                className="text-sm"
+                                placeholder="% Comercial"
+                                min="0"
+                                max="100"
+                                value={metaEditada.percentual_comercial || 15}
+                                onChange={(e) => {
+                                  const comercial = parseInt(e.target.value) || 0;
+                                  setMetaEditada({ 
+                                    ...metaEditada, 
+                                    percentual_comercial: comercial,
+                                    percentual_marketing: 100 - comercial
+                                  });
+                                }}
+                              />
+                            </div>
                           </div>
                         ) : (
                           <div>
@@ -468,6 +548,9 @@ export default function AdminMetas() {
                                 🏆 {meta.grande_premio}
                               </p>
                             )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              📊 {meta.percentual_marketing || 85}% Marketing | {meta.percentual_comercial || 15}% Comercial
+                            </p>
                           </div>
                         )}
                       </div>

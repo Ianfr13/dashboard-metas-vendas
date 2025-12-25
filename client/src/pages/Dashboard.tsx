@@ -106,6 +106,10 @@ export default function Dashboard() {
   const meta = dashboardData?.metaPrincipal;
   const subMetas = dashboardData?.subMetas || [];
   
+  // Percentuais configurados no Admin (padrão 85/15)
+  const percentualMarketing = meta?.percentual_marketing || 85;
+  const percentualComercial = meta?.percentual_comercial || 15;
+  
   // Se uma submeta está selecionada, usar seu valor como meta
   const subMetaSelecionada = selectedSubMeta !== null ? subMetas.find((sm: any) => sm.id === selectedSubMeta) : null;
   const valorMeta = subMetaSelecionada ? subMetaSelecionada.valor : (meta?.valor_meta || 0);
@@ -146,10 +150,10 @@ export default function Dashboard() {
   const progressoEsperado = (diasDecorridos / diasNoMes) * 100;
   const deficit = (valorAtual - (valorMeta * (progressoEsperado / 100)));
 
-  const metaMarketing = valorMeta * 0.85;
-  const metaComercial = valorMeta * 0.15;
-  const vendasMarketing = valorAtual * 0.85;
-  const vendasComercial = valorAtual * 0.15;
+  const metaMarketing = valorMeta * (percentualMarketing / 100);
+  const metaComercial = valorMeta * (percentualComercial / 100);
+  const vendasMarketing = valorAtual * (percentualMarketing / 100);
+  const vendasComercial = valorAtual * (percentualComercial / 100);
   const ticketMedio = valorAtual > 0 ? valorAtual / 100 : 0;
 
   const ritmoAtual = diasDecorridos > 0 ? valorAtual / diasDecorridos : 0;
@@ -251,10 +255,10 @@ export default function Dashboard() {
         const deficitDiario = vendasHoje - (metaDiaria * (progressoEsperadoDia / 100));
         
         // Marketing e Comercial
-        const metaMarketingDia = metaDiaria * 0.85;
-        const metaComercialDia = metaDiaria * 0.15;
-        const vendasMarketingDia = vendasHoje * 0.85;
-        const vendasComercialDia = vendasHoje * 0.15;
+        const metaMarketingDia = metaDiaria * (percentualMarketing / 100);
+        const metaComercialDia = metaDiaria * (percentualComercial / 100);
+        const vendasMarketingDia = vendasHoje * (percentualMarketing / 100);
+        const vendasComercialDia = vendasHoje * (percentualComercial / 100);
         
         // Ticket médio (vendas hoje / número de vendas hoje)
         const vendasCountHoje = salesByDay[now.toISOString().split('T')[0]]?.sales || 0;
@@ -320,10 +324,10 @@ export default function Dashboard() {
         const ritmoNecessarioSemana = diasRestantesSemana > 0 ? faltaSemana / diasRestantesSemana : 0;
         
         // Marketing e Comercial
-        const metaMarketingSemana = metaSemanal * 0.85;
-        const metaComercialSemana = metaSemanal * 0.15;
-        const vendasMarketingSemana = vendasSemana * 0.85;
-        const vendasComercialSemana = vendasSemana * 0.15;
+        const metaMarketingSemana = metaSemanal * (percentualMarketing / 100);
+        const metaComercialSemana = metaSemanal * (percentualComercial / 100);
+        const vendasMarketingSemana = vendasSemana * (percentualMarketing / 100);
+        const vendasComercialSemana = vendasSemana * (percentualComercial / 100);
         
         // Ticket médio da semana
         let vendasCountSemana = 0;
@@ -366,10 +370,10 @@ export default function Dashboard() {
         const ritmoAtualMensal = diasDecorridos > 0 ? valorAtual / diasDecorridos : 0;
         const ritmoNecessarioMensal = diasRestantes > 0 ? (valorMeta - valorAtual) / diasRestantes : 0;
         
-        const metaMarketing = valorMeta * 0.85;
-        const metaComercial = valorMeta * 0.15;
-        const vendasMarketing = valorAtual * 0.85;
-        const vendasComercial = valorAtual * 0.15;
+        const metaMarketing = valorMeta * (percentualMarketing / 100);
+        const metaComercial = valorMeta * (percentualComercial / 100);
+        const vendasMarketing = valorAtual * (percentualMarketing / 100);
+        const vendasComercial = valorAtual * (percentualComercial / 100);
         
         // Ticket médio do mês (vendas totais / número total de vendas)
         const vendasCountMes = Object.values(salesByDay).reduce((sum: number, day: any) => sum + (day?.sales || 0), 0);
