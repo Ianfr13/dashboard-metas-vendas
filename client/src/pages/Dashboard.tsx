@@ -104,7 +104,7 @@ export default function Home() {
   const ritmoNecessario = diasRestantes > 0 ? (valorMeta - valorAtual) / diasRestantes : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-amber-50">
+    <div className="min-h-screen bg-background">
       {showCelebration && <GoalCelebration onClose={() => setShowCelebration(false)} />}
       
       {/* Header com Logo */}
