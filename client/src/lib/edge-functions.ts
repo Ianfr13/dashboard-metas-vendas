@@ -51,23 +51,30 @@ export const gtmAPI = {
 
 export const dashboardAPI = {
   /**
-   * Obtém a meta principal do mês atual
+   * Obtém dados completos do dashboard via edge function
+   * Inclui: meta principal, sub-metas, métricas avançadas, vendas
    */
-  getMetaPrincipal: async () => {
-    const now = new Date();
-    const mes = now.getMonth() + 1;
-    const ano = now.getFullYear();
+  getMetaPrincipal: async (month?: number, year?: number) => {
+    const params = new URLSearchParams();
+    if (month) params.append('month', month.toString());
+    if (year) params.append('year', year.toString());
 
-    const { data, error } = await supabase
-      .from('metas_principais')
-      .select('*')
-      .eq('mes', mes)
-      .eq('ano', ano)
-      .eq('active', 1)
-      .maybeSingle();
+    const url = `${FUNCTIONS_URL}/get-dashboard-data${params.toString() ? '?' + params.toString() : ''}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+    });
 
-    if (error) throw error;
-    return data;
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch dashboard data');
+    }
+
+    return response.json();
   },
 
   /**
