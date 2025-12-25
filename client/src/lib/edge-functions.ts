@@ -11,6 +11,18 @@ import { supabase } from './supabase';
 
 const FUNCTIONS_URL = 'https://auvvrewlbpyymekonilv.supabase.co/functions/v1';
 
+/**
+ * Helper para obter headers com autenticação
+ */
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  return {
+    'Content-Type': 'application/json',
+    ...(session ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+  };
+}
+
 // ============================================
 // API de Eventos GTM (Pública)
 // ============================================
@@ -55,6 +67,12 @@ export const dashboardAPI = {
    * Inclui: meta principal, sub-metas, métricas avançadas, vendas
    */
   getMetaPrincipal: async (month?: number, year?: number) => {
+    // Get current session token
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Not authenticated');
+    }
+
     const params = new URLSearchParams();
     if (month) params.append('month', month.toString());
     if (year) params.append('year', year.toString());
@@ -65,7 +83,7 @@ export const dashboardAPI = {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${session.access_token}`,
       },
     });
 
@@ -310,7 +328,7 @@ export const gtmAnalyticsAPI = {
   getFunnelMetrics: async (startDate: string, endDate: string): Promise<FunnelMetrics> => {
     const response = await fetch(
       `${FUNCTIONS_URL}/gtm-analytics?action=funnel&start_date=${startDate}&end_date=${endDate}`,
-      { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+      { method: 'GET', headers: await getAuthHeaders() }
     );
 
     if (!response.ok) {
@@ -332,7 +350,7 @@ export const gtmAnalyticsAPI = {
   ): Promise<EvolutionData[]> => {
     const response = await fetch(
       `${FUNCTIONS_URL}/gtm-analytics?action=evolution&start_date=${startDate}&end_date=${endDate}&event_name=${eventName}&group_by=${groupBy}`,
-      { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+      { method: 'GET', headers: await getAuthHeaders() }
     );
 
     if (!response.ok) {
@@ -349,7 +367,7 @@ export const gtmAnalyticsAPI = {
   getProductMetrics: async (startDate: string, endDate: string): Promise<ProductMetricsGTM[]> => {
     const response = await fetch(
       `${FUNCTIONS_URL}/gtm-analytics?action=products&start_date=${startDate}&end_date=${endDate}`,
-      { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+      { method: 'GET', headers: await getAuthHeaders() }
     );
 
     if (!response.ok) {
