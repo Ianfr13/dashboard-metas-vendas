@@ -6,7 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import Admin from "./pages/Admin";
+import AdminDashboard from "./pages/admin/index";
+import AdminMetas from "./pages/admin/Metas";
+import AdminProdutos from "./pages/admin/Produtos";
+import AdminFunis from "./pages/admin/Funis";
+import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import Metricas from "./pages/Metricas";
 import Ranking from "./pages/Ranking";
 import { LoginPage } from "./components/Auth/LoginPage";
@@ -29,13 +33,43 @@ function Router() {
         )}
       </Route>
       
-      {/* Rota de admin (requer autenticação + role admin) */}
+      {/* Rotas de admin (requer autenticação) */}
       <Route path="/admin">
         {() => (
           <ProtectedRoute>
-            <AdminRoute>
-              <Admin />
-            </AdminRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      <Route path="/admin/metas">
+        {() => (
+          <ProtectedRoute>
+            <AdminMetas />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      <Route path="/admin/produtos">
+        {() => (
+          <ProtectedRoute>
+            <AdminProdutos />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      <Route path="/admin/funis">
+        {() => (
+          <ProtectedRoute>
+            <AdminFunis />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      <Route path="/admin/configuracoes">
+        {() => (
+          <ProtectedRoute>
+            <AdminConfiguracoes />
           </ProtectedRoute>
         )}
       </Route>
