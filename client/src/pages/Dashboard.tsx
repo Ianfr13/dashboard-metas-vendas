@@ -112,10 +112,37 @@ export default function Dashboard() {
   const valorAtual = meta?.valor_atual || 0;
   const progressoReal = valorMeta > 0 ? (valorAtual / valorMeta) * 100 : 0;
 
-  const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
-  const diaAtual = hoje.getDate();
-  const diasDecorridos = diaAtual;
-  const diasRestantes = diasNoMes - diaAtual;
+  // Calcular dias baseado no mês/ano selecionado
+  const diasNoMes = getDaysInMonth(selectedMonth, selectedYear);
+  
+  // Determinar se o mês selecionado é passado, atual ou futuro
+  const mesAtual = selectedMonth === (hoje.getMonth() + 1) && selectedYear === hoje.getFullYear();
+  const mesPassado = selectedYear < hoje.getFullYear() || 
+                     (selectedYear === hoje.getFullYear() && selectedMonth < (hoje.getMonth() + 1));
+  const mesFuturo = selectedYear > hoje.getFullYear() || 
+                    (selectedYear === hoje.getFullYear() && selectedMonth > (hoje.getMonth() + 1));
+  
+  // Calcular dias decorridos e restantes baseado no período
+  let diaAtual: number;
+  let diasDecorridos: number;
+  let diasRestantes: number;
+  
+  if (mesPassado) {
+    // Mês passado: todos os dias decorridos, nenhum restante
+    diaAtual = diasNoMes;
+    diasDecorridos = diasNoMes;
+    diasRestantes = 0;
+  } else if (mesFuturo) {
+    // Mês futuro: nenhum dia decorrido, todos restantes
+    diaAtual = 0;
+    diasDecorridos = 0;
+    diasRestantes = diasNoMes;
+  } else {
+    // Mês atual: calcular normalmente
+    diaAtual = hoje.getDate();
+    diasDecorridos = diaAtual;
+    diasRestantes = diasNoMes - diaAtual;
+  }
   const progressoEsperado = (diasDecorridos / diasNoMes) * 100;
   const deficit = (valorAtual - (valorMeta * (progressoEsperado / 100)));
 
@@ -194,21 +221,34 @@ export default function Dashboard() {
         console.log('  vendasHoje:', vendasHoje);
         console.log('  progressoDiario:', progressoDiario);
         
-        // Horas restantes hoje
-        const horasRestantes = hoursInDay - currentHour;
+        // Se mês passado ou futuro, não calcular horas (não faz sentido)
+        let horasRestantes: number;
+        let progressoEsperadoDia: number;
+        let ritmoAtualDia: number;
+        let ritmoNecessarioDia: number;
         
-        // Progresso esperado do dia (% do dia que passou)
-        const progressoEsperadoDia = (currentHour / hoursInDay) * 100;
+        if (mesPassado) {
+          // Mês passado: dia completo
+          horasRestantes = 0;
+          progressoEsperadoDia = 100;
+          ritmoAtualDia = vendasHoje / hoursInDay;
+          ritmoNecessarioDia = 0;
+        } else if (mesFuturo) {
+          // Mês futuro: dia ainda não começou
+          horasRestantes = hoursInDay;
+          progressoEsperadoDia = 0;
+          ritmoAtualDia = 0;
+          ritmoNecessarioDia = metaDiaria / hoursInDay;
+        } else {
+          // Mês atual: calcular normalmente
+          horasRestantes = hoursInDay - currentHour;
+          progressoEsperadoDia = (currentHour / hoursInDay) * 100;
+          ritmoAtualDia = currentHour > 0 ? vendasHoje / currentHour : 0;
+          const faltaHoje = metaDiaria - vendasHoje;
+          ritmoNecessarioDia = horasRestantes > 0 ? faltaHoje / horasRestantes : 0;
+        }
         
-        // Déficit/superávit diário
         const deficitDiario = vendasHoje - (metaDiaria * (progressoEsperadoDia / 100));
-        
-        // Ritmo atual (vendas por hora hoje)
-        const ritmoAtualDia = currentHour > 0 ? vendasHoje / currentHour : 0;
-        
-        // Ritmo necessário (quanto precisa vender por hora restante)
-        const faltaHoje = metaDiaria - vendasHoje;
-        const ritmoNecessarioDia = horasRestantes > 0 ? faltaHoje / horasRestantes : 0;
         
         // Marketing e Comercial
         const metaMarketingDia = metaDiaria * 0.85;
@@ -246,13 +286,28 @@ export default function Dashboard() {
         const vendasSemana = getThisWeekSales(salesByDay);
         const progressoSemanal = metaSemanal > 0 ? (vendasSemana / metaSemanal) * 100 : 0;
         
-        // Dias da semana
-        const dayOfWeek = now.getDay(); // 0 = Domingo
-        const diasDecorridosSemana = dayOfWeek + 1; // Domingo = 1
-        const diasRestantesSemana = 7 - diasDecorridosSemana;
+        // Dias da semana - ajustar baseado no mês selecionado
+        let diasDecorridosSemana: number;
+        let diasRestantesSemana: number;
+        let progressoEsperadoSemana: number;
         
-        // Progresso esperado da semana
-        const progressoEsperadoSemana = (diasDecorridosSemana / 7) * 100;
+        if (mesPassado) {
+          // Mês passado: semana completa
+          diasDecorridosSemana = 7;
+          diasRestantesSemana = 0;
+          progressoEsperadoSemana = 100;
+        } else if (mesFuturo) {
+          // Mês futuro: semana ainda não começou
+          diasDecorridosSemana = 0;
+          diasRestantesSemana = 7;
+          progressoEsperadoSemana = 0;
+        } else {
+          // Mês atual: calcular normalmente
+          const dayOfWeek = now.getDay(); // 0 = Domingo
+          diasDecorridosSemana = dayOfWeek + 1; // Domingo = 1
+          diasRestantesSemana = 7 - diasDecorridosSemana;
+          progressoEsperadoSemana = (diasDecorridosSemana / 7) * 100;
+        }
         
         // Déficit/superávit semanal
         const deficitSemanal = vendasSemana - (metaSemanal * (progressoEsperadoSemana / 100));
@@ -303,16 +358,13 @@ export default function Dashboard() {
       }
       
       default: { // 'month'
-        // Cálculos mensais (originais)
-        const diasNoMes = daysInMonth;
-        const diaAtual = now.getDate();
-        const diasDecorridos = diaAtual;
-        const diasRestantes = diasNoMes - diaAtual;
-        const progressoEsperado = (diasDecorridos / diasNoMes) * 100;
-        const deficit = valorAtual - (valorMeta * (progressoEsperado / 100));
+        // Cálculos mensais - usar variáveis do escopo externo que já consideram mês selecionado
+        // diasNoMes, diasDecorridos, diasRestantes já foram calculados corretamente acima
+        const progressoEsperadoMensal = (diasDecorridos / diasNoMes) * 100;
+        const deficitMensal = valorAtual - (valorMeta * (progressoEsperadoMensal / 100));
         
-        const ritmoAtual = diasDecorridos > 0 ? valorAtual / diasDecorridos : 0;
-        const ritmoNecessario = diasRestantes > 0 ? (valorMeta - valorAtual) / diasRestantes : 0;
+        const ritmoAtualMensal = diasDecorridos > 0 ? valorAtual / diasDecorridos : 0;
+        const ritmoNecessarioMensal = diasRestantes > 0 ? (valorMeta - valorAtual) / diasRestantes : 0;
         
         const metaMarketing = valorMeta * 0.85;
         const metaComercial = valorMeta * 0.15;
@@ -330,10 +382,10 @@ export default function Dashboard() {
           label: 'Meta Mensal',
           tempoRestante: diasRestantes,
           tempoLabel: diasRestantes === 1 ? 'dia restante' : 'dias restantes',
-          progressoEsperado,
-          deficit,
-          ritmoAtual,
-          ritmoNecessario,
+          progressoEsperado: progressoEsperadoMensal,
+          deficit: deficitMensal,
+          ritmoAtual: ritmoAtualMensal,
+          ritmoNecessario: ritmoNecessarioMensal,
           ritmoLabel: '/dia',
           metaMarketing,
           metaComercial,
