@@ -171,10 +171,10 @@ export default function Home() {
               
               <div className="max-w-md mx-auto">
                 <GoalGauge 
-                  value={progressoReal} 
-                  max={100}
-                  size={240}
-                  strokeWidth={20}
+                  percentage={progressoReal}
+                  current={valorAtual}
+                  target={valorMeta}
+                  subGoals={subMetas.map((sm: any) => ({ value: sm.valor_meta || 0, achieved: sm.status === 'concluida' }))}
                 />
               </div>
             </CardContent>
