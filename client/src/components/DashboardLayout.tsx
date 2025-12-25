@@ -26,6 +26,7 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import DashboardHeader from './DashboardHeader';
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -46,11 +47,30 @@ const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  // Header props
+  showFilters?: boolean;
+  selectedMonth?: number;
+  selectedYear?: number;
+  viewMode?: string;
+  onMonthChange?: (month: number) => void;
+  onYearChange?: (year: number) => void;
+  onViewModeChange?: (mode: string) => void;
+  onRefresh?: () => void;
+}
+
 export default function DashboardLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+  showFilters,
+  selectedMonth,
+  selectedYear,
+  viewMode,
+  onMonthChange,
+  onYearChange,
+  onViewModeChange,
+  onRefresh,
+}: DashboardLayoutProps) {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
@@ -99,7 +119,17 @@ export default function DashboardLayout({
         } as CSSProperties
       }
     >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
+      <DashboardLayoutContent 
+        setSidebarWidth={setSidebarWidth}
+        showFilters={showFilters}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        viewMode={viewMode}
+        onMonthChange={onMonthChange}
+        onYearChange={onYearChange}
+        onViewModeChange={onViewModeChange}
+        onRefresh={onRefresh}
+      >
         {children}
       </DashboardLayoutContent>
     </SidebarProvider>
@@ -109,11 +139,28 @@ export default function DashboardLayout({
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
   setSidebarWidth: (width: number) => void;
+  // Header props
+  showFilters?: boolean;
+  selectedMonth?: number;
+  selectedYear?: number;
+  viewMode?: string;
+  onMonthChange?: (month: number) => void;
+  onYearChange?: (year: number) => void;
+  onViewModeChange?: (mode: string) => void;
+  onRefresh?: () => void;
 };
 
 function DashboardLayoutContent({
   children,
   setSidebarWidth,
+  showFilters,
+  selectedMonth,
+  selectedYear,
+  viewMode,
+  onMonthChange,
+  onYearChange,
+  onViewModeChange,
+  onRefresh,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
@@ -284,20 +331,18 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset>
-        {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Menu"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <DashboardHeader 
+          showFilters={showFilters}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          viewMode={viewMode}
+          onMonthChange={onMonthChange}
+          onYearChange={onYearChange}
+          onViewModeChange={onViewModeChange}
+          onRefresh={onRefresh}
+          pageTitle={activeMenuItem?.label ?? "Menu"}
+          isMobile={isMobile}
+        />
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
     </>

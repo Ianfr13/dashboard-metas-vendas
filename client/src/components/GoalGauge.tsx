@@ -55,7 +55,7 @@ export default function GoalGauge({
   const excessAmount = current - target;
 
   return (
-    <div className="w-full flex flex-col items-center gap-8 py-8">
+    <div className="w-full flex flex-col items-center gap-4 md:gap-8 py-4 md:py-8">
       {/* Gauge */}
       <div className="relative w-full max-w-md md:max-w-lg">
         <svg
@@ -119,15 +119,15 @@ export default function GoalGauge({
                 </div>
               )}
               {grandPrize && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-lg">{grandPrize.icon}</span>
-                    <span className="text-xs font-semibold text-muted-foreground">🏆 GRANDE PRÊMIO</span>
+                <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-border">
+                  <div className="flex items-center justify-center gap-1.5 md:gap-2">
+                    <span className="text-base md:text-lg">{grandPrize.icon}</span>
+                    <span className="text-[10px] md:text-xs font-semibold text-muted-foreground">🏆 GRANDE PRÊMIO</span>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1 max-w-[200px] mx-auto">
+                  <div className="text-[10px] md:text-xs text-muted-foreground mt-1 max-w-[180px] md:max-w-[200px] mx-auto truncate">
                     {grandPrize.text}
                   </div>
-                  <div className={`text-xs font-bold mt-1 ${
+                  <div className={`text-[10px] md:text-xs font-bold mt-0.5 md:mt-1 ${
                     grandPrize.status === 'desbloqueado' ? 'text-green-600' :
                     grandPrize.status === 'perdido' ? 'text-red-600' :
                     grandPrize.status === 'quase' ? 'text-orange-600' :
@@ -147,14 +147,14 @@ export default function GoalGauge({
 
       {/* Sub-metas */}
       <div className="w-full max-w-4xl">
-        <h3 className="text-lg font-semibold text-center mb-4 text-muted-foreground uppercase tracking-wide">
+        <h3 className="text-sm md:text-lg font-semibold text-center mb-3 md:mb-4 text-muted-foreground uppercase tracking-wide">
           Sub-metas
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
           {subGoals.map((subGoal, index) => (
             <div
               key={index}
-              className={`flex flex-col rounded-lg border p-3 transition-all ${
+              className={`flex flex-col rounded-lg border p-2 md:p-3 transition-all ${
                 subGoal.achieved
                   ? "border-green-500/50 bg-green-500/10"
                   : "border-border bg-card"
@@ -162,15 +162,15 @@ export default function GoalGauge({
             >
               {/* Prêmio em cima */}
               {subGoal.premio && (
-                <div className="mb-2 pb-2 border-b border-border">
-                  <div className="flex items-center gap-1 mb-1">
-                    <span className="text-xs">{subGoal.icon || '🎁'}</span>
-                    <span className="text-xs font-medium text-muted-foreground truncate">
+                <div className="mb-1.5 md:mb-2 pb-1.5 md:pb-2 border-b border-border">
+                  <div className="flex items-center gap-1 mb-0.5 md:mb-1">
+                    <span className="text-[10px] md:text-xs">{subGoal.icon || '🎁'}</span>
+                    <span className="text-[10px] md:text-xs font-medium text-muted-foreground truncate">
                       {subGoal.premio}
                     </span>
                   </div>
                   {subGoal.status && (
-                    <div className={`text-[10px] font-bold ${
+                    <div className={`text-[9px] md:text-[10px] font-bold ${
                       subGoal.status === 'desbloqueado' ? 'text-green-600' :
                       subGoal.status === 'perdido' ? 'text-red-600' :
                       subGoal.status === 'quase' ? 'text-orange-600' :
@@ -185,16 +185,16 @@ export default function GoalGauge({
                 </div>
               )}
               {/* Valor da submeta */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 md:gap-2">
                 <div
-                  className={`h-3 w-3 rounded-full flex-shrink-0 ${
+                  className={`h-2.5 w-2.5 md:h-3 md:w-3 rounded-full flex-shrink-0 ${
                     subGoal.achieved
                       ? "bg-green-500 animate-pulse"
                       : "bg-cyan-500"
                   }`}
                 />
                 <span
-                  className={`font-semibold text-sm ${
+                  className={`font-semibold text-xs md:text-sm ${
                     subGoal.achieved
                       ? "line-through text-muted-foreground"
                       : "text-foreground"
