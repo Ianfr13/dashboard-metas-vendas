@@ -173,12 +173,23 @@ export default function Dashboard() {
     const currentHour = now.getHours();
     const hoursInDay = 24;
 
+    // DEBUG
+    console.log('🔍 getDisplayValues called');
+    console.log('viewMode:', viewMode);
+    console.log('salesByDay:', salesByDay);
+    console.log('dashboardData:', dashboardData);
+
     switch (viewMode) {
       case 'day': {
         // Meta e vendas diárias
         const metaDiaria = valorMeta / daysInMonth;
         const vendasHoje = getTodaySales(salesByDay);
         const progressoDiario = metaDiaria > 0 ? (vendasHoje / metaDiaria) * 100 : 0;
+        
+        console.log('📅 MODO DIÁRIO:');
+        console.log('  metaDiaria:', metaDiaria);
+        console.log('  vendasHoje:', vendasHoje);
+        console.log('  progressoDiario:', progressoDiario);
         
         // Horas restantes hoje
         const horasRestantes = hoursInDay - currentHour;
