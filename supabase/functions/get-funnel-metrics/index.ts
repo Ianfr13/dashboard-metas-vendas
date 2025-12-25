@@ -13,31 +13,47 @@ Deno.serve(async (req) => {
     );
 
     const url = new URL(req.url);
-    const monthParam = url.searchParams.get('month');
-    const yearParam = url.searchParams.get('year');
+    const startDateParam = url.searchParams.get('startDate');
+    const endDateParam = url.searchParams.get('endDate');
     const funnel = url.searchParams.get('funnel') || 'comercial'; // 'comercial' ou 'marketing'
 
-    // Validar month
-    const month = parseInt(monthParam || '', 10);
-    if (isNaN(month) || month < 1 || month > 12) {
+    // Validar startDate
+    if (!startDateParam) {
       return new Response(
-        JSON.stringify({ error: 'Month must be an integer between 1 and 12' }),
+        JSON.stringify({ error: 'startDate parameter is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const startDate = new Date(startDateParam);
+    if (isNaN(startDate.getTime())) {
+      return new Response(
+        JSON.stringify({ error: 'startDate must be a valid ISO date string' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validar year
-    const year = parseInt(yearParam || '', 10);
-    if (isNaN(year) || year < 2000 || year > 2100) {
+    // Validar endDate
+    if (!endDateParam) {
       return new Response(
-        JSON.stringify({ error: 'Year must be a valid integer between 2000 and 2100' }),
+        JSON.stringify({ error: 'endDate parameter is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const endDate = new Date(endDateParam);
+    if (isNaN(endDate.getTime())) {
+      return new Response(
+        JSON.stringify({ error: 'endDate must be a valid ISO date string' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Calcular período
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    // Validar que endDate >= startDate
+    if (endDate < startDate) {
+      return new Response(
+        JSON.stringify({ error: 'endDate must be greater than or equal to startDate' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (funnel === 'comercial') {
       // FUNIL COMERCIAL
@@ -76,6 +92,34 @@ Deno.serve(async (req) => {
       const taxaConversao = contatosUnicos > 0 ? (totalVendas / contatosUnicos) * 100 : 0;
       const taxaAgendamento = contatosUnicos > 0 ? (totalAgendamentos / contatosUnicos) * 100 : 0;
 
+      // 5. Evolution Data (por semana)
+      const weeksInMonth = Math.ceil(diasNoMes / 7);
+      const evolutionData = [];
+      for (let week = 1; week <= weeksInMonth; week++) {
+        const weekStart = new Date(year, month - 1, (week - 1) * 7 + 1);
+        const weekEnd = new Date(year, month - 1, Math.min(week * 7, diasNoMes), 23, 59, 59, 999);
+        
+        const { data: weekAppointments } = await supabaseClient
+          .from('ghl_appointments')
+          .select('id, status, contact_id')
+          .gte('start_time', weekStart.toISOString())
+          .lte('start_time', weekEnd.toISOString())
+          .neq('status', 'cancelled');
+        
+        const { data: weekSales } = await supabaseClient
+          .from('crm_gtm_sync')
+          .select('id')
+          .gte('purchase_date', weekStart.toISOString())
+          .lte('purchase_date', weekEnd.toISOString());
+        
+        evolutionData.push({
+          periodo: `Sem ${week}`,
+          agendamentos: weekAppointments?.length || 0,
+          contatos: new Set(weekAppointments?.map(a => a.contact_id) || []).size,
+          vendas: weekSales?.length || 0
+        });
+      }
+
       return new Response(
         JSON.stringify({
           funnel: 'comercial',
@@ -89,7 +133,8 @@ Deno.serve(async (req) => {
             taxaAgendamento: parseFloat(taxaAgendamento.toFixed(2)),
             noShow: noShows,
             taxaPresenca: parseFloat(taxaPresenca.toFixed(2))
-          }
+          },
+          evolutionData
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -177,6 +222,42 @@ Deno.serve(async (req) => {
       const cpa = totalVendas > 0 ? custoTotal / totalVendas : 0;
       const taxaConversao = totalLeads > 0 ? (totalVendas / totalLeads) * 100 : 0;
 
+      // 5. Evolution Data (por semana)
+      const weeksInMonth = Math.ceil(diasNoMes / 7);
+      const evolutionData = [];
+      for (let week = 1; week <= weeksInMonth; week++) {
+        const weekStart = new Date(year, month - 1, (week - 1) * 7 + 1);
+        const weekEnd = new Date(year, month - 1, Math.min(week * 7, diasNoMes), 23, 59, 59, 999);
+        
+        const { data: weekLeads } = await supabaseClient
+          .from('ghl_contacts')
+          .select('id')
+          .gte('date_added', weekStart.toISOString())
+          .lte('date_added', weekEnd.toISOString());
+        
+        const { data: weekSales } = await supabaseClient
+          .from('gtm_events')
+          .select('event_data')
+          .eq('event_name', 'purchase')
+          .gte('timestamp', weekStart.toISOString())
+          .lte('timestamp', weekEnd.toISOString());
+        
+        let weekReceita = 0;
+        weekSales?.forEach(event => {
+          try {
+            const data = typeof event.event_data === 'string' ? JSON.parse(event.event_data) : event.event_data;
+            if (data.value) weekReceita += parseFloat(data.value) || 0;
+          } catch (e) {}
+        });
+        
+        evolutionData.push({
+          periodo: `Sem ${week}`,
+          leads: weekLeads?.length || 0,
+          vendas: weekSales?.length || 0,
+          receita: weekReceita
+        });
+      }
+
       return new Response(
         JSON.stringify({
           funnel: 'marketing',
@@ -189,7 +270,8 @@ Deno.serve(async (req) => {
             cpl: parseFloat(cpl.toFixed(2)),
             cpa: parseFloat(cpa.toFixed(2)),
             taxaConversao: parseFloat(taxaConversao.toFixed(2))
-          }
+          },
+          evolutionData
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

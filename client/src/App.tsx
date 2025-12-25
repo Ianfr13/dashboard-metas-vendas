@@ -13,7 +13,6 @@ import AdminProdutos from "./pages/admin/Produtos";
 import AdminFunis from "./pages/admin/Funis";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import Metricas from "./pages/Metricas";
-import Metrics from "./pages/Metrics";
 import Ranking from "./pages/Ranking";
 import { LoginPage } from "./components/Auth/LoginPage";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
@@ -81,14 +80,6 @@ function Router() {
         {() => (
           <ProtectedRoute>
             <Metricas />
-          </ProtectedRoute>
-        )}
-      </Route>
-      
-      <Route path="/metrics">
-        {() => (
-          <ProtectedRoute>
-            <Metrics />
           </ProtectedRoute>
         )}
       </Route>
