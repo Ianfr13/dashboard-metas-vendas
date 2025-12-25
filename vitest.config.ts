@@ -13,7 +13,16 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    environment: "jsdom",
+    include: [
+      "server/**/*.test.ts",
+      "server/**/*.spec.ts",
+      "client/**/*.test.ts",
+      "client/**/*.test.tsx",
+      "client/**/*.spec.ts",
+      "client/**/*.spec.tsx"
+    ],
+    globals: true,
+    setupFiles: ["./client/src/test/setup.ts"],
   },
 });
