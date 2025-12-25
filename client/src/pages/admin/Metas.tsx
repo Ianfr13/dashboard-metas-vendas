@@ -409,11 +409,13 @@ export default function AdminMetas() {
                     max="100"
                     value={novaMeta.percentual_marketing}
                     onChange={(e) => {
-                      const marketing = parseInt(e.target.value) || 0;
+                      const parsed = parseInt(e.target.value, 10);
+                      const marketing = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
+                      const comercial = Math.max(0, Math.min(100, 100 - marketing));
                       setNovaMeta({ 
                         ...novaMeta, 
                         percentual_marketing: marketing,
-                        percentual_comercial: 100 - marketing
+                        percentual_comercial: comercial
                       });
                     }}
                   />
@@ -426,11 +428,13 @@ export default function AdminMetas() {
                     max="100"
                     value={novaMeta.percentual_comercial}
                     onChange={(e) => {
-                      const comercial = parseInt(e.target.value) || 0;
+                      const parsed = parseInt(e.target.value, 10);
+                      const comercial = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
+                      const marketing = Math.max(0, Math.min(100, 100 - comercial));
                       setNovaMeta({ 
                         ...novaMeta, 
                         percentual_comercial: comercial,
-                        percentual_marketing: 100 - comercial
+                        percentual_marketing: marketing
                       });
                     }}
                   />
@@ -509,11 +513,13 @@ export default function AdminMetas() {
                                 max="100"
                                 value={metaEditada.percentual_marketing || 85}
                                 onChange={(e) => {
-                                  const marketing = parseInt(e.target.value) || 0;
+                                  const parsed = parseInt(e.target.value, 10);
+                                  const marketing = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
+                                  const comercial = Math.max(0, Math.min(100, 100 - marketing));
                                   setMetaEditada({ 
                                     ...metaEditada, 
                                     percentual_marketing: marketing,
-                                    percentual_comercial: 100 - marketing
+                                    percentual_comercial: comercial
                                   });
                                 }}
                               />
@@ -525,11 +531,13 @@ export default function AdminMetas() {
                                 max="100"
                                 value={metaEditada.percentual_comercial || 15}
                                 onChange={(e) => {
-                                  const comercial = parseInt(e.target.value) || 0;
+                                  const parsed = parseInt(e.target.value, 10);
+                                  const comercial = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
+                                  const marketing = Math.max(0, Math.min(100, 100 - comercial));
                                   setMetaEditada({ 
                                     ...metaEditada, 
                                     percentual_comercial: comercial,
-                                    percentual_marketing: 100 - comercial
+                                    percentual_marketing: marketing
                                   });
                                 }}
                               />
