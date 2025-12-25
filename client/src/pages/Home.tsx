@@ -152,10 +152,7 @@ export default function Landing() {
                   </div>
                 </div>
 
-                {/* Texto de segurança */}
-                <p className="text-xs text-gray-500">
-                  Login seguro via Supabase OAuth
-                </p>
+
               </div>
             </div>
           </CardContent>
