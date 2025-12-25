@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -331,7 +331,7 @@ export default function Dashboard() {
     }
   };
 
-  const displayValues = getDisplayValues();
+  const displayValues = useMemo(() => getDisplayValues(), [viewMode, dashboardData, selectedMonth, selectedYear]);
 
   return (
     <DashboardLayout
