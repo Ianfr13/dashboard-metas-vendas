@@ -45,37 +45,37 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
   const [evolutionData, setEvolutionData] = useState<EvolutionData[]>([]);
 
   useEffect(() => {
+    const loadMetrics = async () => {
+      try {
+        setLoading(true);
+        
+        // Chamar Edge Function do Supabase (sem expor chaves)
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?month=${selectedMonth}&year=${selectedYear}&funnel=comercial`,
+          {
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar métricas');
+        }
+        
+        const data = await response.json();
+        setMetrics(data.metrics);
+        setEvolutionData(data.evolutionData || []);
+      } catch (error) {
+        console.error('Erro ao carregar métricas:', error);
+        // Manter valores zerados em caso de erro
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadMetrics();
   }, [selectedMonth, selectedYear]);
-
-  const loadMetrics = async () => {
-    try {
-      setLoading(true);
-      
-      // Chamar Edge Function do Supabase (sem expor chaves)
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?month=${selectedMonth}&year=${selectedYear}&funnel=comercial`,
-        {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error('Erro ao carregar métricas');
-      }
-      
-      const data = await response.json();
-      setMetrics(data.metrics);
-      setEvolutionData(data.evolutionData || []);
-    } catch (error) {
-      console.error('Erro ao carregar métricas:', error);
-      // Manter valores zerados em caso de erro
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Dados para gráficos
   const chartData = [
