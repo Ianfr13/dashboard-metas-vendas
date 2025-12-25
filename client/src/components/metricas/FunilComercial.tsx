@@ -277,7 +277,7 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
 
             {/* Contatos */}
             <div className="relative">
-              <div className="bg-purple-500 text-white p-6 rounded-lg text-center mx-auto" style={{ width: `${(metrics.contatos / metrics.agendamentos) * 100}%`, minWidth: '200px' }}>
+              <div className="bg-purple-500 text-white p-6 rounded-lg text-center mx-auto" style={{ width: `${metrics.agendamentos > 0 ? (metrics.contatos / metrics.agendamentos) * 100 : 0}%`, minWidth: '200px' }}>
                 <div className="text-4xl font-bold">{metrics.contatos}</div>
                 <div className="text-sm mt-2">Contatos ({metrics.taxaPresenca}% presença)</div>
               </div>
@@ -289,7 +289,7 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
             <div className="h-4"></div>
 
             {/* Vendas */}
-            <div className="bg-green-500 text-white p-6 rounded-lg text-center mx-auto" style={{ width: `${(metrics.vendas / metrics.agendamentos) * 100}%`, minWidth: '200px' }}>
+            <div className="bg-green-500 text-white p-6 rounded-lg text-center mx-auto" style={{ width: `${metrics.agendamentos > 0 ? (metrics.vendas / metrics.agendamentos) * 100 : 0}%`, minWidth: '200px' }}>
               <div className="text-4xl font-bold">{metrics.vendas}</div>
               <div className="text-sm mt-2">Vendas ({metrics.taxaConversao}%)</div>
             </div>
