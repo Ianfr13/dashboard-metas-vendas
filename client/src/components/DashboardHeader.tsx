@@ -91,9 +91,9 @@ export default function DashboardHeader({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="mensal">Mes</SelectItem>
-                  <SelectItem value="semanal">Sem</SelectItem>
-                  <SelectItem value="diario">Dia</SelectItem>
+                  <SelectItem value="month">Mes</SelectItem>
+                  <SelectItem value="week">Sem</SelectItem>
+                  <SelectItem value="day">Dia</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -158,9 +158,9 @@ export default function DashboardHeader({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mensal">Mensal</SelectItem>
-                <SelectItem value="semanal">Semanal</SelectItem>
-                <SelectItem value="diario">Diário</SelectItem>
+                <SelectItem value="month">Mensal</SelectItem>
+                <SelectItem value="week">Semanal</SelectItem>
+                <SelectItem value="day">Diário</SelectItem>
               </SelectContent>
             </Select>
           )}
