@@ -108,77 +108,64 @@ export default function Home() {
       {showCelebration && <GoalCelebration onClose={() => setShowCelebration(false)} />}
       
       {/* Header com Logo */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-teal-100 sticky top-0 z-40 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img src="/douravita-logo.png" alt="Douravita" className="h-12 w-auto" />
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-teal-700 bg-clip-text text-transparent">
-                  Dashboard de Metas
-                </h1>
-                <p className="text-sm text-gray-600">Acompanhamento em tempo real</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="rounded-full hover:bg-teal-50"
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-5 w-5 text-amber-500" />
-                ) : (
-                  <Moon className="h-5 w-5 text-teal-600" />
-                )}
-              </Button>
-              
-              <Link href="/metricas">
-                <Button variant="ghost" size="icon" className="rounded-full hover:bg-teal-50">
-                  <BarChart3 className="h-5 w-5 text-teal-600" />
-                </Button>
-              </Link>
-              
-              <Link href="/admin">
-                <Button variant="ghost" size="icon" className="rounded-full hover:bg-teal-50">
-                  <Settings className="h-5 w-5 text-teal-600" />
-                </Button>
-              </Link>
+      <nav className="border-b">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img
+              src="/douravita-logo.png"
+              alt="DouraVita"
+              className="h-10 w-auto transition-all filter drop-shadow-md"
+            />
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">Dashboard de Metas</h1>
+              <p className="text-xs font-medium text-muted-foreground">
+                {meta?.mes ? `${meta.mes}/${meta.ano}` : 'Janeiro 2025'}
+              </p>
             </div>
           </div>
+          
+          <div className="hidden md:flex items-center gap-4">
+            <Link href="/dashboard">
+              <Button variant={location === "/dashboard" ? "default" : "ghost"} size="sm">
+                <HomeIcon className="h-4 w-4 mr-2" />
+                Home
+              </Button>
+            </Link>
+            <Link href="/metricas">
+              <Button variant={location === "/metricas" ? "default" : "ghost"} size="sm">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Métricas
+              </Button>
+            </Link>
+            <Link href="/ranking">
+              <Button variant={location === "/ranking" ? "default" : "ghost"} size="sm">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Ranking
+              </Button>
+            </Link>
+            <Link href="/admin">
+              <Button variant={location === "/admin" ? "default" : "ghost"} size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            </Link>
+            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
-      </header>
+      </nav>
 
       <main className="container mx-auto px-4 py-8 pb-24">
         {/* Meta Principal com Gauge */}
-        <div className="mb-8">
-          <Card className="border-none shadow-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/20 rounded-full -mr-32 -mt-32"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-700/30 rounded-full -ml-24 -mb-24"></div>
-            
-            <CardContent className="pt-8 pb-8 relative z-10">
-              <div className="text-center mb-6">
-                <p className="text-teal-100 text-sm font-medium mb-2">Meta do Mês</p>
-                <h2 className="text-5xl font-bold mb-2">
-                  {valorMeta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </h2>
-                <p className="text-teal-100">
-                  Realizado: {valorAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-              </div>
-              
-              <div className="max-w-md mx-auto">
-                <GoalGauge 
-                  percentage={progressoReal}
-                  current={valorAtual}
-                  target={valorMeta}
-                  subGoals={subMetas.map((sm: any) => ({ value: sm.valor_meta || 0, achieved: sm.status === 'concluida' }))}
-                />
-              </div>
-            </CardContent>
-          </Card>
+        {/* Goal Gauge */}
+        <div className="flex justify-center mb-8">
+          <GoalGauge 
+            percentage={progressoReal}
+            current={valorAtual}
+            target={valorMeta}
+            subGoals={subMetas.map((sm: any) => ({ value: sm.valor_meta || 0, achieved: sm.status === 'concluida' }))}
+          />
         </div>
 
         {/* Cards de Overview */}
