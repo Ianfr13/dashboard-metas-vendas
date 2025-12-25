@@ -13,13 +13,24 @@ Deno.serve(async (req) => {
     );
 
     const url = new URL(req.url);
-    const month = parseInt(url.searchParams.get('month') || '0');
-    const year = parseInt(url.searchParams.get('year') || '0');
+    const monthParam = url.searchParams.get('month');
+    const yearParam = url.searchParams.get('year');
     const funnel = url.searchParams.get('funnel') || 'comercial'; // 'comercial' ou 'marketing'
 
-    if (!month || !year) {
+    // Validar month
+    const month = parseInt(monthParam || '', 10);
+    if (isNaN(month) || month < 1 || month > 12) {
       return new Response(
-        JSON.stringify({ error: 'Month and year are required' }),
+        JSON.stringify({ error: 'Month must be an integer between 1 and 12' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validar year
+    const year = parseInt(yearParam || '', 10);
+    if (isNaN(year) || year < 2000 || year > 2100) {
+      return new Response(
+        JSON.stringify({ error: 'Year must be a valid integer between 2000 and 2100' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
