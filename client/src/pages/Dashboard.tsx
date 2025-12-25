@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -331,7 +331,31 @@ export default function Dashboard() {
     }
   };
 
-  const displayValues = useMemo(() => getDisplayValues(), [viewMode, dashboardData, selectedMonth, selectedYear]);
+  // Calcular valores de exibição (não usar useMemo para evitar erro #310)
+  const displayValues = getDisplayValues();
+
+  // Loading state
+  if (loading || !dashboardData) {
+    return (
+      <DashboardLayout
+        showFilters={false}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        viewMode={viewMode}
+        onMonthChange={setSelectedMonth}
+        onYearChange={setSelectedYear}
+        onViewModeChange={(mode) => setViewMode(mode as 'month' | 'week' | 'day')}
+        onRefresh={handleRefresh}
+      >
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Carregando dados...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout
