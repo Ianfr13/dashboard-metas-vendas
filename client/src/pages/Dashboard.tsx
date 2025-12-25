@@ -164,42 +164,170 @@ export default function Dashboard() {
     fetchData();
   };
 
-  // Cálculos baseados no modo de visualização
+  // Cálculos baseados no modo de visualização - TODOS OS VALORES
   const getDisplayValues = () => {
     const salesByDay = dashboardData?.salesByDay || {};
     const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
     const weeksInMonth = getWeeksInMonth(selectedMonth, selectedYear);
+    const now = new Date();
+    const currentHour = now.getHours();
+    const hoursInDay = 24;
 
     switch (viewMode) {
-      case 'day':
+      case 'day': {
+        // Meta e vendas diárias
         const metaDiaria = valorMeta / daysInMonth;
         const vendasHoje = getTodaySales(salesByDay);
         const progressoDiario = metaDiaria > 0 ? (vendasHoje / metaDiaria) * 100 : 0;
+        
+        // Horas restantes hoje
+        const horasRestantes = hoursInDay - currentHour;
+        
+        // Progresso esperado do dia (% do dia que passou)
+        const progressoEsperadoDia = (currentHour / hoursInDay) * 100;
+        
+        // Déficit/superávit diário
+        const deficitDiario = vendasHoje - (metaDiaria * (progressoEsperadoDia / 100));
+        
+        // Ritmo atual (vendas por hora hoje)
+        const ritmoAtualDia = currentHour > 0 ? vendasHoje / currentHour : 0;
+        
+        // Ritmo necessário (quanto precisa vender por hora restante)
+        const faltaHoje = metaDiaria - vendasHoje;
+        const ritmoNecessarioDia = horasRestantes > 0 ? faltaHoje / horasRestantes : 0;
+        
+        // Marketing e Comercial
+        const metaMarketingDia = metaDiaria * 0.85;
+        const metaComercialDia = metaDiaria * 0.15;
+        const vendasMarketingDia = vendasHoje * 0.85;
+        const vendasComercialDia = vendasHoje * 0.15;
+        
+        // Ticket médio (vendas hoje / número de vendas hoje)
+        const vendasCountHoje = salesByDay[now.toISOString().split('T')[0]]?.sales || 0;
+        const ticketMedioDia = vendasCountHoje > 0 ? vendasHoje / vendasCountHoje : 0;
+        
         return {
           meta: metaDiaria,
           atual: vendasHoje,
           progresso: progressoDiario,
-          label: 'Meta Diária'
+          label: 'Meta Diária',
+          tempoRestante: horasRestantes,
+          tempoLabel: horasRestantes === 1 ? 'hora restante' : 'horas restantes',
+          progressoEsperado: progressoEsperadoDia,
+          deficit: deficitDiario,
+          ritmoAtual: ritmoAtualDia,
+          ritmoNecessario: ritmoNecessarioDia,
+          ritmoLabel: '/hora',
+          metaMarketing: metaMarketingDia,
+          metaComercial: metaComercialDia,
+          vendasMarketing: vendasMarketingDia,
+          vendasComercial: vendasComercialDia,
+          ticketMedio: ticketMedioDia
         };
+      }
       
-      case 'week':
+      case 'week': {
+        // Meta e vendas semanais
         const metaSemanal = valorMeta / weeksInMonth;
         const vendasSemana = getThisWeekSales(salesByDay);
         const progressoSemanal = metaSemanal > 0 ? (vendasSemana / metaSemanal) * 100 : 0;
+        
+        // Dias da semana
+        const dayOfWeek = now.getDay(); // 0 = Domingo
+        const diasDecorridosSemana = dayOfWeek + 1; // Domingo = 1
+        const diasRestantesSemana = 7 - diasDecorridosSemana;
+        
+        // Progresso esperado da semana
+        const progressoEsperadoSemana = (diasDecorridosSemana / 7) * 100;
+        
+        // Déficit/superávit semanal
+        const deficitSemanal = vendasSemana - (metaSemanal * (progressoEsperadoSemana / 100));
+        
+        // Ritmo atual (vendas por dia esta semana)
+        const ritmoAtualSemana = diasDecorridosSemana > 0 ? vendasSemana / diasDecorridosSemana : 0;
+        
+        // Ritmo necessário (quanto precisa vender por dia restante)
+        const faltaSemana = metaSemanal - vendasSemana;
+        const ritmoNecessarioSemana = diasRestantesSemana > 0 ? faltaSemana / diasRestantesSemana : 0;
+        
+        // Marketing e Comercial
+        const metaMarketingSemana = metaSemanal * 0.85;
+        const metaComercialSemana = metaSemanal * 0.15;
+        const vendasMarketingSemana = vendasSemana * 0.85;
+        const vendasComercialSemana = vendasSemana * 0.15;
+        
+        // Ticket médio da semana
+        let vendasCountSemana = 0;
+        const sunday = new Date(now);
+        sunday.setDate(now.getDate() - dayOfWeek);
+        for (let i = 0; i <= dayOfWeek; i++) {
+          const date = new Date(sunday);
+          date.setDate(sunday.getDate() + i);
+          const dateStr = date.toISOString().split('T')[0];
+          vendasCountSemana += salesByDay[dateStr]?.sales || 0;
+        }
+        const ticketMedioSemana = vendasCountSemana > 0 ? vendasSemana / vendasCountSemana : 0;
+        
         return {
           meta: metaSemanal,
           atual: vendasSemana,
           progresso: progressoSemanal,
-          label: 'Meta Semanal'
+          label: 'Meta Semanal',
+          tempoRestante: diasRestantesSemana,
+          tempoLabel: diasRestantesSemana === 1 ? 'dia restante' : 'dias restantes',
+          progressoEsperado: progressoEsperadoSemana,
+          deficit: deficitSemanal,
+          ritmoAtual: ritmoAtualSemana,
+          ritmoNecessario: ritmoNecessarioSemana,
+          ritmoLabel: '/dia',
+          metaMarketing: metaMarketingSemana,
+          metaComercial: metaComercialSemana,
+          vendasMarketing: vendasMarketingSemana,
+          vendasComercial: vendasComercialSemana,
+          ticketMedio: ticketMedioSemana
         };
+      }
       
-      default: // 'month'
+      default: { // 'month'
+        // Cálculos mensais (originais)
+        const diasNoMes = daysInMonth;
+        const diaAtual = now.getDate();
+        const diasDecorridos = diaAtual;
+        const diasRestantes = diasNoMes - diaAtual;
+        const progressoEsperado = (diasDecorridos / diasNoMes) * 100;
+        const deficit = valorAtual - (valorMeta * (progressoEsperado / 100));
+        
+        const ritmoAtual = diasDecorridos > 0 ? valorAtual / diasDecorridos : 0;
+        const ritmoNecessario = diasRestantes > 0 ? (valorMeta - valorAtual) / diasRestantes : 0;
+        
+        const metaMarketing = valorMeta * 0.85;
+        const metaComercial = valorMeta * 0.15;
+        const vendasMarketing = valorAtual * 0.85;
+        const vendasComercial = valorAtual * 0.15;
+        
+        // Ticket médio do mês (vendas totais / número total de vendas)
+        const vendasCountMes = Object.values(salesByDay).reduce((sum: number, day: any) => sum + (day?.sales || 0), 0);
+        const ticketMedio = vendasCountMes > 0 ? valorAtual / vendasCountMes : 0;
+        
         return {
           meta: valorMeta,
           atual: valorAtual,
           progresso: progressoReal,
-          label: 'Meta Mensal'
+          label: 'Meta Mensal',
+          tempoRestante: diasRestantes,
+          tempoLabel: diasRestantes === 1 ? 'dia restante' : 'dias restantes',
+          progressoEsperado,
+          deficit,
+          ritmoAtual,
+          ritmoNecessario,
+          ritmoLabel: '/dia',
+          metaMarketing,
+          metaComercial,
+          vendasMarketing,
+          vendasComercial,
+          ticketMedio
         };
+      }
     }
   };
 
@@ -254,15 +382,15 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-teal-700 dark:text-teal-300">
-                {vendasMarketing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                {displayValues.vendasMarketing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Meta: {metaMarketing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                Meta: {displayValues.metaMarketing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </p>
               <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-teal-500 to-teal-600 dark:from-teal-400 dark:to-teal-500 transition-all duration-500"
-                  style={{ width: `${Math.min(100, (vendasMarketing / metaMarketing) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (displayValues.vendasMarketing / displayValues.metaMarketing) * 100)}%` }}
                 ></div>
               </div>
             </CardContent>
@@ -275,15 +403,15 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-amber-700 dark:text-amber-300">
-                {vendasComercial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                {displayValues.vendasComercial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Meta: {metaComercial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                Meta: {displayValues.metaComercial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </p>
               <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-amber-500 to-amber-600 dark:from-amber-400 dark:to-amber-500 transition-all duration-500"
-                  style={{ width: `${Math.min(100, (vendasComercial / metaComercial) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (displayValues.vendasComercial / displayValues.metaComercial) * 100)}%` }}
                 ></div>
               </div>
             </CardContent>
@@ -296,7 +424,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">
-                {ticketMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                {displayValues.ticketMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Por venda</p>
             </CardContent>
@@ -309,7 +437,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-purple-700 dark:text-purple-300">
-                {safeToFixed(progressoReal, 1)}%
+                {safeToFixed(displayValues.progresso, 1)}%
               </div>
               <p className="text-xs text-muted-foreground mt-1">Progresso atual</p>
             </CardContent>
@@ -324,8 +452,8 @@ export default function Dashboard() {
               <Calendar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-foreground">{diasRestantes}</div>
-              <p className="text-xs text-muted-foreground mt-1">dias até o fim do mês</p>
+              <div className="text-4xl font-bold text-foreground">{displayValues.tempoRestante}</div>
+              <p className="text-xs text-muted-foreground mt-1">{displayValues.tempoLabel}</p>
             </CardContent>
           </Card>
 
@@ -335,24 +463,24 @@ export default function Dashboard() {
               <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-foreground">{safeToFixed(progressoEsperado, 1)}%</div>
-              <p className="text-xs text-muted-foreground mt-1">baseado no dia atual</p>
+              <div className="text-4xl font-bold text-foreground">{safeToFixed(displayValues.progressoEsperado, 1)}%</div>
+              <p className="text-xs text-muted-foreground mt-1">baseado no período</p>
             </CardContent>
           </Card>
 
-          <Card className={`border-l-4 ${deficit < 0 ? 'border-l-green-500 dark:border-l-green-400' : 'border-l-red-500 dark:border-l-red-400'} shadow-lg`}>
+          <Card className={`border-l-4 ${displayValues.deficit > 0 ? 'border-l-green-500 dark:border-l-green-400' : 'border-l-red-500 dark:border-l-red-400'} shadow-lg`}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                {deficit < 0 ? 'Superávit' : 'Déficit'}
+                {displayValues.deficit > 0 ? 'Superávit' : 'Déficit'}
               </CardTitle>
-              <TrendingDown className={`h-5 w-5 ${deficit < 0 ? 'text-green-600 dark:text-green-400 rotate-180' : 'text-red-600 dark:text-red-400'}`} />
+              <TrendingDown className={`h-5 w-5 ${displayValues.deficit > 0 ? 'text-green-600 dark:text-green-400 rotate-180' : 'text-red-600 dark:text-red-400'}`} />
             </CardHeader>
             <CardContent>
-              <div className={`text-4xl font-bold ${deficit < 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {Math.abs(deficit).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+              <div className={`text-4xl font-bold ${displayValues.deficit > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {Math.abs(displayValues.deficit).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {deficit < 0 ? 'acima da meta esperada' : 'abaixo da meta esperada'}
+                {displayValues.deficit > 0 ? 'acima da meta esperada' : 'abaixo da meta esperada'}
               </p>
             </CardContent>
           </Card>
@@ -371,19 +499,19 @@ export default function Dashboard() {
               <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground mb-2">Ritmo Atual</p>
                 <p className="text-2xl font-bold text-teal-700 dark:text-teal-300">
-                  {ritmoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}/dia
+                  {displayValues.ritmoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}{displayValues.ritmoLabel}
                 </p>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground mb-2">Ritmo Necessário</p>
                 <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-                  {ritmoNecessario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}/dia
+                  {displayValues.ritmoNecessario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}{displayValues.ritmoLabel}
                 </p>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground mb-2">Diferença</p>
-                <p className={`text-2xl font-bold ${ritmoAtual >= ritmoNecessario ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {(ritmoAtual - ritmoNecessario).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}/dia
+                <p className={`text-2xl font-bold ${displayValues.ritmoAtual >= displayValues.ritmoNecessario ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {(displayValues.ritmoAtual - displayValues.ritmoNecessario).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}{displayValues.ritmoLabel}
                 </p>
               </div>
             </div>
