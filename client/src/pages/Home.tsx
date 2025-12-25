@@ -34,6 +34,7 @@ export default function Landing() {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
+            hd: 'douravita.com.br', // Restringe para apenas e-mails @douravita.com.br
           }
         }
       });
