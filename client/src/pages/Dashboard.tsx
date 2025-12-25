@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState<number>(hoje.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(hoje.getFullYear());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
+  const [selectedSubMeta, setSelectedSubMeta] = useState<number | null>(null);
 
   // Funções auxiliares para cálculos
   const getDaysInMonth = (month: number, year: number) => {
@@ -105,7 +106,9 @@ export default function Dashboard() {
   const meta = dashboardData?.metaPrincipal;
   const subMetas = dashboardData?.subMetas || [];
   
-  const valorMeta = meta?.valor_meta || 0;
+  // Se uma submeta está selecionada, usar seu valor como meta
+  const subMetaSelecionada = selectedSubMeta !== null ? subMetas.find((sm: any) => sm.id === selectedSubMeta) : null;
+  const valorMeta = subMetaSelecionada ? subMetaSelecionada.valor : (meta?.valor_meta || 0);
   const valorAtual = meta?.valor_atual || 0;
   const progressoReal = valorMeta > 0 ? (valorAtual / valorMeta) * 100 : 0;
 
@@ -239,7 +242,7 @@ export default function Dashboard() {
       
       case 'week': {
         // Meta e vendas semanais
-        const metaSemanal = valorMeta / weeksInMonth;
+        const metaSemanal = (valorMeta / daysInMonth) * 7;
         const vendasSemana = getThisWeekSales(salesByDay);
         const progressoSemanal = metaSemanal > 0 ? (vendasSemana / metaSemanal) * 100 : 0;
         
@@ -399,6 +402,7 @@ export default function Dashboard() {
             subGoals={subMetas.map((sm: any) => {
               const statusPremio = calcularStatusPremio(parseFloat(sm.valor), sm.atingida);
               return {
+                id: sm.id,
                 value: parseFloat(sm.valor) || 0,
                 achieved: sm.atingida === 1,
                 premio: sm.premio,
@@ -407,6 +411,11 @@ export default function Dashboard() {
                 color: statusPremio.color
               };
             })}
+            selectedSubMetaId={selectedSubMeta}
+            onSubMetaClick={(id) => {
+              // Toggle: se clicar na mesma submeta, desseleciona
+              setSelectedSubMeta(selectedSubMeta === id ? null : id);
+            }}
             grandPrize={meta?.grande_premio ? {
               text: meta.grande_premio,
               status: statusGrandePremio().status,

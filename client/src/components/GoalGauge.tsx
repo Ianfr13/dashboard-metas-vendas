@@ -3,6 +3,7 @@ interface GoalGaugeProps {
   current: number;
   target: number;
   subGoals: { 
+    id: number;
     value: number; 
     achieved: boolean;
     premio?: string;
@@ -10,6 +11,8 @@ interface GoalGaugeProps {
     icon?: string;
     color?: string;
   }[];
+  selectedSubMetaId?: number | null;
+  onSubMetaClick?: (id: number) => void;
   grandPrize?: {
     text: string;
     status: string;
@@ -25,6 +28,8 @@ export default function GoalGauge({
   current,
   target,
   subGoals,
+  selectedSubMetaId,
+  onSubMetaClick,
   grandPrize,
 }: GoalGaugeProps) {
   const formatCurrency = (value: number) => {
@@ -151,13 +156,18 @@ export default function GoalGauge({
           Sub-metas
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
-          {subGoals.map((subGoal, index) => (
+          {subGoals.map((subGoal, index) => {
+            const isSelected = selectedSubMetaId === subGoal.id;
+            return (
             <div
               key={index}
-              className={`flex flex-col rounded-lg border p-2 md:p-3 transition-all ${
-                subGoal.achieved
+              onClick={() => onSubMetaClick && onSubMetaClick(subGoal.id)}
+              className={`flex flex-col rounded-lg border p-2 md:p-3 transition-all cursor-pointer hover:shadow-lg ${
+                isSelected
+                  ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500"
+                  : subGoal.achieved
                   ? "border-green-500/50 bg-green-500/10"
-                  : "border-border bg-card"
+                  : "border-border bg-card hover:border-blue-300"
               }`}
             >
               {/* Prêmio em cima */}
@@ -204,7 +214,8 @@ export default function GoalGauge({
                 </span>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         {subGoals.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">
