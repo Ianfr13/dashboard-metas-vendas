@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   TrendingUp,
   TrendingDown,
@@ -9,6 +11,7 @@ import {
   Target,
   Calendar,
   Activity,
+  RefreshCw,
 } from "lucide-react";
 import GoalGauge from "@/components/GoalGauge";
 import GoalCelebration from "@/components/GoalCelebration";
@@ -20,27 +23,34 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
+  
+  // Filtros
+  const hoje = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(hoje.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(hoje.getFullYear());
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await dashboardAPI.getMetaPrincipal(selectedMonth, selectedYear);
+      setDashboardData(data);
+      
+      if (data?.metaPrincipal?.progresso >= 100) {
+        setShowCelebration(true);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await dashboardAPI.getMetaPrincipal();
-        setDashboardData(data);
-        
-        if (data?.metaPrincipal?.progresso >= 100) {
-          setShowCelebration(true);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dashboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   if (loading) {
     return (
@@ -62,7 +72,6 @@ export default function Dashboard() {
   const valorAtual = meta?.valor_atual || 0;
   const progressoReal = valorMeta > 0 ? (valorAtual / valorMeta) * 100 : 0;
 
-  const hoje = new Date();
   const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
   const diaAtual = hoje.getDate();
   const diasDecorridos = diaAtual;
@@ -93,6 +102,79 @@ export default function Dashboard() {
             subGoals={subMetas.map((sm: any) => ({ value: sm.valor_meta || 0, achieved: sm.status === 'concluida' }))}
           />
         </div>
+
+        {/* Filtros de Período */}
+        <Card className="mb-8 border shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Filtros de Período
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4 items-end">
+              {/* Seletor de Mês */}
+              <div className="flex-1 min-w-[150px]">
+                <label className="text-sm font-medium mb-2 block">Mês</label>
+                <Select value={selectedMonth.toString()} onValueChange={(val) => setSelectedMonth(parseInt(val))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Janeiro</SelectItem>
+                    <SelectItem value="2">Fevereiro</SelectItem>
+                    <SelectItem value="3">Março</SelectItem>
+                    <SelectItem value="4">Abril</SelectItem>
+                    <SelectItem value="5">Maio</SelectItem>
+                    <SelectItem value="6">Junho</SelectItem>
+                    <SelectItem value="7">Julho</SelectItem>
+                    <SelectItem value="8">Agosto</SelectItem>
+                    <SelectItem value="9">Setembro</SelectItem>
+                    <SelectItem value="10">Outubro</SelectItem>
+                    <SelectItem value="11">Novembro</SelectItem>
+                    <SelectItem value="12">Dezembro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Seletor de Ano */}
+              <div className="flex-1 min-w-[120px]">
+                <label className="text-sm font-medium mb-2 block">Ano</label>
+                <Select value={selectedYear.toString()} onValueChange={(val) => setSelectedYear(parseInt(val))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2024">2024</SelectItem>
+                    <SelectItem value="2025">2025</SelectItem>
+                    <SelectItem value="2026">2026</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Modo de Visualização */}
+              <div className="flex-1 min-w-[150px]">
+                <label className="text-sm font-medium mb-2 block">Visualização</label>
+                <Select value={viewMode} onValueChange={(val: any) => setViewMode(val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="month">Mensal</SelectItem>
+                    <SelectItem value="week">Semanal</SelectItem>
+                    <SelectItem value="day">Diário</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Botão Atualizar */}
+              <Button onClick={fetchData} variant="outline" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Atualizar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Cards de Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
