@@ -162,7 +162,10 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
         <CardContent>
           <div className="text-3xl font-bold">{metrics.noShow}</div>
           <p className="text-xs text-muted-foreground mt-1">
-            {((metrics.noShow / metrics.agendamentos) * 100).toFixed(1)}% dos agendamentos
+            {metrics.agendamentos > 0 
+              ? ((metrics.noShow / metrics.agendamentos) * 100).toFixed(1) 
+              : '0.0'
+            }% dos agendamentos
           </p>
         </CardContent>
       </Card>
@@ -333,13 +336,19 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
               <div className="flex justify-between">
                 <span>% No-Show:</span>
                 <span className="font-bold text-red-600">
-                  {((metrics.noShow / metrics.agendamentos) * 100).toFixed(1)}%
+                  {metrics.agendamentos > 0 
+                    ? ((metrics.noShow / metrics.agendamentos) * 100).toFixed(1) 
+                    : '0.0'
+                  }%
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Ticket Médio:</span>
                 <span className="font-bold">
-                  R$ {(metrics.receita / metrics.vendas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {metrics.vendas > 0 
+                    ? (metrics.receita / metrics.vendas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                    : '0,00'
+                  }
                 </span>
               </div>
             </div>
@@ -438,7 +447,7 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
             <BarChart 
               data={[
                 { name: 'Presença', value: metrics.taxaPresenca, color: '#10b981' },
-                { name: 'No-Show', value: (metrics.noShow / metrics.agendamentos) * 100, color: '#ef4444' }
+                { name: 'No-Show', value: metrics.agendamentos > 0 ? (metrics.noShow / metrics.agendamentos) * 100 : 0, color: '#ef4444' }
               ]} 
               layout="vertical"
             >
@@ -449,7 +458,7 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
               <Bar dataKey="value" radius={[0, 8, 8, 0]}>
                 {[
                   { name: 'Presença', value: metrics.taxaPresenca, color: '#10b981' },
-                  { name: 'No-Show', value: (metrics.noShow / metrics.agendamentos) * 100, color: '#ef4444' }
+                  { name: 'No-Show', value: metrics.agendamentos > 0 ? (metrics.noShow / metrics.agendamentos) * 100 : 0, color: '#ef4444' }
                 ].map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}

@@ -183,7 +183,10 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold">
-            {((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1)}%
+            {metrics.custoTotal > 0 
+              ? ((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1) 
+              : '0.0'
+            }%
           </div>
         </CardContent>
       </Card>
@@ -236,7 +239,10 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
               <tr className="hover:bg-muted/50">
                 <td className="p-4 font-semibold">ROI</td>
                 <td className="p-4 text-right font-mono font-semibold">
-                  {((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1)}%
+                  {metrics.custoTotal > 0 
+                    ? ((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1) 
+                    : '0.0'
+                  }%
                 </td>
               </tr>
             </tbody>
@@ -270,7 +276,7 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
 
             {/* Vendas */}
             <div className="relative">
-              <div className="bg-green-500 text-white p-6 rounded-lg text-center mx-auto" style={{ width: `${(metrics.vendas / metrics.leads) * 100}%`, minWidth: '200px' }}>
+              <div className="bg-green-500 text-white p-6 rounded-lg text-center mx-auto" style={{ width: `${metrics.leads > 0 ? (metrics.vendas / metrics.leads) * 100 : 0}%`, minWidth: '200px' }}>
                 <div className="text-4xl font-bold">{metrics.vendas}</div>
                 <div className="text-sm mt-2">Vendas ({metrics.taxaConversao}%)</div>
               </div>
@@ -323,13 +329,19 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
               <div className="flex justify-between">
                 <span>ROI:</span>
                 <span className="font-bold text-green-600">
-                  {((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1)}%
+                  {metrics.custoTotal > 0 
+                    ? ((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1) 
+                    : '0.0'
+                  }%
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Ticket Médio:</span>
                 <span className="font-bold">
-                  R$ {(metrics.receita / metrics.vendas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {metrics.vendas > 0 
+                    ? (metrics.receita / metrics.vendas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                    : '0,00'
+                  }
                 </span>
               </div>
             </div>
