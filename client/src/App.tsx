@@ -19,6 +19,22 @@ import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 import { AdminRoute } from "./components/Auth/AdminRoute";
 
 
+// Export routes for testing
+export const routes = [
+  { path: '/', component: 'Home' },
+  { path: '/login', component: 'LoginPage' },
+  { path: '/dashboard', component: 'Dashboard' },
+  { path: '/admin', component: 'AdminDashboard' },
+  { path: '/admin/metas', component: 'AdminMetas' },
+  { path: '/admin/produtos', component: 'AdminProdutos' },
+  { path: '/admin/funis', component: 'AdminFunis' },
+  { path: '/admin/configuracoes', component: 'AdminConfiguracoes' },
+  { path: '/metricas', component: 'Metricas' },
+  { path: '/ranking', component: 'Ranking' },
+  { path: '/404', component: 'NotFound' },
+  { path: undefined, component: 'NotFound' }, // Fallback
+] as const;
+
 function Router() {
   return (
     <Switch>

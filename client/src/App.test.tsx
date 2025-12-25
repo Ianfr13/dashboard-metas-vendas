@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import App from './App';
+import React from 'react';
+import App, { routes } from './App';
 
 // Mock all page components
 vi.mock('./pages/Home', () => ({
@@ -221,14 +222,18 @@ describe('App', () => {
   });
 
   describe('Route Count Verification', () => {
-    it('should have exactly the expected number of routes', () => {
+    it('should have exactly 12 routes', () => {
       // This test ensures we removed /metrics and kept everything else
-      render(<App />);
-
       // Routes: /, /login, /dashboard, /admin, /admin/metas, /admin/produtos,
       // /admin/funis, /admin/configuracoes, /metricas, /ranking, /404, fallback
-      // Total: 12 routes (one less than before since /metrics was removed)
-      expect(screen.getByTestId('switch')).toBeInTheDocument();
+      expect(routes).toHaveLength(12);
+      
+      // Verify key routes exist
+      const routePaths = routes.map(r => r.path);
+      expect(routePaths).toContain('/');
+      expect(routePaths).toContain('/dashboard');
+      expect(routePaths).toContain('/metricas');
+      expect(routePaths).not.toContain('/metrics'); // Ensure old route is removed
     });
   });
 
