@@ -82,7 +82,7 @@ serve(async (req) => {
     // Return aggregated data
     return new Response(
       JSON.stringify({
-        meta: metaPrincipal,
+        metaPrincipal: metaPrincipal,
         subMetas,
         totals: {
           sales: salesData.sales,

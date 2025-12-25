@@ -10,7 +10,7 @@ export async function getMetaPrincipal(
     .select('*')
     .eq('mes', month)
     .eq('ano', year)
-    .eq('active', true)
+    .eq('active', 1)
     .single();
 
   if (error) {
@@ -28,8 +28,8 @@ export async function getSubMetas(
   const { data, error } = await supabase
     .from('sub_metas')
     .select('*')
-    .eq('meta_id', metaId)
-    .order('ordem', { ascending: true });
+    .eq('meta_principal_id', metaId)
+    .order('valor', { ascending: true });
 
   if (error) {
     console.error('Error fetching sub-metas:', error);
