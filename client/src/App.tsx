@@ -123,7 +123,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider
           defaultTheme="light"
-          switchable
+          switchable={false}
         >
           <TooltipProvider>
             <Toaster />
