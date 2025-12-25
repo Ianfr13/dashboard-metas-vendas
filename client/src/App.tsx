@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/admin/index";
 import AdminMetas from "./pages/admin/Metas";
 import AdminProdutos from "./pages/admin/Produtos";
@@ -21,14 +22,15 @@ import { AdminRoute } from "./components/Auth/AdminRoute";
 function Router() {
   return (
     <Switch>
-      {/* Rota pública de login */}
+      {/* Rota pública de landing/login */}
+      <Route path="/" component={Home} />
       <Route path="/login" component={LoginPage} />
       
       {/* Rotas protegidas (requer autenticação) */}
-      <Route path="/">
+      <Route path="/dashboard">
         {() => (
           <ProtectedRoute>
-            <Home />
+            <Dashboard />
           </ProtectedRoute>
         )}
       </Route>
