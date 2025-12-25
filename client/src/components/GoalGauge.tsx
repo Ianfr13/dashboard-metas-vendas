@@ -2,7 +2,20 @@ interface GoalGaugeProps {
   percentage: number;
   current: number;
   target: number;
-  subGoals: { value: number; achieved: boolean }[];
+  subGoals: { 
+    value: number; 
+    achieved: boolean;
+    premio?: string;
+    status?: string;
+    icon?: string;
+    color?: string;
+  }[];
+  grandPrize?: {
+    text: string;
+    status: string;
+    icon: string;
+    color: string;
+  };
 }
 
 import { safeToFixed } from "@/lib/formatters";
@@ -12,6 +25,7 @@ export default function GoalGauge({
   current,
   target,
   subGoals,
+  grandPrize,
 }: GoalGaugeProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -104,6 +118,28 @@ export default function GoalGauge({
                   +{formatCurrency(excessAmount)} acima da meta
                 </div>
               )}
+              {grandPrize && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-lg">{grandPrize.icon}</span>
+                    <span className="text-xs font-semibold text-muted-foreground">🏆 GRANDE PRÊMIO</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 max-w-[200px] mx-auto">
+                    {grandPrize.text}
+                  </div>
+                  <div className={`text-xs font-bold mt-1 ${
+                    grandPrize.status === 'desbloqueado' ? 'text-green-600' :
+                    grandPrize.status === 'perdido' ? 'text-red-600' :
+                    grandPrize.status === 'quase' ? 'text-orange-600' :
+                    'text-blue-600'
+                  }`}>
+                    {grandPrize.status === 'desbloqueado' ? 'Desbloqueado!' :
+                     grandPrize.status === 'perdido' ? 'Perdido' :
+                     grandPrize.status === 'quase' ? 'Quase lá!' :
+                     'Em andamento'}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -118,28 +154,55 @@ export default function GoalGauge({
           {subGoals.map((subGoal, index) => (
             <div
               key={index}
-              className={`flex items-center gap-2 rounded-lg border p-3 transition-all ${
+              className={`flex flex-col rounded-lg border p-3 transition-all ${
                 subGoal.achieved
                   ? "border-green-500/50 bg-green-500/10"
                   : "border-border bg-card"
               }`}
             >
-              <div
-                className={`h-3 w-3 rounded-full ${
-                  subGoal.achieved
-                    ? "bg-green-500 animate-pulse"
-                    : "bg-cyan-500"
-                }`}
-              />
-              <span
-                className={`font-semibold text-sm ${
-                  subGoal.achieved
-                    ? "line-through text-muted-foreground"
-                    : "text-foreground"
-                }`}
-              >
-                {formatShortCurrency(subGoal.value)}
-              </span>
+              {/* Prêmio em cima */}
+              {subGoal.premio && (
+                <div className="mb-2 pb-2 border-b border-border">
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-xs">{subGoal.icon || '🎁'}</span>
+                    <span className="text-xs font-medium text-muted-foreground truncate">
+                      {subGoal.premio}
+                    </span>
+                  </div>
+                  {subGoal.status && (
+                    <div className={`text-[10px] font-bold ${
+                      subGoal.status === 'desbloqueado' ? 'text-green-600' :
+                      subGoal.status === 'perdido' ? 'text-red-600' :
+                      subGoal.status === 'quase' ? 'text-orange-600' :
+                      'text-blue-600'
+                    }`}>
+                      {subGoal.status === 'desbloqueado' ? 'Desbloqueado!' :
+                       subGoal.status === 'perdido' ? 'Perdido' :
+                       subGoal.status === 'quase' ? 'Quase lá!' :
+                       'Em andamento'}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Valor da submeta */}
+              <div className="flex items-center gap-2">
+                <div
+                  className={`h-3 w-3 rounded-full flex-shrink-0 ${
+                    subGoal.achieved
+                      ? "bg-green-500 animate-pulse"
+                      : "bg-cyan-500"
+                  }`}
+                />
+                <span
+                  className={`font-semibold text-sm ${
+                    subGoal.achieved
+                      ? "line-through text-muted-foreground"
+                      : "text-foreground"
+                  }`}
+                >
+                  {formatShortCurrency(subGoal.value)}
+                </span>
+              </div>
             </div>
           ))}
         </div>

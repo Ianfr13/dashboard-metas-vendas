@@ -134,40 +134,25 @@ export default function Dashboard() {
             percentage={progressoReal}
             current={valorAtual}
             target={valorMeta}
-            subGoals={subMetas.map((sm: any) => ({ value: parseFloat(sm.valor) || 0, achieved: sm.atingida === 1 }))}
+            subGoals={subMetas.map((sm: any) => {
+              const statusPremio = calcularStatusPremio(parseFloat(sm.valor), sm.atingida);
+              return {
+                value: parseFloat(sm.valor) || 0,
+                achieved: sm.atingida === 1,
+                premio: sm.premio,
+                status: statusPremio.status,
+                icon: statusPremio.icon,
+                color: statusPremio.color
+              };
+            })}
+            grandPrize={meta?.grande_premio ? {
+              text: meta.grande_premio,
+              status: statusGrandePremio().status,
+              icon: statusGrandePremio().icon,
+              color: statusGrandePremio().color
+            } : undefined}
           />
         </div>
-
-        {/* Grande Prêmio */}
-        {meta?.grande_premio && (
-          <Card className="mb-8 border shadow-lg">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-16 h-16 rounded-full ${statusGrandePremio().color} flex items-center justify-center text-3xl`}>
-                    {statusGrandePremio().icon}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-foreground">🏆 Grande Prêmio</h3>
-                    <p className="text-sm text-muted-foreground">{meta.grande_premio}</p>
-                    <p className={`text-sm font-medium mt-1 ${
-                      statusGrandePremio().status === 'desbloqueado' ? 'text-green-600' :
-                      statusGrandePremio().status === 'perdido' ? 'text-red-600' :
-                      statusGrandePremio().status === 'quase' ? 'text-orange-600' :
-                      'text-blue-600'
-                    }`}>
-                      {statusGrandePremio().text}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-foreground">{progressoReal.toFixed(1)}%</p>
-                  <p className="text-xs text-muted-foreground">Progresso</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Filtros de Período */}
         <Card className="mb-8 border shadow-lg">
@@ -462,52 +447,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Sub-Metas */}
-        {subMetas.length > 0 && (
-          <Card className="mb-8 border shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-foreground">Sub-Metas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {subMetas.map((subMeta: any) => {
-                  const statusPremio = calcularStatusPremio(parseFloat(subMeta.valor), subMeta.atingida);
-                  return (
-                    <div
-                      key={subMeta.id}
-                      className="flex items-center justify-between p-4 bg-muted rounded-lg hover:bg-accent transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className={`w-3 h-3 rounded-full ${statusPremio.color}`}></div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">
-                              {(parseFloat(subMeta.valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </span>
-                            <span className="text-xs">{statusPremio.icon}</span>
-                          </div>
-                          {subMeta.premio && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              🎁 {subMeta.premio}
-                            </p>
-                          )}
-                          <p className={`text-xs font-medium mt-1 ${
-                            statusPremio.status === 'desbloqueado' ? 'text-green-600' :
-                            statusPremio.status === 'perdido' ? 'text-red-600' :
-                            statusPremio.status === 'quase' ? 'text-orange-600' :
-                            'text-blue-600'
-                          }`}>
-                            {statusPremio.text}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
       </div>
     </DashboardLayout>
   );
