@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Edit2, Check, X, Calculator } from "lucide-react";
 import { toast } from "sonner";
-import AdminLayout from "./AdminLayout";
+import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/lib/supabase";
 
 interface Produto {
@@ -377,16 +377,16 @@ export default function AdminFunis() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Carregando funis...</p>
         </div>
-      </AdminLayout>
+      </DashboardLayout>
     );
   }
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Funis de Venda</h2>
@@ -684,6 +684,6 @@ export default function AdminFunis() {
           ))
         )}
       </div>
-    </AdminLayout>
+    </DashboardLayout>
   );
 }

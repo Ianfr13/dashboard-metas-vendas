@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
-import AdminLayout from "./AdminLayout";
+import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/lib/supabase";
 
 interface Meta {
@@ -249,16 +249,16 @@ export default function AdminMetas() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
-      </AdminLayout>
+      </DashboardLayout>
     );
   }
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Gerenciar Metas</h2>
@@ -438,6 +438,6 @@ export default function AdminMetas() {
           </div>
         )}
       </div>
-    </AdminLayout>
+    </DashboardLayout>
   );
 }

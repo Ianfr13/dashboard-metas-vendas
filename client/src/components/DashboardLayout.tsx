@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Trophy } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Trophy, Settings, Target, Package, GitBranch, Sliders } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -31,6 +31,14 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Trophy, label: "Ranking", path: "/ranking" },
   { icon: Users, label: "Métricas", path: "/metricas" },
+];
+
+const adminMenuItems = [
+  { icon: Settings, label: "Admin Dashboard", path: "/admin" },
+  { icon: Target, label: "Metas", path: "/admin/metas" },
+  { icon: Package, label: "Produtos", path: "/admin/produtos" },
+  { icon: GitBranch, label: "Funis", path: "/admin/funis" },
+  { icon: Sliders, label: "Configurações", path: "/admin/configuracoes" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -182,6 +190,38 @@ function DashboardLayoutContent({
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
+                const isActive = location === item.path;
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => setLocation(item.path)}
+                      tooltip={item.label}
+                      className={`h-10 transition-all font-normal`}
+                    >
+                      <item.icon
+                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                      />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+
+            {/* Divider */}
+            <div className="px-4 py-2">
+              <div className="h-px bg-border" />
+            </div>
+
+            {/* Admin Section */}
+            <div className="px-4 py-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+                Administração
+              </span>
+            </div>
+            <SidebarMenu className="px-2 py-1">
+              {adminMenuItems.map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, Package, GitBranch, TrendingUp, Loader2 } from "lucide-react";
 import { Link } from "wouter";
-import AdminLayout from "./AdminLayout";
+import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminDashboard() {
@@ -45,16 +45,16 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
-      </AdminLayout>
+      </DashboardLayout>
     );
   }
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard Administrativo</h2>
@@ -162,6 +162,6 @@ export default function AdminDashboard() {
           </Card>
         </div>
       </div>
-    </AdminLayout>
+    </DashboardLayout>
   );
 }

@@ -1,10 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import AdminLayout from "./AdminLayout";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Settings, Database, Shield, Zap } from "lucide-react";
 
 export default function AdminConfiguracoes() {
   return (
-    <AdminLayout>
+    <DashboardLayout>
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Configurações</h2>
@@ -137,6 +137,6 @@ export default function AdminConfiguracoes() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </DashboardLayout>
   );
 }
