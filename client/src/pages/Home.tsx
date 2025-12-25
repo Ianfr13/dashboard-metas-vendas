@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Moon, Sun, TrendingUp, DollarSign, Target, Home as HomeIcon, BarChart3, Settings, Loader2, Users } from "lucide-react";
+import { Moon, Sun, TrendingUp, DollarSign, Target, Home as HomeIcon, BarChart3, Settings, Loader2, Users, Calendar, TrendingDown, Activity } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import MobileNav from "@/components/MobileNav";
 import GoalGauge from "@/components/GoalGauge";
@@ -48,10 +48,11 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando dashboard...</p>
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-amber-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <img src="/douravita-logo.png" alt="Douravita" className="w-48 h-auto mx-auto animate-pulse" />
+          <Loader2 className="w-8 h-8 animate-spin text-teal-600 mx-auto" />
+          <p className="text-teal-700 font-medium">Carregando dashboard...</p>
         </div>
       </div>
     );
@@ -59,15 +60,15 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle className="text-red-500">Erro ao carregar</CardTitle>
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-amber-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-red-200 shadow-xl">
+          <CardHeader className="bg-red-50">
+            <CardTitle className="text-red-700">Erro ao Carregar</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">{error}</p>
-            <Button onClick={() => window.location.reload()} className="mt-4">
-              Tentar novamente
+          <CardContent className="pt-6">
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()} className="w-full bg-teal-600 hover:bg-teal-700">
+              Tentar Novamente
             </Button>
           </CardContent>
         </Card>
@@ -75,270 +76,249 @@ export default function Home() {
     );
   }
 
-  const { meta, subMetas, metrics, totals, salesByDay } = dashboardData || {};
-  
-  // Valores com fallback para 0
-  const valorMeta = metrics?.valorMeta || meta?.valor_meta || 0;
-  const valorAtual = metrics?.valorAtual || totals?.revenue || 0;
-  const progressoReal = metrics?.progressoReal || 0;
-  const progressoEsperado = metrics?.progressoEsperado || 0;
-  const diasRestantes = metrics?.dias?.restantes || 0;
-  const diasDecorridos = metrics?.dias?.decorridos || 0;
-  const diasTotais = metrics?.dias?.total || 30;
-  const deficit = metrics?.deficit || { valor: 0, percentual: 0 };
-  const ritmo = metrics?.ritmo || { atual: 0, necessario: 0, diferenca: 0 };
-  
-  // Calcular vendas totais
-  const vendasTotais = totals?.sales || 0;
-  
-  // Calcular ticket médio
-  const ticketMedio = vendasTotais > 0 ? valorAtual / vendasTotais : 1000;
-  
-  // Calcular distribuição Marketing/Comercial (85% marketing, 15% comercial)
-  const percentualMarketing = 0.85;
-  const percentualComercial = 0.15;
-  
-  const metaMarketing = valorMeta * percentualMarketing;
-  const metaComercial = valorMeta * percentualComercial;
-  
-  const receitaMarketing = valorAtual * percentualMarketing;
-  const receitaComercial = valorAtual * percentualComercial;
-  
-  const vendasMarketing = Math.floor(vendasTotais * percentualMarketing);
-  const vendasComercial = Math.floor(vendasTotais * percentualComercial);
-  
-  // Vendas esperadas baseadas no progresso esperado
-  const vendasEsperadasMarketing = Math.floor((metaMarketing / ticketMedio) * (progressoEsperado / 100));
-  const vendasEsperadasComercial = Math.floor((metaComercial / 20000) * (progressoEsperado / 100)); // ticket médio comercial ~20k
-  
-  const receitaEsperadaMarketing = metaMarketing * (progressoEsperado / 100);
-  const receitaEsperadaComercial = metaComercial * (progressoEsperado / 100);
+  const meta = dashboardData?.meta || {};
+  const metrics = dashboardData?.metrics || {};
+  const subMetas = dashboardData?.subMetas || [];
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  // Calcular valores
+  const valorMeta = meta.valor_meta || 0;
+  const valorAtual = meta.valor_atual || 0;
+  const progressoReal = metrics.progressoReal || 0;
+  const diasRestantes = metrics.diasRestantes || 0;
+  const progressoEsperado = metrics.progressoEsperado || 0;
+  const deficit = metrics.deficit || 0;
+
+  // Distribuição 85% Marketing / 15% Comercial
+  const metaMarketing = valorMeta * 0.85;
+  const metaComercial = valorMeta * 0.15;
+  const vendasMarketing = valorAtual * 0.85;
+  const vendasComercial = valorAtual * 0.15;
+
+  // Ticket médio
+  const ticketMedio = valorAtual > 0 ? valorAtual / Math.max(1, Math.floor(valorAtual / 800)) : 0;
+
+  // Ritmo de vendas
+  const diasDecorridos = 30 - diasRestantes;
+  const ritmoAtual = diasDecorridos > 0 ? valorAtual / diasDecorridos : 0;
+  const ritmoNecessario = diasRestantes > 0 ? (valorMeta - valorAtual) / diasRestantes : 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      {showCelebration && <GoalCelebration show={showCelebration} />}
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-amber-50">
+      {showCelebration && <GoalCelebration onClose={() => setShowCelebration(false)} />}
       
-      {/* Header */}
-      <nav className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img
-              src="/douravita-logo.png"
-              alt="DouraVita"
-              className="h-10 w-auto transition-all filter drop-shadow-md"
-            />
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">Dashboard de Metas</h1>
-              <p className="text-xs font-medium text-muted-foreground">
-                {meta?.mes ? `${meta.mes}/${meta.ano}` : 'Janeiro 2025'}
-              </p>
+      {/* Header com Logo */}
+      <header className="bg-white/80 backdrop-blur-sm border-b border-teal-100 sticky top-0 z-40 shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <img src="/douravita-logo.png" alt="Douravita" className="h-12 w-auto" />
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-teal-700 bg-clip-text text-transparent">
+                  Dashboard de Metas
+                </h1>
+                <p className="text-sm text-gray-600">Acompanhamento em tempo real</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="rounded-full hover:bg-teal-50"
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5 text-amber-500" />
+                ) : (
+                  <Moon className="h-5 w-5 text-teal-600" />
+                )}
+              </Button>
+              
+              <Link href="/metricas">
+                <Button variant="ghost" size="icon" className="rounded-full hover:bg-teal-50">
+                  <BarChart3 className="h-5 w-5 text-teal-600" />
+                </Button>
+              </Link>
+              
+              <Link href="/admin">
+                <Button variant="ghost" size="icon" className="rounded-full hover:bg-teal-50">
+                  <Settings className="h-5 w-5 text-teal-600" />
+                </Button>
+              </Link>
             </div>
           </div>
-          
-          <div className="hidden md:flex items-center gap-4">
-            <Link href="/">
-              <Button variant={location === "/" ? "default" : "ghost"} size="sm">
-                <HomeIcon className="h-4 w-4 mr-2" />
-                Home
-              </Button>
-            </Link>
-            <Link href="/metricas">
-              <Button variant={location === "/metricas" ? "default" : "ghost"} size="sm">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Métricas
-              </Button>
-            </Link>
-            <Link href="/ranking">
-              <Button variant={location === "/ranking" ? "default" : "ghost"} size="sm">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Ranking
-              </Button>
-            </Link>
-            <Link href="/admin">
-              <Button variant={location === "/admin" ? "default" : "ghost"} size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Admin
-              </Button>
-            </Link>
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-          </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 pb-24 md:pb-8 space-y-8">
-        {/* Goal Gauge */}
-        <div className="flex justify-center">
-          <GoalGauge 
-            percentage={progressoReal}
-            current={valorAtual} 
-            target={valorMeta}
-            subGoals={subMetas?.map((sm: any) => ({
-              value: sm.valor_meta || sm.valor,
-              achieved: sm.atingida === 1 || valorAtual >= (sm.valor_meta || sm.valor)
-            })) || []}
-          />
+      <main className="container mx-auto px-4 py-8 pb-24">
+        {/* Meta Principal com Gauge */}
+        <div className="mb-8">
+          <Card className="border-none shadow-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/20 rounded-full -mr-32 -mt-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-700/30 rounded-full -ml-24 -mb-24"></div>
+            
+            <CardContent className="pt-8 pb-8 relative z-10">
+              <div className="text-center mb-6">
+                <p className="text-teal-100 text-sm font-medium mb-2">Meta do Mês</p>
+                <h2 className="text-5xl font-bold mb-2">
+                  {valorMeta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </h2>
+                <p className="text-teal-100">
+                  Realizado: {valorAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+              </div>
+              
+              <div className="max-w-md mx-auto">
+                <GoalGauge 
+                  value={progressoReal} 
+                  max={100}
+                  size={240}
+                  strokeWidth={20}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Cards de Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                META TOTAL
-              </CardTitle>
-              <DollarSign className="h-5 w-5 text-green-500" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-teal-50 to-white">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Marketing</CardTitle>
+              <TrendingUp className="h-5 w-5 text-teal-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {formatCurrency(valorMeta)}
+              <div className="text-3xl font-bold text-teal-700">
+                {vendasMarketing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Meta mensal completa
+              <p className="text-xs text-gray-500 mt-1">
+                Meta: {metaMarketing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </p>
+              <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-teal-500 to-teal-600 transition-all duration-500"
+                  style={{ width: `${Math.min(100, (vendasMarketing / metaMarketing) * 100)}%` }}
+                ></div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                MARKETING
-              </CardTitle>
-              <TrendingUp className="h-5 w-5 text-blue-500" />
+          <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-white">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Comercial</CardTitle>
+              <Users className="h-5 w-5 text-amber-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {vendasMarketing}
+              <div className="text-3xl font-bold text-amber-700">
+                {vendasComercial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Vendas diretas realizadas
+              <p className="text-xs text-gray-500 mt-1">
+                Meta: {metaComercial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </p>
+              <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-500"
+                  style={{ width: `${Math.min(100, (vendasComercial / metaComercial) * 100)}%` }}
+                ></div>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-purple-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                COMERCIAL
-              </CardTitle>
-              <Users className="h-5 w-5 text-purple-500" />
+          <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-white">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Ticket Médio</CardTitle>
+              <DollarSign className="h-5 w-5 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {vendasComercial}
+              <div className="text-3xl font-bold text-blue-700">
+                {ticketMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Vendas high-ticket realizadas
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Por venda</p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-yellow-500">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                TICKET MÉDIO
-              </CardTitle>
-              <Target className="h-5 w-5 text-yellow-500" />
+          <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-white">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Meta Total</CardTitle>
+              <Target className="h-5 w-5 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {formatCurrency(ticketMedio)}
+              <div className="text-3xl font-bold text-purple-700">
+                {progressoReal.toFixed(1)}%
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Valor médio por venda
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Progresso atual</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Métricas de Progresso */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Dias Restantes
-              </CardTitle>
+        {/* Cards de Progresso */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="border-l-4 border-l-teal-500 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Dias Restantes</CardTitle>
+              <Calendar className="h-5 w-5 text-teal-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{diasRestantes}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                de {diasTotais} dias ({diasDecorridos} decorridos)
-              </p>
+              <div className="text-4xl font-bold text-gray-900">{diasRestantes}</div>
+              <p className="text-xs text-gray-500 mt-1">dias até o fim do mês</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Progresso Esperado
-              </CardTitle>
+          <Card className="border-l-4 border-l-blue-500 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Progresso Esperado</CardTitle>
+              <Activity className="h-5 w-5 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{progressoEsperado.toFixed(1)}%</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {progressoReal >= progressoEsperado ? (
-                  <span className="text-green-500">✓ Acima do esperado</span>
-                ) : (
-                  <span className="text-orange-500">⚠ Abaixo do esperado</span>
-                )}
-              </p>
+              <div className="text-4xl font-bold text-gray-900">{progressoEsperado.toFixed(1)}%</div>
+              <p className="text-xs text-gray-500 mt-1">baseado no dia atual</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {deficit.valor >= 0 ? 'Déficit' : 'Superávit'}
+          <Card className={`border-l-4 ${deficit < 0 ? 'border-l-green-500' : 'border-l-red-500'} shadow-lg`}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                {deficit < 0 ? 'Superávit' : 'Déficit'}
               </CardTitle>
+              <TrendingDown className={`h-5 w-5 ${deficit < 0 ? 'text-green-600 rotate-180' : 'text-red-600'}`} />
             </CardHeader>
             <CardContent>
-              <div className={`text-3xl font-bold ${deficit.valor >= 0 ? 'text-orange-500' : 'text-green-500'}`}>
-                {formatCurrency(Math.abs(deficit.valor))}
+              <div className={`text-4xl font-bold ${deficit < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {Math.abs(deficit).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {Math.abs(deficit.percentual).toFixed(1)}% {deficit.valor >= 0 ? 'abaixo' : 'acima'}
+              <p className="text-xs text-gray-500 mt-1">
+                {deficit < 0 ? 'acima da meta esperada' : 'abaixo da meta esperada'}
               </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Ritmo de Vendas */}
-        <Card>
+        <Card className="mb-8 border-none shadow-lg bg-gradient-to-r from-teal-50 to-amber-50">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-teal-700">
+              <Activity className="h-5 w-5" />
               Ritmo de Vendas
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Ritmo Atual</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(ritmo.atual)}/dia
+              <div className="text-center p-4 bg-white rounded-lg shadow">
+                <p className="text-sm text-gray-600 mb-2">Ritmo Atual</p>
+                <p className="text-2xl font-bold text-teal-700">
+                  {ritmoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}/dia
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Ritmo Necessário</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(ritmo.necessario)}/dia
+              <div className="text-center p-4 bg-white rounded-lg shadow">
+                <p className="text-sm text-gray-600 mb-2">Ritmo Necessário</p>
+                <p className="text-2xl font-bold text-amber-700">
+                  {ritmoNecessario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}/dia
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Diferença</p>
-                <p className={`text-2xl font-bold ${ritmo.diferenca >= 0 ? 'text-orange-500' : 'text-green-500'}`}>
-                  {formatCurrency(Math.abs(ritmo.diferenca))}/dia
+              <div className="text-center p-4 bg-white rounded-lg shadow">
+                <p className="text-sm text-gray-600 mb-2">Diferença</p>
+                <p className={`text-2xl font-bold ${ritmoAtual >= ritmoNecessario ? 'text-green-600' : 'text-red-600'}`}>
+                  {(ritmoAtual - ritmoNecessario).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}/dia
                 </p>
               </div>
             </div>
@@ -346,138 +326,124 @@ export default function Home() {
         </Card>
 
         {/* Tabs de Detalhamento */}
-        <Tabs defaultValue="marketing" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="marketing">Marketing Direto</TabsTrigger>
-            <TabsTrigger value="comercial">Time Comercial</TabsTrigger>
-            <TabsTrigger value="operacoes">Operações</TabsTrigger>
-          </TabsList>
+        <Card className="mb-8 border-none shadow-lg">
+          <CardContent className="pt-6">
+            <Tabs defaultValue="marketing" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 bg-teal-50">
+                <TabsTrigger value="marketing" className="data-[state=active]:bg-teal-600 data-[state=active]:text-white">
+                  Marketing Direto
+                </TabsTrigger>
+                <TabsTrigger value="comercial" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+                  Time Comercial
+                </TabsTrigger>
+                <TabsTrigger value="operacoes" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  Operações
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="marketing" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Métricas de Marketing Direto</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Vendas Esperadas</p>
-                    <p className="text-xl font-bold text-foreground">{vendasEsperadasMarketing.toLocaleString('pt-BR')}</p>
+              <TabsContent value="marketing" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-teal-50 rounded-lg">
+                    <span className="font-medium text-gray-700">Vendas Esperadas</span>
+                    <span className="text-lg font-bold text-teal-700">
+                      {(metaMarketing * (progressoEsperado / 100)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Receita Esperada</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(receitaEsperadaMarketing)}
-                    </p>
+                  <div className="flex justify-between items-center p-4 bg-teal-100 rounded-lg">
+                    <span className="font-medium text-gray-700">Vendas Realizadas</span>
+                    <span className="text-lg font-bold text-teal-700">
+                      {vendasMarketing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Vendas Realizadas</p>
-                    <p className="text-xl font-bold text-green-500">{vendasMarketing}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Receita Realizada</p>
-                    <p className="text-xl font-bold text-green-500">
-                      {formatCurrency(receitaMarketing)}
-                    </p>
+                  <div className="flex justify-between items-center p-4 bg-white border-2 border-teal-200 rounded-lg">
+                    <span className="font-medium text-gray-700">Meta Total</span>
+                    <span className="text-xl font-bold text-teal-700">
+                      {metaMarketing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </TabsContent>
 
-          <TabsContent value="comercial" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Time Comercial</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Vendas Esperadas</p>
-                    <p className="text-xl font-bold text-foreground">{vendasEsperadasComercial.toLocaleString('pt-BR')}</p>
+              <TabsContent value="comercial" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg">
+                    <span className="font-medium text-gray-700">Vendas Esperadas</span>
+                    <span className="text-lg font-bold text-amber-700">
+                      {(metaComercial * (progressoEsperado / 100)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Receita Esperada</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(receitaEsperadaComercial)}
-                    </p>
+                  <div className="flex justify-between items-center p-4 bg-amber-100 rounded-lg">
+                    <span className="font-medium text-gray-700">Vendas Realizadas</span>
+                    <span className="text-lg font-bold text-amber-700">
+                      {vendasComercial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Vendas Realizadas</p>
-                    <p className="text-xl font-bold text-green-500">{vendasComercial}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Receita Realizada</p>
-                    <p className="text-xl font-bold text-green-500">
-                      {formatCurrency(receitaComercial)}
-                    </p>
+                  <div className="flex justify-between items-center p-4 bg-white border-2 border-amber-200 rounded-lg">
+                    <span className="font-medium text-gray-700">Meta Total</span>
+                    <span className="text-xl font-bold text-amber-700">
+                      {metaComercial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </TabsContent>
 
-          <TabsContent value="operacoes" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Observações Operacionais</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>• Primeiros dias focados em validação da VSL</p>
-                  <p>• Escala forte a partir da segunda semana</p>
-                  <p>• Time comercial ganha tração progressivamente</p>
-                  <p>• Funil completo com upsells implementado até dia 05</p>
+              <TabsContent value="operacoes" className="mt-6">
+                <div className="p-6 bg-blue-50 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-4">Observações Operacionais</h3>
+                  <ul className="space-y-2 text-gray-700">
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 mt-1">•</span>
+                      <span>Acompanhamento diário do progresso das metas</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 mt-1">•</span>
+                      <span>Análise de performance por canal (Marketing vs Comercial)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 mt-1">•</span>
+                      <span>Monitoramento do ritmo de vendas necessário</span>
+                    </li>
+                  </ul>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
         {/* Sub-Metas */}
-        {subMetas && subMetas.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Sub-Metas
+        {subMetas.length > 0 && (
+          <Card className="border-none shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-amber-50">
+              <CardTitle className="flex items-center gap-2 text-teal-700">
+                <Target className="h-5 w-5" />
+                Sub-Metas do Mês
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="space-y-3">
-                {subMetas.map((subMeta: any) => {
-                  const valorSubMeta = subMeta.valor_meta || subMeta.valor;
-                  const atingida = subMeta.atingida === 1 || valorAtual >= valorSubMeta;
-                  return (
-                    <div 
-                      key={subMeta.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border ${
-                        atingida ? 'bg-green-500/10 border-green-500' : 'bg-muted'
-                      }`}
-                    >
-                      <div>
-                        <p className="font-medium">{subMeta.nome || `Meta ${formatCurrency(valorSubMeta)}`}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatCurrency(valorSubMeta)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        {atingida ? (
-                          <span className="text-green-500 font-bold">✓ Atingida</span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            Faltam {formatCurrency(valorSubMeta - valorAtual)}
-                          </span>
-                        )}
-                      </div>
+                {subMetas.map((subMeta: any, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        subMeta.status === 'concluida' ? 'bg-green-500' :
+                        subMeta.status === 'em_andamento' ? 'bg-amber-500' :
+                        'bg-gray-300'
+                      }`}></div>
+                      <span className="font-medium text-gray-800">{subMeta.titulo}</span>
                     </div>
-                  );
-                })}
+                    <span className="text-sm text-gray-600">
+                      {subMeta.valor_meta?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         )}
-      </div>
+      </main>
 
       <MobileNav />
     </div>
