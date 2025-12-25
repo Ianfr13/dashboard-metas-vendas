@@ -110,16 +110,39 @@ Deno.serve(async (req) => {
       const totalLeads = leads?.length || 0;
 
       // 2. Custos do período
-      const { data: custos, error: custosError } = await supabaseClient
+      // Calcular range de mês/ano
+      const startMonth = startDate.getMonth() + 1;
+      const startYear = startDate.getFullYear();
+      const endMonth = endDate.getMonth() + 1;
+      const endYear = endDate.getFullYear();
+
+      // Buscar custos e filtrar no código para maior robustez
+      let query = supabaseClient
         .from('custos')
-        .select('valor, data')
-        .gte('data', startDate.toISOString())
-        .lte('data', endDate.toISOString())
+        .select('valor_mensal, mes, ano')
         .eq('canal', 'marketing');
+
+      // Se mesmo ano, filtrar por mês
+      if (startYear === endYear) {
+        query = query.eq('ano', startYear).gte('mes', startMonth).lte('mes', endMonth);
+      } else {
+        // Range multi-ano: (ano > startYear OR (ano = startYear AND mes >= startMonth)) AND (ano < endYear OR (ano = endYear AND mes <= endMonth))
+        query = query.gte('ano', startYear).lte('ano', endYear);
+      }
+
+      const { data: custosData, error: custosError } = await query;
 
       if (custosError) throw custosError;
 
-      const custoTotal = custos?.reduce((sum, c) => sum + (parseFloat(c.valor) || 0), 0) || 0;
+      // Filtrar manualmente para garantir range correto em casos multi-ano
+      const custos = custosData?.filter(c => {
+        if (c.ano > startYear && c.ano < endYear) return true;
+        if (c.ano === startYear && c.mes >= startMonth) return true;
+        if (c.ano === endYear && c.mes <= endMonth) return true;
+        return false;
+      }) || [];
+
+      const custoTotal = custos.reduce((sum, c) => sum + (parseFloat(c.valor_mensal || '0') || 0), 0);
 
       // 3. Vendas do marketing (GTM events com purchase)
       const { data: gtmEvents, error: gtmError } = await supabaseClient
