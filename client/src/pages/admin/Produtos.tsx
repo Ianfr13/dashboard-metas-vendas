@@ -12,8 +12,10 @@ interface Produto {
   id: number;
   name: string;
   price: number;
-  description?: string;
-  active: boolean;
+  type: string;
+  channel: string;
+  url?: string;
+  active: number;
   created_at: string;
 }
 
@@ -27,14 +29,18 @@ export default function AdminProdutos() {
   const [novoProduto, setNovoProduto] = useState({
     name: '',
     price: 0,
-    description: '',
+    type: 'produto',
+    channel: 'marketing',
+    url: '',
   });
 
   // Formulário edição
   const [produtoEditado, setProdutoEditado] = useState({
     name: '',
     price: 0,
-    description: '',
+    type: 'produto',
+    channel: 'marketing',
+    url: '',
   });
 
   useEffect(() => {
@@ -47,7 +53,7 @@ export default function AdminProdutos() {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('active', true)
+        .eq('active', 1)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -80,14 +86,16 @@ export default function AdminProdutos() {
         .insert([{
           name: novoProduto.name,
           price: novoProduto.price,
-          description: novoProduto.description || null,
-          active: true,
+          type: novoProduto.type,
+          channel: novoProduto.channel,
+          url: novoProduto.url || null,
+          active: 1,
         }]);
 
       if (error) throw error;
 
       toast.success('Produto criado com sucesso!');
-      setNovoProduto({ name: '', price: 0, description: '' });
+      setNovoProduto({ name: '', price: 0, type: 'produto', channel: 'marketing', url: '' });
       await loadProdutos();
     } catch (error: any) {
       console.error('Erro ao criar produto:', error);
@@ -102,7 +110,9 @@ export default function AdminProdutos() {
     setProdutoEditado({
       name: produto.name,
       price: produto.price,
-      description: produto.description || '',
+      type: produto.type,
+      channel: produto.channel,
+      url: produto.url || '',
     });
   }
 
@@ -125,7 +135,9 @@ export default function AdminProdutos() {
         .update({
           name: produtoEditado.name,
           price: produtoEditado.price,
-          description: produtoEditado.description || null,
+          type: produtoEditado.type,
+          channel: produtoEditado.channel,
+          url: produtoEditado.url || null,
         })
         .eq('id', id);
 
@@ -144,7 +156,7 @@ export default function AdminProdutos() {
 
   function cancelarEdicao() {
     setEditando(null);
-    setProdutoEditado({ name: '', price: 0, description: '' });
+    setProdutoEditado({ name: '', price: 0, type: 'produto', channel: 'marketing', url: '' });
   }
 
   async function deletarProduto(id: number) {
@@ -156,7 +168,7 @@ export default function AdminProdutos() {
       // Soft delete
       const { error } = await supabase
         .from('products')
-        .update({ active: false })
+        .update({ active: 0 })
         .eq('id', id);
 
       if (error) throw error;
@@ -229,11 +241,34 @@ export default function AdminProdutos() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Descrição</Label>
+                <Label>Tipo</Label>
+                <select
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={novoProduto.type}
+                  onChange={(e) => setNovoProduto({ ...novoProduto, type: e.target.value })}
+                >
+                  <option value="produto">Produto</option>
+                  <option value="servico">Serviço</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Canal</Label>
+                <select
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={novoProduto.channel}
+                  onChange={(e) => setNovoProduto({ ...novoProduto, channel: e.target.value })}
+                >
+                  <option value="marketing">Marketing</option>
+                  <option value="comercial">Comercial</option>
+                  <option value="ambos">Ambos</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>URL (opcional)</Label>
                 <Input
-                  placeholder="Descrição opcional"
-                  value={novoProduto.description}
-                  onChange={(e) => setNovoProduto({ ...novoProduto, description: e.target.value })}
+                  placeholder="https://..."
+                  value={novoProduto.url}
+                  onChange={(e) => setNovoProduto({ ...novoProduto, url: e.target.value })}
                 />
               </div>
               <Button onClick={criarProduto} disabled={saving} className="w-full">
