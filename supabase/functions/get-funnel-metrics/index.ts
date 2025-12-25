@@ -93,11 +93,12 @@ Deno.serve(async (req) => {
       const taxaAgendamento = contatosUnicos > 0 ? (totalAgendamentos / contatosUnicos) * 100 : 0;
 
       // 5. Evolution Data (por semana)
-      const weeksInMonth = Math.ceil(diasNoMes / 7);
+      const diasNoPeriodo = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weeksInPeriod = Math.ceil(diasNoPeriodo / 7);
       const evolutionData = [];
-      for (let week = 1; week <= weeksInMonth; week++) {
-        const weekStart = new Date(year, month - 1, (week - 1) * 7 + 1);
-        const weekEnd = new Date(year, month - 1, Math.min(week * 7, diasNoMes), 23, 59, 59, 999);
+      for (let week = 1; week <= weeksInPeriod; week++) {
+        const weekStart = new Date(startDate.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
+        const weekEnd = new Date(Math.min(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1, endDate.getTime()));
         
         const { data: weekAppointments } = await supabaseClient
           .from('ghl_appointments')
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           funnel: 'comercial',
-          period: { month, year, startDate, endDate },
+          period: { startDate: startDate.toISOString(), endDate: endDate.toISOString() },
           metrics: {
             agendamentos: totalAgendamentos,
             contatos: contatosUnicos,
@@ -223,11 +224,12 @@ Deno.serve(async (req) => {
       const taxaConversao = totalLeads > 0 ? (totalVendas / totalLeads) * 100 : 0;
 
       // 5. Evolution Data (por semana)
-      const weeksInMonth = Math.ceil(diasNoMes / 7);
+      const diasNoPeriodo = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weeksInPeriod = Math.ceil(diasNoPeriodo / 7);
       const evolutionData = [];
-      for (let week = 1; week <= weeksInMonth; week++) {
-        const weekStart = new Date(year, month - 1, (week - 1) * 7 + 1);
-        const weekEnd = new Date(year, month - 1, Math.min(week * 7, diasNoMes), 23, 59, 59, 999);
+      for (let week = 1; week <= weeksInPeriod; week++) {
+        const weekStart = new Date(startDate.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
+        const weekEnd = new Date(Math.min(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1, endDate.getTime()));
         
         const { data: weekLeads } = await supabaseClient
           .from('ghl_contacts')
@@ -261,7 +263,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           funnel: 'marketing',
-          period: { month, year, startDate, endDate },
+          period: { startDate: startDate.toISOString(), endDate: endDate.toISOString() },
           metrics: {
             leads: totalLeads,
             vendas: totalVendas,
