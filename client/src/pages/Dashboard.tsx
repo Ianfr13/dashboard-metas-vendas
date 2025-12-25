@@ -355,7 +355,11 @@ export default function Dashboard() {
         viewMode={viewMode}
         onMonthChange={setSelectedMonth}
         onYearChange={setSelectedYear}
-        onViewModeChange={(mode) => setViewMode(mode as 'month' | 'week' | 'day')}
+        onViewModeChange={(mode) => {
+        console.log('🔄 onViewModeChange called with:', mode);
+        setViewMode(mode as 'month' | 'week' | 'day');
+        console.log('✅ setViewMode called');
+      }}
         onRefresh={handleRefresh}
       >
         <div className="flex items-center justify-center min-h-screen">
@@ -376,7 +380,11 @@ export default function Dashboard() {
       viewMode={viewMode}
       onMonthChange={setSelectedMonth}
       onYearChange={setSelectedYear}
-      onViewModeChange={(mode) => setViewMode(mode as 'month' | 'week' | 'day')}
+      onViewModeChange={(mode) => {
+        console.log('🔄 onViewModeChange called with:', mode);
+        setViewMode(mode as 'month' | 'week' | 'day');
+        console.log('✅ setViewMode called');
+      }}
       onRefresh={handleRefresh}
     >
       {showCelebration && <GoalCelebration show={showCelebration} />}
