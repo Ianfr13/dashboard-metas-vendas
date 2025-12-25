@@ -25,11 +25,11 @@ interface EvolutionData {
 }
 
 interface FunilComercialProps {
-  selectedMonth: number;
-  selectedYear: number;
+  startDate: Date;
+  endDate: Date;
 }
 
-export default function FunilComercial({ selectedMonth, selectedYear }: FunilComercialProps) {
+export default function FunilComercial({ startDate, endDate }: FunilComercialProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
         
         // Chamar Edge Function do Supabase (sem expor chaves)
         const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?month=${selectedMonth}&year=${selectedYear}&funnel=comercial`,
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&funnel=comercial`,
           {
             headers: {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
@@ -78,7 +78,7 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
     };
 
     loadMetrics();
-  }, [selectedMonth, selectedYear]);
+  }, [startDate, endDate]);
 
   // Dados para gráficos
   const chartData = [

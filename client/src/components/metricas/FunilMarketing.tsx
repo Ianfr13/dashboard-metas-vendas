@@ -24,11 +24,11 @@ interface EvolutionData {
 }
 
 interface FunilMarketingProps {
-  selectedMonth: number;
-  selectedYear: number;
+  startDate: Date;
+  endDate: Date;
 }
 
-export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMarketingProps) {
+export default function FunilMarketing({ startDate, endDate }: FunilMarketingProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
         
         // Chamar Edge Function do Supabase (sem expor chaves)
         const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?month=${selectedMonth}&year=${selectedYear}&funnel=marketing`,
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&funnel=marketing`,
           {
             headers: {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
@@ -76,7 +76,7 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
     };
 
     loadMetrics();
-  }, [selectedMonth, selectedYear]);
+  }, [startDate, endDate]);
 
   // Dados para gráficos
   const chartData = [

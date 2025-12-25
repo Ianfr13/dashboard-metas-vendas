@@ -13,31 +13,47 @@ Deno.serve(async (req) => {
     );
 
     const url = new URL(req.url);
-    const monthParam = url.searchParams.get('month');
-    const yearParam = url.searchParams.get('year');
+    const startDateParam = url.searchParams.get('startDate');
+    const endDateParam = url.searchParams.get('endDate');
     const funnel = url.searchParams.get('funnel') || 'comercial'; // 'comercial' ou 'marketing'
 
-    // Validar month
-    const month = parseInt(monthParam || '', 10);
-    if (isNaN(month) || month < 1 || month > 12) {
+    // Validar startDate
+    if (!startDateParam) {
       return new Response(
-        JSON.stringify({ error: 'Month must be an integer between 1 and 12' }),
+        JSON.stringify({ error: 'startDate parameter is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const startDate = new Date(startDateParam);
+    if (isNaN(startDate.getTime())) {
+      return new Response(
+        JSON.stringify({ error: 'startDate must be a valid ISO date string' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validar year
-    const year = parseInt(yearParam || '', 10);
-    if (isNaN(year) || year < 2000 || year > 2100) {
+    // Validar endDate
+    if (!endDateParam) {
       return new Response(
-        JSON.stringify({ error: 'Year must be a valid integer between 2000 and 2100' }),
+        JSON.stringify({ error: 'endDate parameter is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const endDate = new Date(endDateParam);
+    if (isNaN(endDate.getTime())) {
+      return new Response(
+        JSON.stringify({ error: 'endDate must be a valid ISO date string' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Calcular período
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    // Validar que endDate >= startDate
+    if (endDate < startDate) {
+      return new Response(
+        JSON.stringify({ error: 'endDate must be greater than or equal to startDate' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (funnel === 'comercial') {
       // FUNIL COMERCIAL

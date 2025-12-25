@@ -367,16 +367,16 @@ export default function Metricas() {
             {/* Funil Marketing */}
             <TabsContent value="marketing" className="space-y-6">
               <FunilMarketing 
-                selectedMonth={startDate.getMonth() + 1}
-                selectedYear={startDate.getFullYear()}
+                startDate={startDate}
+                endDate={endDate}
               />
             </TabsContent>
 
             {/* Funil Comercial */}
             <TabsContent value="comercial" className="space-y-6">
               <FunilComercial 
-                selectedMonth={startDate.getMonth() + 1}
-                selectedYear={startDate.getFullYear()}
+                startDate={startDate}
+                endDate={endDate}
               />
             </TabsContent>
           </Tabs>
