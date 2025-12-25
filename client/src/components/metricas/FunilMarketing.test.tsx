@@ -375,13 +375,7 @@ describe('FunilMarketing', () => {
         expect(screen.getByText('Leads Gerados')).toBeInTheDocument();
       });
 
-      // Chart data should be derived from metrics
-      const expectedChartData = [
-        { name: 'Leads', value: 1250, color: '#3b82f6' },
-        { name: 'Vendas', value: 85, color: '#10b981' },
-      ];
-
-      // Verify the data is used correctly (indirectly through rendering)
+      // Verify chart data values are rendered correctly
       expect(screen.getByText('1.250')).toBeInTheDocument();
       expect(screen.getByText('85')).toBeInTheDocument();
     });
