@@ -5,6 +5,8 @@ interface GoalGaugeProps {
   subGoals: { value: number; achieved: boolean }[];
 }
 
+import { safeToFixed } from "@/lib/formatters";
+
 export default function GoalGauge({
   percentage,
   current,
@@ -22,9 +24,9 @@ export default function GoalGauge({
 
   const formatShortCurrency = (value: number) => {
     if (value >= 1000000) {
-      return `R$ ${(value / 1000000).toFixed(1)}M`;
+      return `R$ ${safeToFixed(value / 1000000, 1)}M`;
     }
-    return `R$ ${(value / 1000).toFixed(0)}k`;
+    return `R$ ${safeToFixed(value / 1000, 0)}k`;
   };
 
   // SVG parameters - responsive sizing
@@ -85,7 +87,7 @@ export default function GoalGauge({
                 ? "bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 bg-clip-text text-transparent"
                 : "bg-gradient-to-r from-[#00a67d] via-[#418ecb] to-[#5a4b99] bg-clip-text text-transparent"
             }`}>
-              {percentage.toFixed(1)}%
+              {safeToFixed(percentage, 1)}%
             </div>
             <div className="text-xs md:text-sm text-muted-foreground mt-1 md:mt-2">
               {isOverGoal ? "META SUPERADA!" : "da meta atingida"}

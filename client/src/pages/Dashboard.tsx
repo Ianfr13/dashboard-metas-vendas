@@ -9,6 +9,7 @@ import MobileNav from "@/components/MobileNav";
 import GoalGauge from "@/components/GoalGauge";
 import GoalCelebration from "@/components/GoalCelebration";
 import { dashboardAPI } from "@/lib/edge-functions";
+import { safeToFixed } from "@/lib/formatters";
 
 export default function Home() {
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -244,7 +245,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-purple-700">
-                {(progressoReal || 0).toFixed(1)}%
+                {safeToFixed(progressoReal, 1)}%
               </div>
               <p className="text-xs text-gray-500 mt-1">Progresso atual</p>
             </CardContent>
@@ -270,7 +271,7 @@ export default function Home() {
               <Activity className="h-5 w-5 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-gray-900">{(progressoEsperado || 0).toFixed(1)}%</div>
+              <div className="text-4xl font-bold text-gray-900">{safeToFixed(progressoEsperado, 1)}%</div>
               <p className="text-xs text-gray-500 mt-1">baseado no dia atual</p>
             </CardContent>
           </Card>
