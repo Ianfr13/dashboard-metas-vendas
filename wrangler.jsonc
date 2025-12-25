@@ -1,8 +1,13 @@
 {
   "name": "dashboard-metas-vendas",
   "compatibility_date": "2025-12-24",
+  "compatibility_flags": ["nodejs_compat"],
   "main": "worker.ts",
   "assets": {
-    "directory": "./dist/public"
+    "directory": "./dist/public",
+    "binding": "ASSETS"
+  },
+  "build": {
+    "command": "pnpm build"
   }
 }

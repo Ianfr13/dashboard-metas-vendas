@@ -13,7 +13,7 @@ import {
   Target,
   Percent
 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+// tRPC removido - cálculos agora são feitos localmente
 import { toast } from 'sonner';
 
 interface MetricsSimulatorProps {
@@ -42,24 +42,35 @@ export function MetricsSimulator({ scenario }: MetricsSimulatorProps) {
     setTargetRevenue(revenues[scenario]);
   }, [scenario]);
 
-  // Mutation para calcular métricas
-  const calculateMutation = trpc.simulations.calculate.useMutation();
+  // Cálculos feitos localmente (não precisa mais de backend)
 
   const [calculatedMetrics, setCalculatedMetrics] = useState<any>(null);
 
-  const handleCalculate = async () => {
+  const handleCalculate = () => {
     try {
-      const result = await calculateMutation.mutateAsync({
-        targetRevenue,
-        vslConversionRate,
-        checkoutConversionRate,
-        upsellConversionRate,
-        targetCPA,
-        targetCPL,
-        avgCTR,
-        frontTicket,
-        upsellTicket,
-      });
+      // Cálculo local das métricas
+      const avgTicket = frontTicket + (upsellTicket * (upsellConversionRate / 100));
+      const requiredSales = Math.ceil(targetRevenue / avgTicket);
+      const requiredLeads = Math.ceil(requiredSales / (checkoutConversionRate / 100));
+      const requiredViews = Math.ceil(requiredLeads / (vslConversionRate / 100));
+      const requiredClicks = Math.ceil(requiredViews / (avgCTR / 100));
+      const trafficInvestment = requiredLeads * targetCPL;
+      const expectedRevenue = requiredSales * avgTicket;
+      const roi = ((expectedRevenue - trafficInvestment) / trafficInvestment) * 100;
+      const roas = expectedRevenue / trafficInvestment;
+
+      const result = {
+        requiredViews,
+        requiredLeads,
+        requiredClicks,
+        requiredSales,
+        trafficInvestment,
+        expectedRevenue,
+        roi,
+        roas,
+        avgTicket,
+      };
+
       setCalculatedMetrics(result);
       toast.success('Métricas calculadas com sucesso!');
     } catch (error) {
@@ -233,11 +244,11 @@ export function MetricsSimulator({ scenario }: MetricsSimulatorProps) {
 
         <Button
           onClick={handleCalculate}
-          disabled={calculateMutation.isPending}
+          disabled={false}
           className="mt-6 w-full md:w-auto bg-[#00a67d] hover:bg-[#00a67d]/80 text-white"
         >
           <Calculator className="w-4 h-4 mr-2" />
-          {calculateMutation.isPending ? 'Calculando...' : 'Calcular Métricas'}
+          Calcular Métricas
         </Button>
       </Card>
 

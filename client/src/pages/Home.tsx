@@ -114,7 +114,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {showCelebration && <GoalCelebration />}
+      {showCelebration && <GoalCelebration show={showCelebration} />}
       
       {/* Header */}
       <nav className="border-b">
@@ -167,9 +167,13 @@ export default function Home() {
             <CardContent>
               <div className="flex flex-col items-center">
                 <GoalGauge 
+                  percentage={progressoReal}
                   current={valorAtual} 
-                  goal={valorMeta}
-                  size={280}
+                  target={valorMeta}
+                  subGoals={subMetas?.map((sm: any) => ({
+                    value: sm.valor_meta,
+                    achieved: sm.atingida === 1 || valorAtual >= sm.valor_meta
+                  })) || []}
                 />
                 <div className="mt-6 text-center">
                   <p className="text-sm text-muted-foreground">
