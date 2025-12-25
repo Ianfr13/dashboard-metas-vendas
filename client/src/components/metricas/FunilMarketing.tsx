@@ -17,6 +17,13 @@ interface FunnelMetrics {
   taxaConversao: number;
 }
 
+interface EvolutionData {
+  periodo: string;
+  leads: number;
+  vendas: number;
+  receita: number;
+}
+
 interface FunilMarketingProps {
   selectedMonth: number;
   selectedYear: number;
@@ -34,6 +41,7 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
     cpa: 0,
     taxaConversao: 0
   });
+  const [evolutionData, setEvolutionData] = useState<EvolutionData[]>([]);
 
   useEffect(() => {
     loadMetrics();
@@ -59,6 +67,7 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
       
       const data = await response.json();
       setMetrics(data.metrics);
+      setEvolutionData(data.evolutionData || []);
     } catch (error) {
       console.error('Erro ao carregar métricas:', error);
       // Manter valores zerados em caso de erro
@@ -73,12 +82,7 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
     { name: 'Vendas', value: metrics.vendas, color: '#10b981' },
   ];
 
-  const evolutionData = [
-    { periodo: 'Sem 1', leads: 280, vendas: 18 },
-    { periodo: 'Sem 2', leads: 320, vendas: 22 },
-    { periodo: 'Sem 3', leads: 310, vendas: 20 },
-    { periodo: 'Sem 4', leads: 340, vendas: 25 },
-  ];
+  // evolutionData agora vem do backend
 
   const custoData = [
     { name: 'CPL', value: metrics.cpl, color: '#f59e0b' },

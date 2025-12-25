@@ -17,6 +17,13 @@ interface FunnelMetrics {
   taxaPresenca: number;
 }
 
+interface EvolutionData {
+  periodo: string;
+  agendamentos: number;
+  contatos: number;
+  vendas: number;
+}
+
 interface FunilComercialProps {
   selectedMonth: number;
   selectedYear: number;
@@ -35,6 +42,7 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
     noShow: 0,
     taxaPresenca: 0
   });
+  const [evolutionData, setEvolutionData] = useState<EvolutionData[]>([]);
 
   useEffect(() => {
     loadMetrics();
@@ -60,6 +68,7 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
       
       const data = await response.json();
       setMetrics(data.metrics);
+      setEvolutionData(data.evolutionData || []);
     } catch (error) {
       console.error('Erro ao carregar métricas:', error);
       // Manter valores zerados em caso de erro
@@ -75,13 +84,9 @@ export default function FunilComercial({ selectedMonth, selectedYear }: FunilCom
     { name: 'Vendas', value: metrics.vendas, color: '#10b981' },
   ];
 
-  const evolutionData = [
-    { periodo: 'Sem 1', agendamentos: 45, contatos: 38, vendas: 12 },
-    { periodo: 'Sem 2', agendamentos: 52, contatos: 44, vendas: 15 },
-    { periodo: 'Sem 3', agendamentos: 48, contatos: 40, vendas: 13 },
-    { periodo: 'Sem 4', agendamentos: 55, contatos: 46, vendas: 17 },
-  ];
+  // evolutionData agora vem do backend
 
+  // taxasData calculado dinamicamente das metrics
   const taxasData = [
     { name: 'Taxa Agendamento', value: metrics.taxaAgendamento, color: '#3b82f6' },
     { name: 'Taxa Presença', value: metrics.taxaPresenca, color: '#10b981' },
