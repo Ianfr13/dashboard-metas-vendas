@@ -10,7 +10,7 @@ import Metricas from "./pages/Metricas";
 import { LoginPage } from "./components/Auth/LoginPage";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 import { AdminRoute } from "./components/Auth/AdminRoute";
-import { Header } from "./components/Auth/Header";
+
 
 function Router() {
   return (
@@ -22,7 +22,6 @@ function Router() {
       <Route path="/">
         {() => (
           <ProtectedRoute>
-            <Header />
             <Home />
           </ProtectedRoute>
         )}
@@ -33,7 +32,6 @@ function Router() {
         {() => (
           <ProtectedRoute>
             <AdminRoute>
-              <Header />
               <Admin />
             </AdminRoute>
           </ProtectedRoute>
@@ -43,7 +41,6 @@ function Router() {
       <Route path="/metricas">
         {() => (
           <ProtectedRoute>
-            <Header />
             <Metricas />
           </ProtectedRoute>
         )}
