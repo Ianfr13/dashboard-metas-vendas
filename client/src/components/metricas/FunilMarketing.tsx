@@ -31,6 +31,7 @@ interface FunilMarketingProps {
 export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMarketingProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<FunnelMetrics>({
     leads: 0,
     vendas: 0,
@@ -46,6 +47,7 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
     const loadMetrics = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Chamar Edge Function do Supabase (sem expor chaves)
         const response = await fetch(
@@ -64,9 +66,10 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
         const data = await response.json();
         setMetrics(data.metrics);
         setEvolutionData(data.evolutionData || []);
-      } catch (error) {
-        console.error('Erro ao carregar métricas:', error);
-        // Manter valores zerados em caso de erro
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar métricas';
+        console.error('Erro ao carregar métricas:', errorMessage);
+        setError(errorMessage)
       } finally {
         setLoading(false);
       }
@@ -505,6 +508,13 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
         <Card>
           <CardContent className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      ) : error ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-destructive font-semibold mb-2">Erro ao carregar métricas</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
           </CardContent>
         </Card>
       ) : (
