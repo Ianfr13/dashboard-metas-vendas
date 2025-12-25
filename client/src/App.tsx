@@ -8,6 +8,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import Metricas from "./pages/Metricas";
+import Ranking from "./pages/Ranking";
 import { LoginPage } from "./components/Auth/LoginPage";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 import { AdminRoute } from "./components/Auth/AdminRoute";
@@ -43,6 +44,14 @@ function Router() {
         {() => (
           <ProtectedRoute>
             <Metricas />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      <Route path="/ranking">
+        {() => (
+          <ProtectedRoute>
+            <Ranking />
           </ProtectedRoute>
         )}
       </Route>
