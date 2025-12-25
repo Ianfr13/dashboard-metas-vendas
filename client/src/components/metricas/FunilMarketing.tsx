@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, Table2, GitBranch, LayoutGrid } from "lucide-react";
+import { BarChart3, Table2, GitBranch, LayoutGrid, Loader2 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 type ViewMode = 'cards' | 'tabela' | 'stage' | 'grafico';
@@ -502,10 +501,20 @@ export default function FunilMarketing({ selectedMonth, selectedYear }: FunilMar
       </Card>
 
       {/* Conteúdo baseado no modo de visualização */}
-      {viewMode === 'cards' && renderCards()}
-      {viewMode === 'tabela' && renderTabela()}
-      {viewMode === 'stage' && renderStage()}
-      {viewMode === 'grafico' && renderGrafico()}
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {viewMode === 'cards' && renderCards()}
+          {viewMode === 'tabela' && renderTabela()}
+          {viewMode === 'stage' && renderStage()}
+          {viewMode === 'grafico' && renderGrafico()}
+        </>
+      )}
     </div>
   );
 }
