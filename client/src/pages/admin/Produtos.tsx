@@ -69,7 +69,6 @@ export default function AdminProdutos() {
           name: novoProduto.name,
           price: parseFloat(novoProduto.price),
           channel: novoProduto.channel,
-          type: 'produto', // Campo obrigatório
           url: null,
           active: 1,
         }]);
