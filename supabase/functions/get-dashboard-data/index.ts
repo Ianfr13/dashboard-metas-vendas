@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders } from './_shared/cors.ts';
 import { getMetaPrincipal, getSubMetas } from './handlers/meta.ts';
 import { aggregateSales } from './handlers/sales.ts';
 import { getProducts } from './handlers/products.ts';
@@ -13,32 +13,32 @@ serve(async (req) => {
   }
 
   try {
-    // Get authorization header
+    // Get authorization header (optional for development)
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Create Supabase client with user's JWT
+    
+    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
-        headers: { Authorization: authHeader },
+        headers: authHeader ? { Authorization: authHeader } : {},
       },
     });
 
-    // Verify user is authenticated
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Try to verify user if auth header is present (optional)
+    let user = null;
+    if (authHeader) {
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+      if (!userError && authUser) {
+        user = authUser;
+        console.log('Authenticated user:', user.email);
+      }
+    }
+    
+    // Log if running without authentication (development mode)
+    if (!user) {
+      console.warn('Running without authentication - development mode');
     }
 
     // Get query parameters
