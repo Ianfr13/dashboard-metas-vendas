@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Loader2, Save } from "lucide-react";
+import { Plus, Trash2, Loader2, Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/lib/supabase";
@@ -15,6 +15,7 @@ interface Meta {
   valor_meta: number;
   valor_atual: number;
   active: number;
+  grande_premio?: string;
 }
 
 interface SubMeta {
@@ -22,6 +23,7 @@ interface SubMeta {
   meta_principal_id: number;
   valor: number;
   atingida: number;
+  premio?: string;
 }
 
 export default function AdminMetas() {
@@ -35,14 +37,22 @@ export default function AdminMetas() {
     mes: new Date().getMonth() + 1,
     ano: new Date().getFullYear(),
     valor_meta: 0,
+    grande_premio: '',
   });
 
   // Formulário nova sub-meta
   const [novaSubMeta, setNovaSubMeta] = useState({
     valor: 0,
+    premio: '',
   });
 
   const [metaSelecionada, setMetaSelecionada] = useState<number | null>(null);
+  
+  // Estados de edição
+  const [editandoMeta, setEditandoMeta] = useState<number | null>(null);
+  const [editandoSubMeta, setEditandoSubMeta] = useState<number | null>(null);
+  const [metaEditada, setMetaEditada] = useState<Partial<Meta>>({});
+  const [subMetaEditada, setSubMetaEditada] = useState<Partial<SubMeta>>({});
 
   // Carregar metas
   useEffect(() => {
@@ -116,6 +126,7 @@ export default function AdminMetas() {
           valor_meta: novaMeta.valor_meta,
           valor_atual: 0,
           active: 1,
+          grande_premio: novaMeta.grande_premio || null,
         }])
         .select()
         .single();
@@ -127,6 +138,7 @@ export default function AdminMetas() {
         mes: new Date().getMonth() + 1,
         ano: new Date().getFullYear(),
         valor_meta: 0,
+        grande_premio: '',
       });
       
       await loadMetas();
@@ -192,16 +204,77 @@ export default function AdminMetas() {
           meta_principal_id: metaSelecionada,
           valor: novaSubMeta.valor,
           atingida: 0,
+          premio: novaSubMeta.premio || null,
         }]);
 
       if (error) throw error;
 
       toast.success('Sub-meta criada com sucesso!');
-      setNovaSubMeta({ valor: 0 });
+      setNovaSubMeta({ valor: 0, premio: '' });
       await loadSubMetas(metaSelecionada);
     } catch (error: any) {
       console.error('Erro ao criar sub-meta:', error);
       toast.error('Erro ao criar sub-meta: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function atualizarMeta() {
+    if (!editandoMeta) return;
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from('metas_principais')
+        .update({
+          mes: metaEditada.mes,
+          ano: metaEditada.ano,
+          valor_meta: metaEditada.valor_meta,
+          grande_premio: metaEditada.grande_premio || null,
+        })
+        .eq('id', editandoMeta);
+
+      if (error) throw error;
+
+      toast.success('Meta atualizada com sucesso!');
+      setEditandoMeta(null);
+      setMetaEditada({});
+      await loadMetas();
+    } catch (error: any) {
+      console.error('Erro ao atualizar meta:', error);
+      toast.error('Erro ao atualizar meta: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function atualizarSubMeta() {
+    if (!editandoSubMeta) return;
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from('sub_metas')
+        .update({
+          valor: subMetaEditada.valor,
+          premio: subMetaEditada.premio || null,
+        })
+        .eq('id', editandoSubMeta);
+
+      if (error) throw error;
+
+      toast.success('Sub-meta atualizada com sucesso!');
+      setEditandoSubMeta(null);
+      setSubMetaEditada({});
+      if (metaSelecionada) {
+        await loadSubMetas(metaSelecionada);
+      }
+    } catch (error: any) {
+      console.error('Erro ao atualizar sub-meta:', error);
+      toast.error('Erro ao atualizar sub-meta: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -308,6 +381,15 @@ export default function AdminMetas() {
                   onChange={(e) => setNovaMeta({ ...novaMeta, valor_meta: parseFloat(e.target.value) || 0 })}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Grande Prêmio 🏆</Label>
+                <Input
+                  type="text"
+                  placeholder="Ex: Viagem para Dubai"
+                  value={novaMeta.grande_premio}
+                  onChange={(e) => setNovaMeta({ ...novaMeta, grande_premio: e.target.value })}
+                />
+              </div>
               <Button onClick={criarMeta} disabled={saving} className="w-full">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
                 Criar Meta
@@ -338,25 +420,110 @@ export default function AdminMetas() {
                       }`}
                       onClick={() => setMetaSelecionada(meta.id)}
                     >
-                      <div>
-                        <p className="font-medium">
-                          {mesesNomes[meta.mes - 1]} {meta.ano}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatCurrency(meta.valor_meta)}
-                        </p>
+                      <div className="flex-1">
+                        {editandoMeta === meta.id ? (
+                          <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                            <div className="grid grid-cols-2 gap-2">
+                              <select
+                                className="px-2 py-1 border rounded text-sm"
+                                value={metaEditada.mes}
+                                onChange={(e) => setMetaEditada({ ...metaEditada, mes: parseInt(e.target.value) })}
+                              >
+                                {mesesNomes.map((nome, idx) => (
+                                  <option key={idx} value={idx + 1}>{nome}</option>
+                                ))}
+                              </select>
+                              <Input
+                                type="number"
+                                className="text-sm"
+                                value={metaEditada.ano}
+                                onChange={(e) => setMetaEditada({ ...metaEditada, ano: parseInt(e.target.value) })}
+                              />
+                            </div>
+                            <Input
+                              type="number"
+                              className="text-sm"
+                              placeholder="Valor"
+                              value={metaEditada.valor_meta}
+                              onChange={(e) => setMetaEditada({ ...metaEditada, valor_meta: parseFloat(e.target.value) })}
+                            />
+                            <Input
+                              type="text"
+                              className="text-sm"
+                              placeholder="Grande Prêmio"
+                              value={metaEditada.grande_premio || ''}
+                              onChange={(e) => setMetaEditada({ ...metaEditada, grande_premio: e.target.value })}
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="font-medium">
+                              {mesesNomes[meta.mes - 1]} {meta.ano}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatCurrency(meta.valor_meta)}
+                            </p>
+                            {meta.grande_premio && (
+                              <p className="text-xs text-muted-foreground">
+                                🏆 {meta.grande_premio}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deletarMeta(meta.id);
-                        }}
-                        disabled={saving}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-1">
+                        {editandoMeta === meta.id ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                atualizarMeta();
+                              }}
+                              disabled={saving}
+                            >
+                              <Save className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditandoMeta(null);
+                                setMetaEditada({});
+                              }}
+                              disabled={saving}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditandoMeta(meta.id);
+                              setMetaEditada(meta);
+                            }}
+                            disabled={saving}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deletarMeta(meta.id);
+                          }}
+                          disabled={saving}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -383,7 +550,16 @@ export default function AdminMetas() {
                     type="number"
                     placeholder="Ex: 100000"
                     value={novaSubMeta.valor || ''}
-                    onChange={(e) => setNovaSubMeta({ valor: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => setNovaSubMeta({ ...novaSubMeta, valor: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Prêmio 🎁</Label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: Jantar no restaurante"
+                    value={novaSubMeta.premio}
+                    onChange={(e) => setNovaSubMeta({ ...novaSubMeta, premio: e.target.value })}
                   />
                 </div>
                 <Button onClick={criarSubMeta} disabled={saving} className="w-full">
@@ -413,22 +589,85 @@ export default function AdminMetas() {
                         key={subMeta.id}
                         className="flex items-center justify-between p-3 rounded-lg border"
                       >
-                        <div>
-                          <p className="font-medium">
-                            {formatCurrency(subMeta.valor)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {subMeta.atingida ? '✓ Atingida' : 'Pendente'}
-                          </p>
+                        <div className="flex-1">
+                          {editandoSubMeta === subMeta.id ? (
+                            <div className="space-y-2">
+                              <Input
+                                type="number"
+                                className="text-sm"
+                                placeholder="Valor"
+                                value={subMetaEditada.valor}
+                                onChange={(e) => setSubMetaEditada({ ...subMetaEditada, valor: parseFloat(e.target.value) })}
+                              />
+                              <Input
+                                type="text"
+                                className="text-sm"
+                                placeholder="Prêmio"
+                                value={subMetaEditada.premio || ''}
+                                onChange={(e) => setSubMetaEditada({ ...subMetaEditada, premio: e.target.value })}
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="font-medium">
+                                {formatCurrency(subMeta.valor)}
+                              </p>
+                              {subMeta.premio && (
+                                <p className="text-xs text-muted-foreground">
+                                  🎁 {subMeta.premio}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                {subMeta.atingida ? '✓ Atingida' : 'Pendente'}
+                              </p>
+                            </div>
+                          )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deletarSubMeta(subMeta.id)}
-                          disabled={saving}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex gap-1">
+                          {editandoSubMeta === subMeta.id ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => atualizarSubMeta()}
+                                disabled={saving}
+                              >
+                                <Save className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setEditandoSubMeta(null);
+                                  setSubMetaEditada({});
+                                }}
+                                disabled={saving}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditandoSubMeta(subMeta.id);
+                                setSubMetaEditada(subMeta);
+                              }}
+                              disabled={saving}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deletarSubMeta(subMeta.id)}
+                            disabled={saving}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                     ))
                   )}
