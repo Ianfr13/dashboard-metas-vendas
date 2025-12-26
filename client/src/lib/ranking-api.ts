@@ -21,12 +21,22 @@ async function callRankingAPI(params: RankingAPIParams) {
     // Obter token de autenticação
     const { data: { session } } = await supabase.auth.getSession()
     
+    // DEBUG: Log da sessão
+    console.log('[ranking-api] Session:', {
+      hasSession: !!session,
+      hasToken: !!session?.access_token,
+      tokenPreview: session?.access_token ? session.access_token.substring(0, 20) + '...' : 'NO TOKEN',
+      user: session?.user?.email
+    })
+    
     const headers: any = {
       'Content-Type': 'application/json'
     }
 
     if (session?.access_token) {
       headers['Authorization'] = `Bearer ${session.access_token}`
+    } else {
+      console.warn('[ranking-api] NO ACCESS TOKEN FOUND IN SESSION!')
     }
 
     const response = await fetch(RANKING_FUNCTION_URL, {
