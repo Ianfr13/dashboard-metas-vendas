@@ -377,8 +377,9 @@ export default function Metricas() {
                   <div className="grid grid-cols-3 gap-4">
                     {/* Filtro de Função */}
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Função</label>
+                      <label htmlFor="role-filter" className="text-sm font-medium mb-2 block">Função</label>
                       <select 
+                        id="role-filter"
                         className="w-full border rounded px-3 py-2"
                         value={selectedRole}
                         onChange={(e) => setSelectedRole(e.target.value)}
@@ -392,8 +393,9 @@ export default function Metricas() {
 
                     {/* Filtro de Vendedor */}
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Vendedor</label>
+                      <label htmlFor="seller-filter" className="text-sm font-medium mb-2 block">Vendedor</label>
                       <select 
+                        id="seller-filter"
                         className="w-full border rounded px-3 py-2"
                         value={selectedSeller}
                         onChange={(e) => setSelectedSeller(e.target.value)}
@@ -405,8 +407,9 @@ export default function Metricas() {
 
                     {/* Filtro de Período */}
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Período</label>
+                      <label htmlFor="period-filter" className="text-sm font-medium mb-2 block">Período</label>
                       <select 
+                        id="period-filter"
                         className="w-full border rounded px-3 py-2"
                         value={selectedPeriod}
                         onChange={(e) => setSelectedPeriod(e.target.value)}
