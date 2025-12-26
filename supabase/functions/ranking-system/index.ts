@@ -17,31 +17,6 @@ import { getRankings } from './handlers/get-rankings.ts'
 import { getMetrics } from './handlers/get-metrics.ts'
 import { adminActions } from './handlers/admin.ts'
 
-// Helper para verificar autenticação
-async function verifyAuth(req: Request) {
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader) {
-    throw new Error('Token de autenticação não fornecido')
-  }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-  
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: { Authorization: authHeader }
-    }
-  })
-
-  const { data: { user }, error } = await supabase.auth.getUser()
-  
-  if (error || !user) {
-    throw new Error('Token inválido ou expirado')
-  }
-
-  return { user, supabase }
-}
-
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -49,12 +24,9 @@ serve(async (req) => {
   }
 
   try {
-    // Verificar autenticação
-    const { user } = await verifyAuth(req)
-    
     const { action, ...params } = await req.json()
 
-    console.log(`[ranking-system] Action: ${action}, User: ${user.id}`)
+    console.log(`[ranking-system] Action: ${action}`)
 
     let result
 
@@ -75,7 +47,25 @@ serve(async (req) => {
         break
 
       case 'admin':
-        // Ações administrativas (requer autorização adicional)
+        // Ações administrativas
+        // TODO: Implementar verificação de permissões de admin
+        const authHeader = req.headers.get('Authorization')
+        if (!authHeader) {
+          throw new Error('Autenticação necessária para ações administrativas')
+        }
+        
+        // Extrair user ID do token (o Supabase já validou via verify_jwt)
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: authHeader } }
+        })
+        
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error || !user) {
+          throw new Error('Token inválido')
+        }
+        
         result = await adminActions(params, user.id)
         break
 
@@ -105,7 +95,7 @@ serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: error.message?.includes('autenticação') || error.message?.includes('autorização') ? 401 : 400
+        status: error.message?.includes('autenticação') || error.message?.includes('Token') ? 401 : 400
       }
     )
   }
