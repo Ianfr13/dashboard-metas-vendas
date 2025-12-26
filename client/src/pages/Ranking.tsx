@@ -1,58 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { TopPerformerCard } from "@/components/Ranking/TopPerformerCard";
-import { RankingTable } from "@/components/Ranking/RankingTable";
-import { useCurrentMonthRanking } from "@/hooks/useTeamRanking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon, RefreshCw } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RefreshCw, Trophy, Loader2 } from "lucide-react";
+import { rankingAPI } from "@/lib/ranking-api";
+import TopThreeCards from "@/components/ranking/TopThreeCards";
+import RankingTable from "@/components/ranking/RankingTable";
+import { Link } from "wouter";
 
 export default function Ranking() {
-  const [dateRange, setDateRange] = useState<{
-    from: Date;
-    to: Date;
-  }>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date(),
-  });
+  const [selectedRole, setSelectedRole] = useState<'sdr' | 'closer' | 'ciclo_completo'>('sdr');
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7)
+  );
+  const [rankings, setRankings] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data, isLoading, error, refetch } = useCurrentMonthRanking();
-
-  const handleRefresh = () => {
-    refetch();
+  // Gerar lista de meses (últimos 6 meses)
+  const getMonthOptions = () => {
+    const months = [];
+    const today = new Date();
+    for (let i = 0; i < 6; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const value = date.toISOString().slice(0, 7);
+      const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      months.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    }
+    return months;
   };
 
-  if (error) {
-    return (
-      <DashboardLayout>
-        <div className="container mx-auto p-6">
-          <Card className="border-destructive">
-            <CardHeader>
-              <CardTitle className="text-destructive">Erro ao carregar dados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {error instanceof Error ? error.message : "Erro desconhecido"}
-              </p>
-              <Button onClick={handleRefresh} className="mt-4">
-                Tentar novamente
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const monthOptions = getMonthOptions();
+
+  // Carregar rankings
+  const loadRankings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const data = await rankingAPI.getRankings({
+        role: selectedRole,
+        month: selectedMonth
+      });
+
+      setRankings(data);
+    } catch (err) {
+      console.error('Erro ao carregar rankings:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao carregar rankings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRankings();
+  }, [selectedRole, selectedMonth]);
 
   return (
     <DashboardLayout>
@@ -62,126 +66,100 @@ export default function Ranking() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Ranking do Time</h1>
             <p className="text-muted-foreground">
-              Desempenho dos vendedores e SDRs
+              Desempenho dos SDRs, Closers e Ciclo Completo
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })} -{" "}
-                        {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
-                      </>
-                    ) : (
-                      format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })
-                    )
-                  ) : (
-                    <span>Selecione o período</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={{
-                    from: dateRange?.from,
-                    to: dateRange?.to,
-                  }}
-                  onSelect={(range) => {
-                    if (range?.from && range?.to) {
-                      setDateRange({ from: range.from, to: range.to });
-                    }
-                  }}
-                  numberOfMonths={2}
-                  locale={ptBR}
-                />
-              </PopoverContent>
-            </Popover>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Selecione o mês" />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <Button
               variant="outline"
               size="icon"
-              onClick={handleRefresh}
-              disabled={isLoading}
+              onClick={loadRankings}
+              disabled={loading}
             >
-              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+
+            <Button variant="outline" asChild>
+              <Link to="/ranking/hall-of-fame">
+                <Trophy className="mr-2 h-4 w-4" />
+                Hall of Fame
+              </Link>
             </Button>
           </div>
         </div>
 
+        {/* Error State */}
+        {error && (
+          <Card className="border-destructive">
+            <CardHeader>
+              <CardTitle className="text-destructive">Erro ao carregar dados</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">{error}</p>
+              <Button onClick={loadRankings} className="mt-4">
+                Tentar novamente
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Loading State */}
-        {isLoading && (
-          <div className="grid gap-6 md:grid-cols-2">
-            {[1, 2].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-6 bg-muted rounded w-1/3"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="h-8 bg-muted rounded w-2/3"></div>
-                    <div className="h-4 bg-muted rounded w-1/2"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         )}
 
-        {/* Top Performers */}
-        {!isLoading && data && (
+        {/* Rankings */}
+        {!loading && !error && rankings && (
           <>
-            <div className="grid gap-6 md:grid-cols-2">
-              <TopPerformerCard
-                title="🏆 Melhor Closer"
-                performer={data.best_closer}
-                type="closer"
-              />
-              <TopPerformerCard
-                title="📞 Melhor SDR"
-                performer={data.best_sdr}
-                type="sdr"
-              />
-            </div>
-
-            {/* Rankings Tables */}
-            <Tabs defaultValue="closers" className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="closers">
-                  Closers ({data.closers.length})
-                </TabsTrigger>
-                <TabsTrigger value="sdrs">
-                  SDRs ({data.sdrs.length})
-                </TabsTrigger>
+            {/* Tabs */}
+            <Tabs value={selectedRole} onValueChange={(value) => setSelectedRole(value as any)}>
+              <TabsList className="grid w-full max-w-md grid-cols-3">
+                <TabsTrigger value="sdr">SDRs</TabsTrigger>
+                <TabsTrigger value="closer">Closers</TabsTrigger>
+                <TabsTrigger value="ciclo_completo">Ciclo Completo</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="closers" className="mt-6">
-                <RankingTable
-                  title="Ranking de Closers"
-                  members={data.closers}
-                  type="closer"
-                />
-              </TabsContent>
+              <TabsContent value={selectedRole} className="space-y-6 mt-6">
+                {/* Top 3 Cards */}
+                {rankings.rankings && rankings.rankings.length > 0 && (
+                  <TopThreeCards rankings={rankings.rankings} />
+                )}
 
-              <TabsContent value="sdrs" className="mt-6">
-                <RankingTable
-                  title="Ranking de SDRs"
-                  members={data.sdrs}
-                  type="sdr"
-                />
+                {/* Ranking Table */}
+                {rankings.rankings && rankings.rankings.length > 0 ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>
+                        Ranking Completo - {selectedRole === 'sdr' ? 'SDRs' : selectedRole === 'closer' ? 'Closers' : 'Ciclo Completo'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <RankingTable rankings={rankings.rankings} role={selectedRole} />
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="py-12 text-center text-muted-foreground">
+                      Nenhum ranking disponível para este período
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
             </Tabs>
 
@@ -189,16 +167,12 @@ export default function Ranking() {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground text-center">
-                  Dados do período:{" "}
+                  Dados do mês:{" "}
                   <span className="font-medium">
-                    {format(new Date(data.period.start_date), "dd/MM/yyyy", {
-                      locale: ptBR,
-                    })}{" "}
-                    até{" "}
-                    {format(new Date(data.period.end_date), "dd/MM/yyyy", {
-                      locale: ptBR,
-                    })}
+                    {monthOptions.find(m => m.value === selectedMonth)?.label}
                   </span>
+                  {" • "}
+                  Total de {rankings.total} {selectedRole === 'sdr' ? 'SDRs' : selectedRole === 'closer' ? 'Closers' : 'Ciclo Completo'}
                 </p>
               </CardContent>
             </Card>

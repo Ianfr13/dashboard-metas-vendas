@@ -576,6 +576,22 @@ async function processWebhook(supabase: any, webhookLogId: string, payload: Webh
       .eq('id', webhookLogId)
 
     console.log(`Webhook ${webhookLogId} processado com sucesso`)
+
+    // Recalcular rankings após processar eventos importantes
+    if (eventType.startsWith('Opportunity') || eventType.startsWith('Appointment')) {
+      EdgeRuntime.waitUntil(
+        fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/ranking-system`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+          },
+          body: JSON.stringify({ action: 'calculate' })
+        }).catch(err => {
+          console.error('Erro ao recalcular rankings:', err)
+        })
+      )
+    }
   } catch (error) {
     console.error('Erro ao processar webhook:', error)
     
