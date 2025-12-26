@@ -54,7 +54,7 @@ Ponto de entrada único para todos os webhooks do GoHighLevel.
 - ✅ **Rate Limiting:** Controle de taxa de requisições (60/min, 1000/hora por IP)
 - ✅ **Validação de Payload:** Tamanho máximo (1MB) e campos obrigatórios
 - ✅ **Validação de Tipo de Evento:** Apenas eventos válidos do GHL são aceitos
-- ✅ Verificação de assinatura (estrutura pronta, validação RSA a ser completada)
+- ✅ **Verificação de Assinatura RSA:** Implementada com Web Crypto API (controlada por `REQUIRE_WEBHOOK_SIGNATURE`)
 - ✅ Verificação de idempotência (não processa o mesmo webhook duas vezes)
 - ✅ Logging completo de todos os eventos
 - ✅ Resposta 200 OK imediata (não bloqueia o GHL)
@@ -132,6 +132,7 @@ Após aplicar as mudanças, verifique:
 - [ ] Aplicação OAuth foi criada no GHL
 - [ ] Webhooks foram configurados no GHL
 - [ ] Credenciais foram adicionadas ao Supabase Vault
+- [ ] Variável `REQUIRE_WEBHOOK_SIGNATURE=true` configurada para produção
 - [ ] Teste: Criar uma oportunidade no GHL
 - [ ] Verificar: Registro aparece em `ghl_webhook_logs` com status `processado`
 - [ ] Verificar: Oportunidade aparece em `ghl_opportunities`
@@ -156,7 +157,7 @@ Com a Fase 1 implementada:
 
 ## ⚠️ Notas Importantes
 
-1. **Verificação de Assinatura:** A validação RSA completa da assinatura do webhook ainda precisa ser implementada. Atualmente, a função aceita todos os webhooks (apenas para desenvolvimento). **Implementar antes de produção!**
+1. **Verificação de Assinatura:** ✅ **Implementada!** A verificação RSA completa está funcional. Configure `REQUIRE_WEBHOOK_SIGNATURE=true` no Supabase para ativar em produção.
 
 2. **Permissões MCP:** Durante a implementação, encontramos limitações de permissão no MCP do Supabase. As migrations devem ser aplicadas manualmente via CLI ou painel.
 

@@ -96,13 +96,14 @@ Qualquer outro tipo é rejeitado com:
 
 **Objetivo:** Garantir que o webhook foi realmente enviado pelo GoHighLevel e não foi adulterado.
 
-**Status:** ⚠️ Estrutura implementada, validação RSA completa pendente
+**Status:** ✅ Implementado com Web Crypto API
 
-#### Como Funciona (Quando Implementado)
+#### Como Funciona
 
-1. O GHL envia o webhook com um header `x-wh-signature` contendo a assinatura RSA
-2. A função verifica a assinatura usando a chave pública do GHL
-3. Se a assinatura for inválida, a requisição é rejeitada
+1. O GHL envia o webhook com um header `x-wh-signature` contendo a assinatura RSA em Base64
+2. A função importa a chave pública oficial do GHL
+3. Usa Web Crypto API (`crypto.subtle.verify`) com algoritmo RSASSA-PKCS1-v1_5 e SHA-256
+4. Se a assinatura for inválida, a requisição é rejeitada com HTTP 401
 
 **Resposta (Assinatura Inválida):**
 
@@ -207,7 +208,43 @@ ORDER BY block_count DESC
 LIMIT 10;
 ```
 
-## 5. Configuração e Ajustes
+## 5. Variável de Ambiente: REQUIRE_WEBHOOK_SIGNATURE
+
+### Propósito
+
+Controla se a verificação de assinatura é obrigatória ou opcional.
+
+### Valores
+
+- **`true`:** Verificação obrigatória. Webhooks sem assinatura ou com assinatura inválida são rejeitados.
+- **`false` ou não definido:** Verificação opcional. Webhooks sem assinatura são permitidos (modo de desenvolvimento).
+
+### Configuração no Supabase
+
+1. Acesse o painel do Supabase
+2. Vá para **Settings** → **Edge Functions** → **webhook-receiver**
+3. Adicione a variável de ambiente:
+   - **Nome:** `REQUIRE_WEBHOOK_SIGNATURE`
+   - **Valor:** `true` (para produção) ou `false` (para desenvolvimento)
+
+### Recomendações
+
+- **Desenvolvimento/Testes:** `false` - Permite testar sem configurar assinaturas
+- **Produção:** `true` - **OBRIGATÓRIO** para segurança
+
+### Comportamento
+
+| Cenário | REQUIRE_WEBHOOK_SIGNATURE | Resultado |
+| :--- | :--- | :--- |
+| Assinatura válida | true ou false | ✅ Webhook processado |
+| Assinatura inválida | true | ❌ Rejeitado (HTTP 401) |
+| Assinatura inválida | false | ⚠️ Permitido com aviso |
+| Sem assinatura | true | ❌ Rejeitado (HTTP 401) |
+| Sem assinatura | false | ⚠️ Permitido com aviso |
+| Erro na verificação | true | ❌ Rejeitado (HTTP 401) |
+| Erro na verificação | false | ⚠️ Permitido com aviso |
+
+## 6. Configuração e Ajustes
 
 ### 5.1. Ajustar Limites de Rate Limiting
 

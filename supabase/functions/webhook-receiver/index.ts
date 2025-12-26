@@ -35,23 +35,21 @@ const SECURITY_CONFIG = {
   REQUIRED_FIELDS: ['type', 'location_id'], // Campos obrigatórios no payload
 }
 
-// Chave pública do GoHighLevel para verificação de assinatura
+// Chave pública oficial do GoHighLevel para verificação de assinatura
+// Fonte: https://marketplace.gohighlevel.com/docs/webhook/WebhookIntegrationGuide/
 const GHL_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoyFqcXVwsYlYlVTlMtxV
-aTxj3gVRLCfXMVdEyLzLLhKMhLKaLqJXqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKA
-JMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqX
-KAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyV
-qXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjA
-yVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqG
-jAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZ
-qGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFq
-GZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVL
-FqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYL
-VLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJq
-YLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJM
-JqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKA
-JMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKAJMJqYLVLFqGZqGjAyVqX
-KQIDAQAB
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAokvo/r9tVgcfZ5DysOSC
+Frm602qYV0MaAiNnX9O8KxMbiyRKWeL9JpCpVpt4XHIcBOK4u3cLSqJGOLaPuXw6
+dO0t6Q/ZVdAV5Phz+ZtzPL16iCGeK9po6D6JHBpbi989mmzMryUnQJezlYJ3DVfB
+csedpinheNnyYeFXolrJvcsjDtfAeRx5ByHQmTnSdFUzuAnC9/GepgLT9SM4nCpv
+uxmZMxrJt5Rw+VUaQ9B8JSvbMPpez4peKaJPZHBbU3OdeCVx5klVXXZQGNHOs8gF
+3kvoV5rTnXV0IknLBXlcKKAQLZcY/Q9rG6Ifi9c+5vqlvHPCUJFT5XUGG5RKgOKU
+J062fRtN+rLYZUV+BjafxQauvC8wSWeYja63VSUruvmNj8xkx2zE/Juc+yjLjTXp
+IocmaiFeAO6fUtNjDeFVkhf5LNb59vECyrHD2SQIrhgXpO4Q3dVNA5rw576PwTzN
+h/AMfHKIjE4xQA1SZuYJmNnmVZLIZBlQAF9Ntd03rfadZ+yDiOXCCs9FkHibELhC
+HULgCsnuDJHcrGNd5/Ddm5hxGQ0ASitgHeMZ0kcIOwKDOzOU53lDza6/Y09T7sYJ
+PQe7z0cvj7aE4B+Ax1ZoZGPzpJlZtGXCsu9aTEGEnKzmsFqwcSsnw3JB31IGKAyk
+T1hhTiaCeIY/OwwwNUY2yvcCAwEAAQ==
 -----END PUBLIC KEY-----`
 
 interface WebhookPayload {
@@ -183,26 +181,87 @@ function validatePayload(rawPayload: string, payload: WebhookPayload): { valid: 
 }
 
 /**
+ * Importa a chave pública PEM para uso com Web Crypto API
+ */
+async function importPublicKey(pemKey: string): Promise<CryptoKey> {
+  // Remover cabeçalho e rodapé do PEM
+  const pemContents = pemKey
+    .replace('-----BEGIN PUBLIC KEY-----', '')
+    .replace('-----END PUBLIC KEY-----', '')
+    .replace(/\s/g, '')
+  
+  // Decodificar de Base64 para ArrayBuffer
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0))
+  
+  // Importar a chave
+  return await crypto.subtle.importKey(
+    'spki',
+    binaryDer,
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256'
+    },
+    false,
+    ['verify']
+  )
+}
+
+/**
  * Verifica a assinatura do webhook usando a chave pública do GHL
  */
 async function verifyWebhookSignature(
   payload: string,
   signature: string | null
 ): Promise<boolean> {
+  // Verificar se a verificação é obrigatória
+  const requireSignature = Deno.env.get('REQUIRE_WEBHOOK_SIGNATURE') === 'true'
+  
   if (!signature) {
-    console.error('Webhook sem assinatura')
-    return false
+    if (requireSignature) {
+      console.error('Webhook sem assinatura e REQUIRE_WEBHOOK_SIGNATURE=true')
+      return false
+    } else {
+      console.warn('Webhook sem assinatura, mas REQUIRE_WEBHOOK_SIGNATURE não está ativado. Permitindo.')
+      return true
+    }
   }
 
   try {
-    // TODO: Implementar verificação de assinatura RSA
-    // Por enquanto, retornamos true para permitir testes
-    // Em produção, DEVE-SE implementar a verificação completa
-    console.warn('AVISO: Verificação de assinatura não implementada. Implementar antes de produção!')
-    return true
+    // Importar a chave pública
+    const publicKey = await importPublicKey(GHL_PUBLIC_KEY)
+    
+    // Decodificar a assinatura de Base64 para ArrayBuffer
+    const signatureBytes = Uint8Array.from(atob(signature), c => c.charCodeAt(0))
+    
+    // Converter o payload para ArrayBuffer
+    const payloadBytes = new TextEncoder().encode(payload)
+    
+    // Verificar a assinatura
+    const isValid = await crypto.subtle.verify(
+      'RSASSA-PKCS1-v1_5',
+      publicKey,
+      signatureBytes,
+      payloadBytes
+    )
+    
+    if (!isValid) {
+      console.error('Assinatura inválida! Webhook pode ser fraudulento.')
+    } else {
+      console.log('✅ Assinatura verificada com sucesso')
+    }
+    
+    return isValid
   } catch (error) {
     console.error('Erro ao verificar assinatura:', error)
-    return false
+    
+    // Se a verificação é obrigatória, rejeitar em caso de erro
+    if (requireSignature) {
+      return false
+    }
+    
+    // Caso contrário, permitir (modo de desenvolvimento)
+    console.warn('Erro na verificação, mas REQUIRE_WEBHOOK_SIGNATURE não está ativado. Permitindo.')
+    return true
   }
 }
 

@@ -123,6 +123,7 @@ Crie os seguintes segredos:
 | `GHL_LOCATION_ID` | (seu Location ID) | ID da location/sub-account no GHL |
 | `GHL_CLIENT_ID` | (seu Client ID) | ID do cliente OAuth (opcional, para futuro) |
 | `GHL_CLIENT_SECRET` | (seu Client Secret) | Segredo do cliente OAuth (opcional, para futuro) |
+| `REQUIRE_WEBHOOK_SIGNATURE` | `true` | **OBRIGATÓRIO EM PRODUÇÃO:** Ativa verificação de assinatura RSA |
 
 ### 4.3. Aplicar as Migrations
 
