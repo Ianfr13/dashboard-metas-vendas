@@ -10,11 +10,37 @@
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { corsHeaders } from '../_shared/cors.ts'
 import { calculate } from './handlers/calculate.ts'
 import { getRankings } from './handlers/get-rankings.ts'
 import { getMetrics } from './handlers/get-metrics.ts'
 import { adminActions } from './handlers/admin.ts'
+
+// Helper para verificar autenticação
+async function verifyAuth(req: Request) {
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    throw new Error('Token de autenticação não fornecido')
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: { Authorization: authHeader }
+    }
+  })
+
+  const { data: { user }, error } = await supabase.auth.getUser()
+  
+  if (error || !user) {
+    throw new Error('Token inválido ou expirado')
+  }
+
+  return { user, supabase }
+}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -23,9 +49,12 @@ serve(async (req) => {
   }
 
   try {
+    // Verificar autenticação
+    const { user } = await verifyAuth(req)
+    
     const { action, ...params } = await req.json()
 
-    console.log(`[ranking-system] Action: ${action}`, params)
+    console.log(`[ranking-system] Action: ${action}, User: ${user.id}`)
 
     let result
 
@@ -46,8 +75,8 @@ serve(async (req) => {
         break
 
       case 'admin':
-        // Ações administrativas
-        result = await adminActions(params)
+        // Ações administrativas (requer autorização adicional)
+        result = await adminActions(params, user.id)
         break
 
       default:
@@ -65,15 +94,18 @@ serve(async (req) => {
   } catch (error) {
     console.error('[ranking-system] Error:', error)
     
+    // Não expor stack trace em produção
+    const isDev = Deno.env.get('NODE_ENV') === 'development'
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
-        details: error.stack 
+        error: error.message || 'Erro interno do servidor',
+        ...(isDev && { details: error.stack })
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
+        status: error.message?.includes('autenticação') || error.message?.includes('autorização') ? 401 : 400
       }
     )
   }

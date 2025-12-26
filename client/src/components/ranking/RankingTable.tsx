@@ -89,7 +89,13 @@ export default function RankingTable({ rankings, role }: RankingTableProps) {
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={ranking.user.avatar} />
                     <AvatarFallback>
-                      {ranking.user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                      {(ranking?.user?.name ?? '')
+                        .split(' ')
+                        .filter(n => n.length > 0)
+                        .map(n => n[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -107,7 +113,7 @@ export default function RankingTable({ rankings, role }: RankingTableProps) {
                 </TableCell>
               ))}
               <TableCell className="text-right font-bold">
-                {ranking.score.toFixed(2)}
+                {ranking?.score != null ? Number(ranking.score).toFixed(2) : '0.00'}
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">

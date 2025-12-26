@@ -44,6 +44,8 @@ export default function Metricas() {
   const [closerPerformance, setCloserPerformance] = useState<any>(null);
   const [salesDistribution, setSalesDistribution] = useState<any>(null);
   const [meetingsMetrics, setMeetingsMetrics] = useState<any>(null);
+  const [rankingLoading, setRankingLoading] = useState(false);
+  const [rankingError, setRankingError] = useState<string | null>(null);
 
   // Carregar dados do GTM (mantido)
   useEffect(() => {
@@ -78,8 +80,14 @@ export default function Metricas() {
 
   // Carregar métricas de ranking (novo)
   useEffect(() => {
+    const abortController = new AbortController();
+    let isMounted = true;
+
     async function loadRankingMetrics() {
       try {
+        setRankingLoading(true);
+        setRankingError(null);
+
         const start = format(startDate, 'yyyy-MM-dd');
         const end = format(endDate, 'yyyy-MM-dd');
         const month = format(startDate, 'yyyy-MM');
@@ -94,19 +102,33 @@ export default function Metricas() {
           rankingAPI.getMetrics({ type: 'reunioes', month })
         ]);
 
-        setCardsMetrics(cards);
-        setSalesFunnel(funnel);
-        setSalesEvolution(evolution);
-        setSdrPerformance(sdr);
-        setCloserPerformance(closer);
-        setSalesDistribution(distribution);
-        setMeetingsMetrics(meetings);
+        if (isMounted) {
+          setCardsMetrics(cards);
+          setSalesFunnel(funnel);
+          setSalesEvolution(evolution);
+          setSdrPerformance(sdr);
+          setCloserPerformance(closer);
+          setSalesDistribution(distribution);
+          setMeetingsMetrics(meetings);
+        }
       } catch (err) {
         console.error('Erro ao carregar métricas de ranking:', err);
+        if (isMounted) {
+          setRankingError(err instanceof Error ? err.message : 'Erro ao carregar métricas de vendas');
+        }
+      } finally {
+        if (isMounted) {
+          setRankingLoading(false);
+        }
       }
     }
 
     loadRankingMetrics();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, [startDate, endDate]);
 
   // Preparar dados para gráfico de funil (mantido)
@@ -249,7 +271,7 @@ export default function Metricas() {
             )}
 
             {/* Evolução de Vendas */}
-            {salesEvolution && (
+            {salesEvolution && salesEvolution.labels && salesEvolution.values && salesEvolution.labels.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Evolução de Vendas</CardTitle>
@@ -257,9 +279,9 @@ export default function Metricas() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={salesEvolution.labels.map((label: string, idx: number) => ({
+                    <LineChart data={(salesEvolution?.labels ?? []).map((label: string, idx: number) => ({
                       date: label,
-                      vendas: salesEvolution.values[idx]
+                      vendas: (salesEvolution?.values ?? [])[idx] ?? 0
                     }))}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />

@@ -36,8 +36,20 @@ async function callRankingAPI(params: RankingAPIParams) {
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Erro ao chamar API de ranking')
+      let errorMessage = 'Erro ao chamar API de ranking'
+      try {
+        const error = await response.json()
+        errorMessage = error.error || errorMessage
+      } catch (parseError) {
+        // Se não for JSON, tenta ler como texto
+        try {
+          const errorText = await response.text()
+          errorMessage = errorText || `${response.status} ${response.statusText}`
+        } catch {
+          errorMessage = `${response.status} ${response.statusText}`
+        }
+      }
+      throw new Error(errorMessage)
     }
 
     const result = await response.json()

@@ -54,15 +54,16 @@ export async function calculate(params: CalculateParams) {
     metricsToUpsert.push({
       ghl_user_id: userId,
       month: monthStart,
+      role: role, // Adicionar role para facilitar agrupamento
       ...metrics
     })
   }
 
   // 3. Calcular scores e posições por função
   const metricsByRole = {
-    sdr: metricsToUpsert.filter((m, i) => users[i].role === 'sdr'),
-    closer: metricsToUpsert.filter((m, i) => users[i].role === 'closer'),
-    ciclo_completo: metricsToUpsert.filter((m, i) => users[i].role === 'ciclo_completo')
+    sdr: metricsToUpsert.filter(m => m.role === 'sdr'),
+    closer: metricsToUpsert.filter(m => m.role === 'closer'),
+    ciclo_completo: metricsToUpsert.filter(m => m.role === 'ciclo_completo')
   }
 
   // Calcular scores

@@ -73,7 +73,8 @@ async function getCardsMetrics(supabase: any, params: any) {
     .lte('updated_at', end_date)
 
   const faturamento = salesData?.reduce((sum, s) => sum + (s.monetary_value || 0), 0) || 0
-  const ticketMedio = vendas > 0 ? faturamento / vendas : 0
+  const safeVendas = Number(vendas) || 0
+  const ticketMedio = safeVendas > 0 ? faturamento / safeVendas : 0
 
   // Taxa de não comparecimento
   const { count: naoComparecimentos } = await supabase

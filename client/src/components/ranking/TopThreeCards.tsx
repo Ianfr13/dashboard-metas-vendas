@@ -49,7 +49,13 @@ export default function TopThreeCards({ rankings }: TopThreeCardsProps) {
               <Avatar className="h-20 w-20 border-4 border-white dark:border-gray-800">
                 <AvatarImage src={ranking.user.avatar} />
                 <AvatarFallback className="text-2xl">
-                  {ranking.user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  {(ranking?.user?.name ?? '')
+                    .split(' ')
+                    .filter(n => n.length > 0)
+                    .map(n => n[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               
@@ -60,7 +66,7 @@ export default function TopThreeCards({ rankings }: TopThreeCardsProps) {
 
               <div className="flex items-center gap-2 text-2xl font-bold">
                 <Trophy className="h-6 w-6" />
-                {ranking.score.toFixed(2)} pts
+                {ranking?.score != null ? Number(ranking.score).toFixed(2) : '0.00'} pts
               </div>
 
               {ranking.badges && ranking.badges.length > 0 && (

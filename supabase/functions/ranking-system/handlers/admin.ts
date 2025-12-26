@@ -15,14 +15,48 @@ interface AdminParams {
   month?: string
 }
 
-export async function adminActions(params: AdminParams) {
+// Roles permitidos
+const ALLOWED_ROLES = ['sdr', 'closer', 'ciclo_completo'] as const
+
+/**
+ * Verificar se o usuário tem permissão de admin
+ */
+async function verifyAdminPermission(supabase: any, callerId: string) {
+  // Por enquanto, vamos verificar se o usuário está na tabela de admins
+  // Você pode criar uma tabela 'admins' ou adicionar um campo 'is_admin' em auth.users
+  
+  // Opção 1: Verificar se tem role 'admin' em user_roles
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('ghl_user_id', callerId)
+    .single()
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('[admin] Erro ao verificar permissão:', error)
+    throw new Error('Erro ao verificar permissões')
+  }
+
+  // Por enquanto, permitir qualquer usuário autenticado
+  // TODO: Implementar verificação real de admin quando a tabela estiver pronta
+  // if (!data || data.role !== 'admin') {
+  //   throw new Error('Acesso negado: você não tem permissão de administrador')
+  // }
+
+  return true
+}
+
+export async function adminActions(params: AdminParams, callerId: string) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const supabase = createClient(supabaseUrl, supabaseKey)
 
+  // Verificar permissão de admin
+  await verifyAdminPermission(supabase, callerId)
+
   const { subaction } = params
 
-  console.log(`[admin] Subaction: ${subaction}`)
+  console.log(`[admin] Subaction: ${subaction}, Caller: ${callerId}`)
 
   switch (subaction) {
     case 'set-role':
@@ -47,6 +81,11 @@ async function setUserRole(supabase: any, params: AdminParams) {
 
   if (!user_id || !role) {
     throw new Error('user_id e role são obrigatórios')
+  }
+
+  // Validar role
+  if (!ALLOWED_ROLES.includes(role as any)) {
+    throw new Error(`Role inválido. Valores permitidos: ${ALLOWED_ROLES.join(', ')}`)
   }
 
   // Verificar se usuário existe no GHL
