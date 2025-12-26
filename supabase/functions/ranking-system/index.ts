@@ -17,6 +17,51 @@ import { getRankings } from './handlers/get-rankings.ts'
 import { getMetrics } from './handlers/get-metrics.ts'
 import { adminActions } from './handlers/admin.ts'
 
+// Helper para verificar autenticação
+async function verifyAuth(req: Request) {
+  const authHeader = req.headers.get('Authorization')
+  
+  console.log('[ranking-system] Auth header:', authHeader ? authHeader.substring(0, 30) + '...' : 'MISSING')
+  
+  if (!authHeader) {
+    throw new Error('Token de autenticação não fornecido')
+  }
+
+  // Extrair o token JWT do header "Bearer <token>"
+  const token = authHeader.replace('Bearer ', '')
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  
+  console.log('[ranking-system] Using SERVICE_ROLE_KEY for auth validation')
+  console.log('[ranking-system] Token preview:', token.substring(0, 20) + '...')
+  
+  // Criar client com SERVICE_ROLE_KEY
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+  // Validar o token JWT passando-o como parâmetro
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+  
+  if (error) {
+    console.error('[ranking-system] Auth error details:', {
+      message: error.message,
+      status: error.status,
+      name: error.name
+    })
+  }
+  
+  if (!user) {
+    console.error('[ranking-system] No user returned from getUser()')
+  }
+  
+  if (error || !user) {
+    throw new Error('Token inválido ou expirado')
+  }
+
+  console.log('[ranking-system] User authenticated successfully:', user.email)
+  return { user, supabase }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -24,9 +69,12 @@ serve(async (req) => {
   }
 
   try {
+    // Verificar autenticação para todas as ações
+    const { user } = await verifyAuth(req)
+    
     const { action, ...params } = await req.json()
 
-    console.log(`[ranking-system] Action: ${action}`)
+    console.log(`[ranking-system] Action: ${action}, User: ${user.id}`)
 
     let result
 
@@ -49,23 +97,6 @@ serve(async (req) => {
       case 'admin':
         // Ações administrativas
         // TODO: Implementar verificação de permissões de admin
-        const authHeader = req.headers.get('Authorization')
-        if (!authHeader) {
-          throw new Error('Autenticação necessária para ações administrativas')
-        }
-        
-        // Extrair user ID do token (o Supabase já validou via verify_jwt)
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-          global: { headers: { Authorization: authHeader } }
-        })
-        
-        const { data: { user }, error } = await supabase.auth.getUser()
-        if (error || !user) {
-          throw new Error('Token inválido')
-        }
-        
         result = await adminActions(params, user.id)
         break
 
@@ -82,7 +113,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('[ranking-system] Error:', error)
+    console.error('[ranking-system] Error:', error.message)
     
     // Não expor stack trace em produção
     const isDev = Deno.env.get('NODE_ENV') === 'development'
