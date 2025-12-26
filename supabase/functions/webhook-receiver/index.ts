@@ -136,7 +136,7 @@ async function checkRateLimit(
 
   // Se não existe ou a janela expirou, criar novo registro
   if (!existing || new Date(existing.window_start) < windowStart) {
-    await supabase
+    const { error } = await supabase
       .from('ghl_webhook_rate_limit')
       .upsert({
         identifier,
@@ -144,6 +144,12 @@ async function checkRateLimit(
         window_start: now,
         last_request: now
       }, { onConflict: 'identifier' })
+    
+    if (error) {
+      console.error('Erro ao fazer upsert no rate limit (novo registro):', error)
+      // Fail-safe: bloquear em caso de erro de DB
+      return { allowed: false, reason: 'Database error' }
+    }
 
     return { allowed: true }
   }
@@ -156,7 +162,7 @@ async function checkRateLimit(
     // Bloquear por abuso
     const blockedUntil = new Date(now.getTime() + RATE_LIMIT_CONFIG.BLOCK_DURATION_MINUTES * 60 * 1000)
     
-    await supabase
+    const { error } = await supabase
       .from('ghl_webhook_rate_limit')
       .update({
         request_count: newCount,
@@ -164,6 +170,11 @@ async function checkRateLimit(
         blocked_until: blockedUntil.toISOString()
       })
       .eq('identifier', identifier)
+    
+    if (error) {
+      console.error('Erro ao atualizar rate limit (bloqueio):', error)
+      // Fail-safe: bloquear mesmo se o DB falhar
+    }
 
     console.warn(`Rate limit exceeded for ${identifier}. Blocked until ${blockedUntil.toISOString()}`)
 
@@ -175,21 +186,44 @@ async function checkRateLimit(
   }
 
   // Atualizar contador
-  await supabase
+  const { error: updateError } = await supabase
     .from('ghl_webhook_rate_limit')
     .update({
       request_count: newCount,
       last_request: now
     })
     .eq('identifier', identifier)
+  
+  if (updateError) {
+    console.error('Erro ao atualizar contador de rate limit:', updateError)
+    // Fail-safe: bloquear em caso de erro de DB
+    return { allowed: false, reason: 'Database error' }
+  }
 
   return { allowed: true }
 }
 
 /**
+ * Serializa um erro de forma segura, independente do tipo
+ */
+function safeSerializeError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+  if (typeof error === 'string') {
+    return error
+  }
+  try {
+    return JSON.stringify(error)
+  } catch {
+    return String(error)
+  }
+}
+
+/**
  * Valida o tamanho e estrutura do payload
  */
-function validatePayload(rawPayload: string, payload: WebhookPayload): { valid: boolean; error?: string } {
+function validatePayload(rawPayload: string, payload: WebhookPayload): { valid: boolean; error?: string} {
   // Verificar tamanho do payload
   if (rawPayload.length > SECURITY_CONFIG.MAX_PAYLOAD_SIZE) {
     return {
@@ -257,7 +291,7 @@ async function importPublicKey(pemKey: string): Promise<CryptoKey> {
     )
   } catch (error) {
     throw new Error(
-      `Erro ao importar chave pública: ${error.message}. ` +
+      `Erro ao importar chave pública: ${safeSerializeError(error)}. ` +
       'Verifique se a chave está no formato PEM correto.'
     )
   }
@@ -365,7 +399,7 @@ async function processWebhook(
       .from('ghl_webhook_logs')
       .update({
         status: 'erro',
-        error_log: error.message,
+        error_log: safeSerializeError(error),
         processed_at: new Date().toISOString()
       })
       .eq('id', webhookLogId)
@@ -525,11 +559,20 @@ serve(async (req) => {
   }
 
   try {
+    // Validar variáveis de ambiente críticas
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error(
+        'ERRO DE CONFIGURAÇÃO: Variáveis de ambiente SUPABASE_URL e/ou ' +
+        'SUPABASE_SERVICE_ROLE_KEY não estão definidas. ' +
+        'A função não pode inicializar sem essas credenciais.'
+      )
+    }
+    
     // Inicializar cliente Supabase com service_role
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     // Obter identificador para rate limiting (IP ou user-agent)
     const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
@@ -650,7 +693,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Erro na Edge Function:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: safeSerializeError(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

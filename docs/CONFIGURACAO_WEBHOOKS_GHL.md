@@ -109,7 +109,7 @@ Marque os seguintes eventos para receber notificações em tempo real:
 
 ### 4.1. Acessar o Painel do Supabase
 
-1. Acesse: https://supabase.com/dashboard
+1. Acesse: <https://supabase.com/dashboard>
 2. Selecione o projeto `dashboard-metas-vendas`
 3. Vá para **Settings** → **Vault** (ou **Secrets**)
 

@@ -304,7 +304,7 @@ Controla se a verificação de assinatura é obrigatória ou opcional.
 
 ## 6. Configuração e Ajustes
 
-### 5.1. Ajustar Limites de Rate Limiting
+### 6.1. Ajustar Limites de Rate Limiting
 
 Para ajustar os limites, edite as constantes no arquivo `webhook-receiver/index.ts`:
 
@@ -323,7 +323,7 @@ Após alterar, faça o redeploy da função:
 supabase functions deploy webhook-receiver
 ```
 
-### 5.2. Ajustar Tamanho Máximo de Payload
+### 6.2. Ajustar Tamanho Máximo de Payload
 
 ```typescript
 const SECURITY_CONFIG = {
@@ -332,7 +332,7 @@ const SECURITY_CONFIG = {
 }
 ```
 
-### 5.3. Whitelist de IPs (Futuro)
+### 6.3. Whitelist de IPs (Futuro)
 
 Para implementar uma whitelist de IPs confiáveis que não sofrem rate limiting:
 
@@ -372,7 +372,7 @@ Para implementar uma whitelist de IPs confiáveis que não sofrem rate limiting:
 Antes de ir para produção, verifique:
 
 - [ ] Rate limiting configurado e testado
-- [ ] Verificação de assinatura RSA implementada (⚠️ PENDENTE)
+- [x] Verificação de assinatura RSA implementada
 - [ ] Limites de payload apropriados
 - [ ] Validação de campos obrigatórios ativa
 - [ ] Idempotência testada
@@ -383,11 +383,10 @@ Antes de ir para produção, verifique:
 
 ## 8. Próximas Melhorias de Segurança
 
-1. **Implementar Verificação de Assinatura RSA** (Prioridade Alta)
-2. **Adicionar Autenticação por API Key** (Opcional)
-3. **Implementar Whitelist de IPs** (Opcional)
-4. **Adicionar Honeypot para Detectar Bots** (Opcional)
-5. **Integrar com WAF (Web Application Firewall)** (Recomendado para produção)
+1. **Adicionar Autenticação por API Key** (Opcional)
+2. **Implementar Whitelist de IPs** (Opcional)
+3. **Adicionar Honeypot para Detectar Bots** (Opcional)
+4. **Integrar com WAF (Web Application Firewall)** (Recomendado para produção)
 
 ---
 
