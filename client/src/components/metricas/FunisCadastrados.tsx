@@ -93,7 +93,7 @@ export default function FunisCadastrados({ startDate, endDate }: FunisCadastrado
         setError(null);
 
         const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-by-id-metrics?funnel_id=${selectedFunilId}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?funnel_id=${selectedFunilId}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
           {
             headers: {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
