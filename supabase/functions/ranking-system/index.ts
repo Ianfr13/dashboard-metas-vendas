@@ -17,33 +17,48 @@ import { getRankings } from './handlers/get-rankings.ts'
 import { getMetrics } from './handlers/get-metrics.ts'
 import { adminActions } from './handlers/admin.ts'
 
-// Helper para verificar autenticação usando SERVICE_ROLE_KEY
-// Necessário para validar tokens ES256 do Google OAuth
+// Helper para verificar autenticação
 async function verifyAuth(req: Request) {
   const authHeader = req.headers.get('Authorization')
+  
+  console.log('[ranking-system] Auth header:', authHeader ? authHeader.substring(0, 30) + '...' : 'MISSING')
+  
   if (!authHeader) {
     throw new Error('Token de autenticação não fornecido')
   }
 
+  // Extrair o token JWT do header "Bearer <token>"
+  const token = authHeader.replace('Bearer ', '')
+  
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   
-  // Usar SERVICE_ROLE_KEY para validar tokens ES256
-  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-    global: {
-      headers: { Authorization: authHeader }
-    }
-  })
+  console.log('[ranking-system] Using SERVICE_ROLE_KEY for auth validation')
+  console.log('[ranking-system] Token preview:', token.substring(0, 20) + '...')
+  
+  // Criar client com SERVICE_ROLE_KEY
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  // getUser() com SERVICE_ROLE_KEY valida tokens ES256 do Google OAuth
-  const { data: { user }, error } = await supabase.auth.getUser()
+  // Validar o token JWT passando-o como parâmetro
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+  
+  if (error) {
+    console.error('[ranking-system] Auth error details:', {
+      message: error.message,
+      status: error.status,
+      name: error.name
+    })
+  }
+  
+  if (!user) {
+    console.error('[ranking-system] No user returned from getUser()')
+  }
   
   if (error || !user) {
-    console.error('[ranking-system] Auth error:', error?.message || 'No user')
     throw new Error('Token inválido ou expirado')
   }
 
-  console.log('[ranking-system] User authenticated:', user.email)
+  console.log('[ranking-system] User authenticated successfully:', user.email)
   return { user, supabase }
 }
 
