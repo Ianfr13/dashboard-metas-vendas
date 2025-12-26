@@ -17,15 +17,11 @@ import { getRankings } from './handlers/get-rankings.ts'
 import { getMetrics } from './handlers/get-metrics.ts'
 import { adminActions } from './handlers/admin.ts'
 
-// Helper para verificar autenticação (opcional)
-async function verifyAuth(req: Request, required: boolean = false) {
+// Helper para verificar autenticação
+async function verifyAuth(req: Request) {
   const authHeader = req.headers.get('Authorization')
-  
   if (!authHeader) {
-    if (required) {
-      throw new Error('Token de autenticação não fornecido')
-    }
-    return { user: null, supabase: null }
+    throw new Error('Token de autenticação não fornecido')
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -40,10 +36,7 @@ async function verifyAuth(req: Request, required: boolean = false) {
   const { data: { user }, error } = await supabase.auth.getUser()
   
   if (error || !user) {
-    if (required) {
-      throw new Error('Token inválido ou expirado')
-    }
-    return { user: null, supabase: null }
+    throw new Error('Token inválido ou expirado')
   }
 
   return { user, supabase }
@@ -56,35 +49,34 @@ serve(async (req) => {
   }
 
   try {
+    // Verificar autenticação
+    const { user } = await verifyAuth(req)
+    
     const { action, ...params } = await req.json()
 
-    console.log(`[ranking-system] Action: ${action}`)
+    console.log(`[ranking-system] Action: ${action}, User: ${user.id}`)
 
     let result
-    let user = null
 
     switch (action) {
       case 'calculate':
-        // Calcular métricas e rankings (não requer auth)
+        // Calcular métricas e rankings
         result = await calculate(params)
         break
 
       case 'get-rankings':
-        // Buscar rankings por função (não requer auth)
+        // Buscar rankings por função
         result = await getRankings(params)
         break
 
       case 'get-metrics':
-        // Buscar métricas para gráficos (não requer auth)
+        // Buscar métricas para gráficos
         result = await getMetrics(params)
         break
 
       case 'admin':
-        // Ações administrativas (REQUER auth)
-        const authResult = await verifyAuth(req, true)
-        user = authResult.user
-        console.log(`[ranking-system] Admin action by user: ${user?.id}`)
-        result = await adminActions(params, user!.id)
+        // Ações administrativas (requer autorização adicional)
+        result = await adminActions(params, user.id)
         break
 
       default:
