@@ -36,6 +36,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_funis_updated_at ON funis;
 CREATE TRIGGER update_funis_updated_at BEFORE UPDATE ON funis
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
