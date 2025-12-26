@@ -41,10 +41,10 @@ export async function getRankings(params: GetRankingsParams) {
     .select(`
       *,
       ghl_users!inner(id, name, email, ghl_data),
-      user_roles!inner(role)
+      sales_roles!inner(role)
     `)
     .eq('month', monthStart)
-    .eq('user_roles.role', role)
+    .eq('sales_roles.role', role)
     .order('position', { ascending: true })
 
   if (limit) {
@@ -105,10 +105,10 @@ async function getChampions(supabase: any, month: string) {
       .select(`
         *,
         ghl_users!inner(id, name, email, ghl_data),
-        user_roles!inner(role)
+        sales_roles!inner(role)
       `)
       .eq('month', month)
-      .eq('user_roles.role', role)
+      .eq('sales_roles.role', role)
       .eq('position', 1)
       .single()
 
@@ -166,10 +166,10 @@ async function getHistoricalRankings(supabase: any, role: string, months: number
         .select(`
           *,
           ghl_users!inner(id, name, email),
-          user_roles!inner(role)
+          sales_roles!inner(role)
         `)
         .eq('month', monthStart)
-        .eq('user_roles.role', role)
+        .eq('sales_roles.role', role)
         .eq('position', 1)
         .single()
 

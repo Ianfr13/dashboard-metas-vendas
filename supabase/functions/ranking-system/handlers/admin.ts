@@ -25,9 +25,9 @@ async function verifyAdminPermission(supabase: any, callerId: string) {
   // Por enquanto, vamos verificar se o usuário está na tabela de admins
   // Você pode criar uma tabela 'admins' ou adicionar um campo 'is_admin' em auth.users
   
-  // Opção 1: Verificar se tem role 'admin' em user_roles
+  // Opção 1: Verificar se tem role 'admin' em sales_roles
   const { data, error } = await supabase
-    .from('user_roles')
+    .from('sales_roles')
     .select('role')
     .eq('ghl_user_id', callerId)
     .single()
@@ -99,9 +99,9 @@ async function setUserRole(supabase: any, params: AdminParams) {
     throw new Error('Usuário não encontrado no GoHighLevel')
   }
 
-  // Upsert na tabela user_roles
+  // Upsert na tabela sales_roles
   const { data, error } = await supabase
-    .from('user_roles')
+    .from('sales_roles')
     .upsert({
       ghl_user_id: user_id,
       role,
@@ -137,7 +137,7 @@ async function listUsers(supabase: any) {
       name,
       email,
       active,
-      user_roles(role, active)
+      sales_roles(role, active)
     `)
     .order('name')
 
@@ -149,8 +149,8 @@ async function listUsers(supabase: any) {
       name: u.name,
       email: u.email,
       active: u.active,
-      role: u.user_roles?.role || null,
-      role_active: u.user_roles?.active || false
+      role: u.sales_roles?.role || null,
+      role_active: u.sales_roles?.active || false
     })) || []
   }
 }

@@ -27,7 +27,7 @@ export async function calculate(params: CalculateParams) {
 
   // 1. Buscar usuários ativos com suas funções
   const { data: users, error: usersError } = await supabase
-    .from('user_roles')
+    .from('sales_roles')
     .select('ghl_user_id, role, ghl_users(id, name, email)')
     .eq('active', true)
 

@@ -213,10 +213,10 @@ async function getPerformanceSDR(supabase: any, params: any) {
     .select(`
       *,
       ghl_users!inner(name),
-      user_roles!inner(role)
+      sales_roles!inner(role)
     `)
     .eq('month', monthStart)
-    .eq('user_roles.role', 'sdr')
+    .eq('sales_roles.role', 'sdr')
     .order('score', { ascending: false })
     .limit(10)
 
@@ -241,10 +241,10 @@ async function getPerformanceCloser(supabase: any, params: any) {
     .select(`
       *,
       ghl_users!inner(name),
-      user_roles!inner(role)
+      sales_roles!inner(role)
     `)
     .eq('month', monthStart)
-    .eq('user_roles.role', 'closer')
+    .eq('sales_roles.role', 'closer')
     .order('score', { ascending: false })
     .limit(10)
 
@@ -309,10 +309,10 @@ async function getMeetingsMetrics(supabase: any, params: any) {
     .select(`
       vendas_primeira_reuniao,
       vendas_segunda_reuniao,
-      user_roles!inner(role)
+      sales_roles!inner(role)
     `)
     .eq('month', monthStart)
-    .eq('user_roles.role', 'closer')
+    .eq('sales_roles.role', 'closer')
 
   const totals = metrics?.reduce((acc: any, m: any) => ({
     primeira: acc.primeira + m.vendas_primeira_reuniao,
