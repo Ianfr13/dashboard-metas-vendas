@@ -17,6 +17,34 @@ import { getRankings } from './handlers/get-rankings.ts'
 import { getMetrics } from './handlers/get-metrics.ts'
 import { adminActions } from './handlers/admin.ts'
 
+// Helper para verificar autenticação usando supabase.auth.getUser()
+// Suporta tokens ES256 do Google OAuth
+async function verifyAuth(req: Request) {
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    throw new Error('Token de autenticação não fornecido')
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: { Authorization: authHeader }
+    }
+  })
+
+  // getUser() valida o token JWT (suporta ES256 do Google OAuth)
+  const { data: { user }, error } = await supabase.auth.getUser()
+  
+  if (error || !user) {
+    console.error('[ranking-system] Auth error:', error)
+    throw new Error('Token inválido ou expirado')
+  }
+
+  return { user, supabase }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -24,9 +52,12 @@ serve(async (req) => {
   }
 
   try {
+    // Verificar autenticação para todas as ações
+    const { user } = await verifyAuth(req)
+    
     const { action, ...params } = await req.json()
 
-    console.log(`[ranking-system] Action: ${action}`)
+    console.log(`[ranking-system] Action: ${action}, User: ${user.id}`)
 
     let result
 
@@ -49,23 +80,6 @@ serve(async (req) => {
       case 'admin':
         // Ações administrativas
         // TODO: Implementar verificação de permissões de admin
-        const authHeader = req.headers.get('Authorization')
-        if (!authHeader) {
-          throw new Error('Autenticação necessária para ações administrativas')
-        }
-        
-        // Extrair user ID do token (o Supabase já validou via verify_jwt)
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-          global: { headers: { Authorization: authHeader } }
-        })
-        
-        const { data: { user }, error } = await supabase.auth.getUser()
-        if (error || !user) {
-          throw new Error('Token inválido')
-        }
-        
         result = await adminActions(params, user.id)
         break
 
