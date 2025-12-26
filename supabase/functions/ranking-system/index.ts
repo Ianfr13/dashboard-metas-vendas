@@ -17,11 +17,15 @@ import { getRankings } from './handlers/get-rankings.ts'
 import { getMetrics } from './handlers/get-metrics.ts'
 import { adminActions } from './handlers/admin.ts'
 
-// Helper para verificar autenticação
-async function verifyAuth(req: Request) {
+// Helper para verificar autenticação (opcional)
+async function verifyAuth(req: Request, required: boolean = false) {
   const authHeader = req.headers.get('Authorization')
+  
   if (!authHeader) {
-    throw new Error('Token de autenticação não fornecido')
+    if (required) {
+      throw new Error('Token de autenticação não fornecido')
+    }
+    return { user: null, supabase: null }
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -36,7 +40,10 @@ async function verifyAuth(req: Request) {
   const { data: { user }, error } = await supabase.auth.getUser()
   
   if (error || !user) {
-    throw new Error('Token inválido ou expirado')
+    if (required) {
+      throw new Error('Token inválido ou expirado')
+    }
+    return { user: null, supabase: null }
   }
 
   return { user, supabase }
@@ -49,34 +56,35 @@ serve(async (req) => {
   }
 
   try {
-    // Verificar autenticação
-    const { user } = await verifyAuth(req)
-    
     const { action, ...params } = await req.json()
 
-    console.log(`[ranking-system] Action: ${action}, User: ${user.id}`)
+    console.log(`[ranking-system] Action: ${action}`)
 
     let result
+    let user = null
 
     switch (action) {
       case 'calculate':
-        // Calcular métricas e rankings
+        // Calcular métricas e rankings (não requer auth)
         result = await calculate(params)
         break
 
       case 'get-rankings':
-        // Buscar rankings por função
+        // Buscar rankings por função (não requer auth)
         result = await getRankings(params)
         break
 
       case 'get-metrics':
-        // Buscar métricas para gráficos
+        // Buscar métricas para gráficos (não requer auth)
         result = await getMetrics(params)
         break
 
       case 'admin':
-        // Ações administrativas (requer autorização adicional)
-        result = await adminActions(params, user.id)
+        // Ações administrativas (REQUER auth)
+        const authResult = await verifyAuth(req, true)
+        user = authResult.user
+        console.log(`[ranking-system] Admin action by user: ${user?.id}`)
+        result = await adminActions(params, user!.id)
         break
 
       default:
