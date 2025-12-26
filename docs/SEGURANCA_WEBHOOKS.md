@@ -302,9 +302,9 @@ Controla se a verificação de assinatura é obrigatória ou opcional.
 | Erro na verificação | true | ❌ Rejeitado (HTTP 401) |
 | Erro na verificação | false | ⚠️ Permitido com aviso |
 
-## 6. Configuração e Ajustes
+## 7. Configuração e Ajustes
 
-### 6.1. Ajustar Limites de Rate Limiting
+### 7.1. Ajustar Limites de Rate Limiting
 
 Para ajustar os limites, edite as constantes no arquivo `webhook-receiver/index.ts`:
 
@@ -323,7 +323,7 @@ Após alterar, faça o redeploy da função:
 supabase functions deploy webhook-receiver
 ```
 
-### 6.2. Ajustar Tamanho Máximo de Payload
+### 7.2. Ajustar Tamanho Máximo de Payload
 
 ```typescript
 const SECURITY_CONFIG = {
@@ -332,14 +332,14 @@ const SECURITY_CONFIG = {
 }
 ```
 
-### 6.3. Whitelist de IPs (Futuro)
+### 7.3. Whitelist de IPs (Futuro)
 
 Para implementar uma whitelist de IPs confiáveis que não sofrem rate limiting:
 
 1. Adicionar coluna `is_whitelisted` na tabela `ghl_webhook_rate_limit`
 2. Modificar a função `checkRateLimit` para pular a verificação se `is_whitelisted = true`
 
-## 6. Troubleshooting
+## 8. Troubleshooting
 
 ### Problema: Webhooks legítimos sendo bloqueados
 
@@ -367,7 +367,7 @@ Para implementar uma whitelist de IPs confiáveis que não sofrem rate limiting:
 1. Configurar Cron Job para executar `clean_old_rate_limit_records()` diariamente
 2. Ou executar manualmente: `SELECT clean_old_rate_limit_records();`
 
-## 7. Checklist de Segurança
+## 9. Checklist de Segurança
 
 Antes de ir para produção, verifique:
 
@@ -381,7 +381,7 @@ Antes de ir para produção, verifique:
 - [ ] Alertas configurados para bloqueios frequentes
 - [ ] Backup e disaster recovery planejados
 
-## 8. Próximas Melhorias de Segurança
+## 10. Próximas Melhorias de Segurança
 
 1. **Adicionar Autenticação por API Key** (Opcional)
 2. **Implementar Whitelist de IPs** (Opcional)
