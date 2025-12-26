@@ -17,8 +17,8 @@ import { getRankings } from './handlers/get-rankings.ts'
 import { getMetrics } from './handlers/get-metrics.ts'
 import { adminActions } from './handlers/admin.ts'
 
-// Helper para verificar autenticação usando supabase.auth.getUser()
-// Suporta tokens ES256 do Google OAuth
+// Helper para verificar autenticação usando SERVICE_ROLE_KEY
+// Necessário para validar tokens ES256 do Google OAuth
 async function verifyAuth(req: Request) {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
@@ -26,22 +26,24 @@ async function verifyAuth(req: Request) {
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  // Usar SERVICE_ROLE_KEY para validar tokens ES256
+  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
     global: {
       headers: { Authorization: authHeader }
     }
   })
 
-  // getUser() valida o token JWT (suporta ES256 do Google OAuth)
+  // getUser() com SERVICE_ROLE_KEY valida tokens ES256 do Google OAuth
   const { data: { user }, error } = await supabase.auth.getUser()
   
   if (error || !user) {
-    console.error('[ranking-system] Auth error:', error)
+    console.error('[ranking-system] Auth error:', error?.message || 'No user')
     throw new Error('Token inválido ou expirado')
   }
 
+  console.log('[ranking-system] User authenticated:', user.email)
   return { user, supabase }
 }
 
@@ -96,7 +98,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('[ranking-system] Error:', error)
+    console.error('[ranking-system] Error:', error.message)
     
     // Não expor stack trace em produção
     const isDev = Deno.env.get('NODE_ENV') === 'development'
