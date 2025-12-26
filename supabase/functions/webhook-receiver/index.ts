@@ -35,9 +35,10 @@ const SECURITY_CONFIG = {
   REQUIRED_FIELDS: ['type', 'location_id'], // Campos obrigatórios no payload
 }
 
-// Chave pública oficial do GoHighLevel para verificação de assinatura
+// Chave pública oficial do GoHighLevel (fallback para desenvolvimento)
 // Fonte: https://marketplace.gohighlevel.com/docs/webhook/WebhookIntegrationGuide/
-const GHL_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+// Em produção, configure a variável de ambiente GHL_PUBLIC_KEY
+const GHL_PUBLIC_KEY_FALLBACK = `-----BEGIN PUBLIC KEY-----
 MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAokvo/r9tVgcfZ5DysOSC
 Frm602qYV0MaAiNnX9O8KxMbiyRKWeL9JpCpVpt4XHIcBOK4u3cLSqJGOLaPuXw6
 dO0t6Q/ZVdAV5Phz+ZtzPL16iCGeK9po6D6JHBpbi989mmzMryUnQJezlYJ3DVfB
@@ -51,6 +52,47 @@ HULgCsnuDJHcrGNd5/Ddm5hxGQ0ASitgHeMZ0kcIOwKDOzOU53lDza6/Y09T7sYJ
 PQe7z0cvj7aE4B+Ax1ZoZGPzpJlZtGXCsu9aTEGEnKzmsFqwcSsnw3JB31IGKAyk
 T1hhTiaCeIY/OwwwNUY2yvcCAwEAAQ==
 -----END PUBLIC KEY-----`
+
+/**
+ * Obtém a chave pública do GHL de forma segura
+ * Prioriza variável de ambiente, com fallback para a chave oficial
+ */
+function getGHLPublicKey(): string {
+  // Tentar carregar da variável de ambiente primeiro
+  const envKey = Deno.env.get('GHL_PUBLIC_KEY')
+  
+  if (envKey) {
+    console.log('Usando chave pública do GHL da variável de ambiente')
+    return envKey
+  }
+  
+  // Verificar se estamos em produção
+  const requireSignature = Deno.env.get('REQUIRE_WEBHOOK_SIGNATURE') === 'true'
+  
+  if (requireSignature) {
+    // Em produção, a chave DEVE vir da variável de ambiente
+    throw new Error(
+      'ERRO DE CONFIGURAÇÃO: GHL_PUBLIC_KEY não está definida. ' +
+      'Em produção (REQUIRE_WEBHOOK_SIGNATURE=true), você DEVE configurar ' +
+      'a variável de ambiente GHL_PUBLIC_KEY com a chave pública do GoHighLevel.'
+    )
+  }
+  
+  // Em desenvolvimento, usar fallback
+  console.warn(
+    'AVISO: Usando chave pública fallback do GHL. ' +
+    'Para produção, configure a variável de ambiente GHL_PUBLIC_KEY.'
+  )
+  return GHL_PUBLIC_KEY_FALLBACK
+}
+
+/**
+ * Valida o formato PEM de uma chave pública
+ */
+function validatePEMFormat(key: string): boolean {
+  const pemRegex = /^-----BEGIN PUBLIC KEY-----\s*[\s\S]+\s*-----END PUBLIC KEY-----\s*$/
+  return pemRegex.test(key.trim())
+}
 
 interface WebhookPayload {
   type: string
@@ -184,26 +226,41 @@ function validatePayload(rawPayload: string, payload: WebhookPayload): { valid: 
  * Importa a chave pública PEM para uso com Web Crypto API
  */
 async function importPublicKey(pemKey: string): Promise<CryptoKey> {
-  // Remover cabeçalho e rodapé do PEM
-  const pemContents = pemKey
-    .replace('-----BEGIN PUBLIC KEY-----', '')
-    .replace('-----END PUBLIC KEY-----', '')
-    .replace(/\s/g, '')
+  // Validar formato PEM
+  if (!validatePEMFormat(pemKey)) {
+    throw new Error(
+      'Formato inválido de chave pública. ' +
+      'Esperado formato PEM: -----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----'
+    )
+  }
   
-  // Decodificar de Base64 para ArrayBuffer
-  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0))
-  
-  // Importar a chave
-  return await crypto.subtle.importKey(
-    'spki',
-    binaryDer,
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      hash: 'SHA-256'
-    },
-    false,
-    ['verify']
-  )
+  try {
+    // Remover cabeçalho e rodapé do PEM
+    const pemContents = pemKey
+      .replace('-----BEGIN PUBLIC KEY-----', '')
+      .replace('-----END PUBLIC KEY-----', '')
+      .replace(/\s/g, '')
+    
+    // Decodificar de Base64 para ArrayBuffer
+    const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0))
+    
+    // Importar a chave
+    return await crypto.subtle.importKey(
+      'spki',
+      binaryDer,
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        hash: 'SHA-256'
+      },
+      false,
+      ['verify']
+    )
+  } catch (error) {
+    throw new Error(
+      `Erro ao importar chave pública: ${error.message}. ` +
+      'Verifique se a chave está no formato PEM correto.'
+    )
+  }
 }
 
 /**
@@ -227,8 +284,9 @@ async function verifyWebhookSignature(
   }
 
   try {
-    // Importar a chave pública
-    const publicKey = await importPublicKey(GHL_PUBLIC_KEY)
+    // Obter e importar a chave pública
+    const pemKey = getGHLPublicKey()
+    const publicKey = await importPublicKey(pemKey)
     
     // Decodificar a assinatura de Base64 para ArrayBuffer
     const signatureBytes = Uint8Array.from(atob(signature), c => c.charCodeAt(0))

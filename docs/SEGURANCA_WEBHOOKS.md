@@ -208,7 +208,65 @@ ORDER BY block_count DESC
 LIMIT 10;
 ```
 
-## 5. Variável de Ambiente: REQUIRE_WEBHOOK_SIGNATURE
+## 5. Carregamento Seguro da Chave Pública
+
+### Estratégia de Carregamento
+
+A chave pública do GoHighLevel é carregada de forma hierárquica:
+
+1. **Primeira prioridade:** Variável de ambiente `GHL_PUBLIC_KEY`
+2. **Fallback:** Chave oficial do GHL (hard-coded, apenas para desenvolvimento)
+
+### Variável de Ambiente: GHL_PUBLIC_KEY
+
+**Propósito:** Permite configurar uma chave pública personalizada ou atualizada.
+
+**Formato:** PEM (-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----)
+
+**Quando usar:**
+- Se o GoHighLevel atualizar a chave pública
+- Para testes com chaves customizadas
+- Para seguir políticas de segurança que proíbem hard-coding de chaves
+
+**Configuração no Supabase:**
+
+1. Acesse o painel do Supabase
+2. Vá para **Settings** → **Edge Functions** → **webhook-receiver**
+3. Adicione a variável de ambiente:
+   - **Nome:** `GHL_PUBLIC_KEY`
+   - **Valor:** (cole a chave pública PEM completa)
+
+**Exemplo de valor:**
+```
+-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAokvo/r9tVgcfZ5DysOSC
+...
+T1hhTiaCeIY/OwwwNUY2yvcCAwEAAQ==
+-----END PUBLIC KEY-----
+```
+
+### Validação de Formato
+
+A função valida automaticamente o formato PEM da chave antes de usá-la:
+- Verifica presença de cabeçalho e rodapé PEM
+- Valida estrutura Base64
+- Lança erro claro se o formato for inválido
+
+### Comportamento em Produção
+
+Quando `REQUIRE_WEBHOOK_SIGNATURE=true` e `GHL_PUBLIC_KEY` não está definida:
+- A função **lança erro** na inicialização
+- Mensagem clara: "ERRO DE CONFIGURAÇÃO: GHL_PUBLIC_KEY não está definida"
+- Previne uso acidental do fallback em produção
+
+### Comportamento em Desenvolvimento
+
+Quando `REQUIRE_WEBHOOK_SIGNATURE=false` ou não definida:
+- Usa a chave fallback (oficial do GHL)
+- Exibe aviso no log
+- Permite desenvolvimento sem configurar a variável
+
+## 6. Variável de Ambiente: REQUIRE_WEBHOOK_SIGNATURE
 
 ### Propósito
 
