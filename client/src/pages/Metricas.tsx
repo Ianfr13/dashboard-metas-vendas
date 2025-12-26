@@ -15,6 +15,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { gtmAnalyticsAPI } from "@/lib/edge-functions";
 import FunilMarketing from "@/components/metricas/FunilMarketing";
 import FunilComercial from "@/components/metricas/FunilComercial";
+import FunisCadastrados from "@/components/metricas/FunisCadastrados";
 
 export default function Metricas() {
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -140,12 +141,13 @@ export default function Metricas() {
           </Card>
         ) : (
           <Tabs defaultValue="funil" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="funil">Funil de Conversão</TabsTrigger>
               <TabsTrigger value="evolucao">Evolução</TabsTrigger>
               <TabsTrigger value="produtos">Produtos</TabsTrigger>
               <TabsTrigger value="marketing">Funil Marketing</TabsTrigger>
               <TabsTrigger value="comercial">Funil Comercial</TabsTrigger>
+              <TabsTrigger value="cadastrados">Funis Cadastrados</TabsTrigger>
             </TabsList>
 
             {/* Funil de Conversão */}
@@ -375,6 +377,14 @@ export default function Metricas() {
             {/* Funil Comercial */}
             <TabsContent value="comercial" className="space-y-6">
               <FunilComercial 
+                startDate={startDate}
+                endDate={endDate}
+              />
+            </TabsContent>
+
+            {/* Funis Cadastrados */}
+            <TabsContent value="cadastrados" className="space-y-6">
+              <FunisCadastrados 
                 startDate={startDate}
                 endDate={endDate}
               />
