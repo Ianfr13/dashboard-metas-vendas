@@ -10,10 +10,8 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
     diagnostics.env_vars = {
-      SUPABASE_URL: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NOT SET',
-      SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey ? `${serviceRoleKey.substring(0, 20)}...` : 'NOT SET',
-      has_url: !!supabaseUrl,
-      has_key: !!serviceRoleKey
+      SUPABASE_URL: supabaseUrl ? 'SET' : 'NOT SET',
+      SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey ? 'SET' : 'NOT SET'
     }
 
     if (!supabaseUrl || !serviceRoleKey) {
@@ -45,8 +43,8 @@ serve(async (req) => {
       data_received: !!data
     }
 
-    // 4. Tentar fazer um upsert
-    const testIdentifier = `test_${Date.now()}`
+    // 4. Tentar fazer um upsert com identificador fixo (não deixa linhas órfãs)
+    const testIdentifier = 'diagnostic_test'
     const { error: upsertError } = await supabase
       .from('ghl_webhook_rate_limit')
       .upsert({
@@ -64,6 +62,19 @@ serve(async (req) => {
         hint: upsertError.hint,
         code: upsertError.code
       } : null
+    }
+
+    // 5. Limpar linha de teste após diagnóstico
+    if (!upsertError) {
+      const { error: deleteError } = await supabase
+        .from('ghl_webhook_rate_limit')
+        .delete()
+        .match({ identifier: testIdentifier })
+      
+      diagnostics.cleanup_result = {
+        success: !deleteError,
+        error: deleteError ? deleteError.message : null
+      }
     }
 
     return new Response(JSON.stringify(diagnostics, null, 2), {

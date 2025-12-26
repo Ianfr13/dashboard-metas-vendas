@@ -6,9 +6,15 @@ Testa o funcionamento básico do webhook
 
 import requests
 import json
+import os
 from datetime import datetime
 
-WEBHOOK_URL = "https://auvvrewlbpyymekonilv.supabase.co/functions/v1/webhook-receiver"
+# Configurar token de autenticação
+WEBHOOK_TOKEN = os.environ.get('WEBHOOK_AUTH_TOKEN', 'NCAXd8WIHOI3EvJCiH5Ab4QgpPVt-ch_ZYIuCRtqvS8')
+WEBHOOK_URL = f"https://auvvrewlbpyymekonilv.supabase.co/functions/v1/webhook-receiver?token={WEBHOOK_TOKEN}"
+
+if not WEBHOOK_TOKEN:
+    raise ValueError("WEBHOOK_AUTH_TOKEN não configurado. Defina a variável de ambiente ou use o valor padrão.")
 
 def test_smoke():
     """ST-05: Smoke Test - Primeiro Webhook"""
@@ -41,7 +47,12 @@ def test_smoke():
         )
         
         print(f"Status Code: {response.status_code}")
-        print(f"Response: {json.dumps(response.json() if response.headers.get('content-type') == 'application/json' else response.text, indent=2)}")
+        
+        # Verificar content-type (aceitar com ou sem charset)
+        content_type = response.headers.get('content-type', '').lower()
+        is_json = 'application/json' in content_type
+        
+        print(f"Response: {json.dumps(response.json() if is_json else response.text, indent=2)}")
         print()
         
         if response.status_code == 200:

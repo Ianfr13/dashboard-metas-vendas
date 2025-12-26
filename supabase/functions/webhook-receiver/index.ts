@@ -18,9 +18,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// CORS headers (sincronizado com _shared/cors.ts)
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wh-signature, x-webhook-token',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 }
 
 // ============================================================================
@@ -37,7 +39,7 @@ const corsHeaders = {
  * 
  * Nota: GoHighLevel Marketplace App não suporta custom headers, por isso usamos query parameter
  */
-function validateWebhookToken(request: Request): { valid: boolean; error?: string } {
+async function validateWebhookToken(request: Request): Promise<{ valid: boolean; error?: string }> {
   const expectedToken = Deno.env.get('WEBHOOK_AUTH_TOKEN')
   
   // Se não houver token configurado, permitir (modo desenvolvimento)
@@ -61,14 +63,66 @@ function validateWebhookToken(request: Request): { valid: boolean; error?: strin
   }
   
   // Comparação segura (constant-time) para prevenir timing attacks
-  if (receivedToken !== expectedToken) {
+  // Usar crypto.timingSafeEqual requer buffers de mesmo tamanho
+  // Então criamos HMACs de tamanho fixo para comparar
+  try {
+    const encoder = new TextEncoder()
+    const secret = Deno.env.get('WEBHOOK_TOKEN_HMAC_SECRET') || 'default-hmac-secret-change-in-production'
+    
+    // Criar HMAC de ambos os tokens usando Web Crypto API
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    )
+    
+    const expectedHmac = await crypto.subtle.sign(
+      'HMAC',
+      keyMaterial,
+      encoder.encode(expectedToken)
+    )
+    
+    const receivedHmac = await crypto.subtle.sign(
+      'HMAC',
+      keyMaterial,
+      encoder.encode(receivedToken)
+    )
+    
+    // Comparar HMACs usando timingSafeEqual
+    const expectedBuffer = new Uint8Array(expectedHmac)
+    const receivedBuffer = new Uint8Array(receivedHmac)
+    
+    // Deno's crypto.subtle não tem timingSafeEqual nativo,
+    // mas podemos usar uma comparação manual constant-time
+    if (expectedBuffer.length !== receivedBuffer.length) {
+      return {
+        valid: false,
+        error: 'Invalid authentication token'
+      }
+    }
+    
+    let mismatch = 0
+    for (let i = 0; i < expectedBuffer.length; i++) {
+      mismatch |= expectedBuffer[i] ^ receivedBuffer[i]
+    }
+    
+    if (mismatch !== 0) {
+      return {
+        valid: false,
+        error: 'Invalid authentication token'
+      }
+    }
+    
+    return { valid: true }
+  } catch (error) {
+    console.error('Error in constant-time comparison:', error)
     return {
       valid: false,
-      error: 'Invalid authentication token'
+      error: 'Authentication error'
     }
   }
-  
-  return { valid: true }
 }
 
 // ============================================================================
@@ -86,33 +140,21 @@ const ESTAGIOS_IMPORTANTES = [
   'Venda Perdida'
 ]
 
-// Mapeamento de stage_id para nome (será preenchido dinamicamente via API)
-// Por enquanto, usaremos o nome do estágio que vem no payload
-const STAGE_ID_MAP: Record<string, string> = {}
-
 /**
  * Verifica se um estágio é importante
+ * Usa apenas o nome do estágio (case-insensitive, remove acentos)
  */
-function isImportantStage(stageName: string | null | undefined, stageId: string | null | undefined): boolean {
-  if (!stageName && !stageId) return false
+function isImportantStage(stageName: string | null | undefined): boolean {
+  if (!stageName) return false
   
   // Verificar por nome (case-insensitive, remove acentos)
-  if (stageName) {
-    const normalizedStageName = stageName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    const isImportant = ESTAGIOS_IMPORTANTES.some(estagio => {
-      const normalizedEstagio = estagio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      return normalizedStageName.includes(normalizedEstagio) || normalizedEstagio.includes(normalizedStageName)
-    })
-    
-    if (isImportant) return true
-  }
+  const normalizedStageName = stageName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const isImportant = ESTAGIOS_IMPORTANTES.some(estagio => {
+    const normalizedEstagio = estagio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    return normalizedStageName.includes(normalizedEstagio) || normalizedEstagio.includes(normalizedStageName)
+  })
   
-  // Verificar por ID (se tivermos mapeamento)
-  if (stageId && STAGE_ID_MAP[stageId]) {
-    return isImportantStage(STAGE_ID_MAP[stageId], null)
-  }
-  
-  return false
+  return isImportant
 }
 
 /**
@@ -129,13 +171,12 @@ function shouldProcessEvent(payload: WebhookPayload): { process: boolean; reason
   // Para Oportunidades, verificar o estágio
   if (eventType.startsWith('Opportunity')) {
     const stageName = payload.pipelineStageName || payload.stageName || null
-    const stageId = payload.pipelineStageId || payload.stageId || null
     
-    if (isImportantStage(stageName, stageId)) {
-      return { process: true, reason: `Estágio importante: ${stageName || stageId}` }
+    if (isImportantStage(stageName)) {
+      return { process: true, reason: `Estágio importante: ${stageName}` }
     }
     
-    return { process: false, reason: `Estágio ignorado: ${stageName || stageId || 'desconhecido'}` }
+    return { process: false, reason: `Estágio ignorado: ${stageName || 'desconhecido'}` }
   }
   
   // Para Contatos, processar apenas Create (primeiro contato)
@@ -719,7 +760,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     // PASSO 1: Validar token de autenticação
-    const tokenValidation = validateWebhookToken(req)
+    const tokenValidation = await validateWebhookToken(req)
     if (!tokenValidation.valid) {
       console.error('Token de autenticação inválido ou ausente')
       return new Response(

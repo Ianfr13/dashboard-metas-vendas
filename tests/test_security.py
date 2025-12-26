@@ -6,10 +6,13 @@ Testes de Segurança - Integração GoHighLevel
 import requests
 import json
 import time
+import os
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-WEBHOOK_URL = "https://auvvrewlbpyymekonilv.supabase.co/functions/v1/webhook-receiver"
+# Configurar token de autenticação
+WEBHOOK_TOKEN = os.environ.get('WEBHOOK_AUTH_TOKEN', 'NCAXd8WIHOI3EvJCiH5Ab4QgpPVt-ch_ZYIuCRtqvS8')
+WEBHOOK_URL = f"https://auvvrewlbpyymekonilv.supabase.co/functions/v1/webhook-receiver?token={WEBHOOK_TOKEN}"
 
 def print_header(title):
     print("\n" + "="*60)
@@ -82,7 +85,7 @@ def test_large_payload():
     
     print(f"Tamanho do payload: {len(json.dumps(payload))} bytes")
     
-    response = requests.post(WEBHOOK_URL, json=payload)
+    response = requests.post(WEBHOOK_URL, json=payload, timeout=10)
     print(f"Status Code: {response.status_code}")
     
     if response.status_code == 400:
@@ -101,7 +104,8 @@ def test_malformed_json():
     response = requests.post(
         WEBHOOK_URL,
         data=malformed_json,
-        headers={'Content-Type': 'application/json'}
+        headers={'Content-Type': 'application/json'},
+        timeout=5
     )
     
     print(f"Status Code: {response.status_code}")
