@@ -3,12 +3,14 @@
  * 
  * Ponto de entrada único para todos os webhooks do GoHighLevel.
  * Responsável por:
- * 1. Verificar a assinatura do webhook (segurança)
- * 2. Garantir idempotência (não processar o mesmo webhook duas vezes)
- * 3. Logar o webhook recebido
- * 4. Retornar 200 OK imediatamente
- * 5. Processar o payload de forma assíncrona
- * 6. Fazer UPSERT nos dados do banco
+ * 1. Rate limiting (prevenir abuso)
+ * 2. Verificar a assinatura do webhook (segurança)
+ * 3. Validar tamanho e estrutura do payload
+ * 4. Garantir idempotência (não processar o mesmo webhook duas vezes)
+ * 5. Logar o webhook recebido
+ * 6. Retornar 200 OK imediatamente
+ * 7. Processar o payload de forma assíncrona
+ * 8. Fazer UPSERT nos dados do banco
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -19,8 +21,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wh-signature',
 }
 
+// Configurações de Rate Limiting
+const RATE_LIMIT_CONFIG = {
+  MAX_REQUESTS_PER_MINUTE: 60, // Máximo de requisições por minuto por IP
+  MAX_REQUESTS_PER_HOUR: 1000, // Máximo de requisições por hora por IP
+  BLOCK_DURATION_MINUTES: 15, // Duração do bloqueio em caso de abuso
+  WINDOW_SIZE_MINUTES: 1, // Tamanho da janela de tempo para contagem
+}
+
+// Configurações de Segurança
+const SECURITY_CONFIG = {
+  MAX_PAYLOAD_SIZE: 1024 * 1024, // 1MB máximo de payload
+  REQUIRED_FIELDS: ['type', 'location_id'], // Campos obrigatórios no payload
+}
+
 // Chave pública do GoHighLevel para verificação de assinatura
-// Fonte: https://marketplace.gohighlevel.com/docs/webhook/WebhookIntegrationGuide/
 const GHL_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoyFqcXVwsYlYlVTlMtxV
 aTxj3gVRLCfXMVdEyLzLLhKMhLKaLqJXqGjAyVqXKAJMJqYLVLFqGZqGjAyVqXKA
@@ -44,6 +59,127 @@ interface WebhookPayload {
   location_id: string
   id?: string
   [key: string]: any
+}
+
+interface RateLimitResult {
+  allowed: boolean
+  reason?: string
+  retryAfter?: number
+}
+
+/**
+ * Verifica e aplica rate limiting
+ */
+async function checkRateLimit(
+  supabase: any,
+  identifier: string
+): Promise<RateLimitResult> {
+  const now = new Date()
+  const windowStart = new Date(now.getTime() - RATE_LIMIT_CONFIG.WINDOW_SIZE_MINUTES * 60 * 1000)
+
+  // Buscar registro existente
+  const { data: existing } = await supabase
+    .from('ghl_webhook_rate_limit')
+    .select('*')
+    .eq('identifier', identifier)
+    .single()
+
+  // Verificar se está bloqueado
+  if (existing?.blocked_until && new Date(existing.blocked_until) > now) {
+    const retryAfter = Math.ceil((new Date(existing.blocked_until).getTime() - now.getTime()) / 1000)
+    return {
+      allowed: false,
+      reason: 'Rate limit exceeded - temporarily blocked',
+      retryAfter
+    }
+  }
+
+  // Se não existe ou a janela expirou, criar novo registro
+  if (!existing || new Date(existing.window_start) < windowStart) {
+    await supabase
+      .from('ghl_webhook_rate_limit')
+      .upsert({
+        identifier,
+        request_count: 1,
+        window_start: now,
+        last_request: now
+      }, { onConflict: 'identifier' })
+
+    return { allowed: true }
+  }
+
+  // Incrementar contador
+  const newCount = existing.request_count + 1
+
+  // Verificar limites
+  if (newCount > RATE_LIMIT_CONFIG.MAX_REQUESTS_PER_MINUTE) {
+    // Bloquear por abuso
+    const blockedUntil = new Date(now.getTime() + RATE_LIMIT_CONFIG.BLOCK_DURATION_MINUTES * 60 * 1000)
+    
+    await supabase
+      .from('ghl_webhook_rate_limit')
+      .update({
+        request_count: newCount,
+        last_request: now,
+        blocked_until: blockedUntil.toISOString()
+      })
+      .eq('identifier', identifier)
+
+    console.warn(`Rate limit exceeded for ${identifier}. Blocked until ${blockedUntil.toISOString()}`)
+
+    return {
+      allowed: false,
+      reason: 'Rate limit exceeded',
+      retryAfter: RATE_LIMIT_CONFIG.BLOCK_DURATION_MINUTES * 60
+    }
+  }
+
+  // Atualizar contador
+  await supabase
+    .from('ghl_webhook_rate_limit')
+    .update({
+      request_count: newCount,
+      last_request: now
+    })
+    .eq('identifier', identifier)
+
+  return { allowed: true }
+}
+
+/**
+ * Valida o tamanho e estrutura do payload
+ */
+function validatePayload(rawPayload: string, payload: WebhookPayload): { valid: boolean; error?: string } {
+  // Verificar tamanho do payload
+  if (rawPayload.length > SECURITY_CONFIG.MAX_PAYLOAD_SIZE) {
+    return {
+      valid: false,
+      error: `Payload too large: ${rawPayload.length} bytes (max: ${SECURITY_CONFIG.MAX_PAYLOAD_SIZE})`
+    }
+  }
+
+  // Verificar campos obrigatórios
+  for (const field of SECURITY_CONFIG.REQUIRED_FIELDS) {
+    if (!payload[field]) {
+      return {
+        valid: false,
+        error: `Missing required field: ${field}`
+      }
+    }
+  }
+
+  // Verificar se o tipo de evento é válido
+  const validEventPrefixes = ['Opportunity', 'Contact', 'Appointment', 'User', 'Task', 'Invoice', 'Note']
+  const hasValidPrefix = validEventPrefixes.some(prefix => payload.type.startsWith(prefix))
+  
+  if (!hasValidPrefix) {
+    return {
+      valid: false,
+      error: `Invalid event type: ${payload.type}`
+    }
+  }
+
+  return { valid: true }
 }
 
 /**
@@ -126,7 +262,6 @@ async function processOpportunityEvent(supabase: any, payload: WebhookPayload) {
   const eventType = payload.type
 
   if (eventType === 'OpportunityDelete') {
-    // Deletar oportunidade
     const { error } = await supabase
       .from('ghl_opportunities')
       .delete()
@@ -135,7 +270,6 @@ async function processOpportunityEvent(supabase: any, payload: WebhookPayload) {
     if (error) throw error
     console.log(`Oportunidade ${payload.id} deletada`)
   } else {
-    // Create ou Update: fazer UPSERT
     const opportunityData = {
       id: payload.id,
       location_id: payload.location_id,
@@ -175,7 +309,6 @@ async function processContactEvent(supabase: any, payload: WebhookPayload) {
     if (error) throw error
     console.log(`Contato ${payload.id} deletado`)
   } else {
-    // UPSERT do contato
     const contactData = {
       id: payload.id,
       location_id: payload.location_id,
@@ -281,9 +414,53 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Obter identificador para rate limiting (IP ou user-agent)
+    const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+    const identifier = `ip:${clientIp}`
+
+    // Verificar rate limiting
+    const rateLimitResult = await checkRateLimit(supabase, identifier)
+    if (!rateLimitResult.allowed) {
+      console.warn(`Rate limit exceeded for ${identifier}: ${rateLimitResult.reason}`)
+      return new Response(
+        JSON.stringify({ 
+          error: rateLimitResult.reason,
+          retry_after: rateLimitResult.retryAfter
+        }),
+        { 
+          status: 429,
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'Retry-After': String(rateLimitResult.retryAfter || 60)
+          }
+        }
+      )
+    }
+
     // Ler o payload
     const rawPayload = await req.text()
-    const payload: WebhookPayload = JSON.parse(rawPayload)
+    
+    let payload: WebhookPayload
+    try {
+      payload = JSON.parse(rawPayload)
+    } catch (error) {
+      console.error('Payload inválido (não é JSON):', error)
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON payload' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validar payload
+    const validation = validatePayload(rawPayload, payload)
+    if (!validation.valid) {
+      console.error('Validação de payload falhou:', validation.error)
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Obter assinatura do header
     const signature = req.headers.get('x-wh-signature')
@@ -298,7 +475,7 @@ serve(async (req) => {
       )
     }
 
-    // Gerar webhook_id único (usar o ID do evento + tipo)
+    // Gerar webhook_id único (usar o ID do evento + tipo + timestamp)
     const webhookId = `${payload.type}_${payload.id}_${Date.now()}`
 
     // Verificar idempotência

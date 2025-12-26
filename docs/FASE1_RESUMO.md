@@ -32,6 +32,9 @@ Tabela central para armazenar todas as oportunidades do pipeline de vendas.
 #### `ghl_webhook_logs`
 Tabela para garantir idempotência e auditoria de todos os webhooks recebidos.
 
+#### `ghl_webhook_rate_limit`
+Tabela para controlar rate limiting e prevenir abuso do endpoint.
+
 **Campos principais:**
 - `webhook_id` - ID único para idempotência
 - `event_type` - Tipo do evento (ex: OpportunityCreate)
@@ -48,6 +51,9 @@ Tabela para garantir idempotência e auditoria de todos os webhooks recebidos.
 Ponto de entrada único para todos os webhooks do GoHighLevel.
 
 **Funcionalidades implementadas:**
+- ✅ **Rate Limiting:** Controle de taxa de requisições (60/min, 1000/hora por IP)
+- ✅ **Validação de Payload:** Tamanho máximo (1MB) e campos obrigatórios
+- ✅ **Validação de Tipo de Evento:** Apenas eventos válidos do GHL são aceitos
 - ✅ Verificação de assinatura (estrutura pronta, validação RSA a ser completada)
 - ✅ Verificação de idempotência (não processa o mesmo webhook duas vezes)
 - ✅ Logging completo de todos os eventos
@@ -79,12 +85,14 @@ Guia passo a passo para:
 dashboard-metas-vendas/
 ├── supabase/
 │   ├── migrations/
-│   │   └── 20251226150000_create_ghl_realtime_tables.sql (NOVO)
+│   │   ├── 20251226150000_create_ghl_realtime_tables.sql (NOVO)
+│   │   └── 20251226151000_add_rate_limiting.sql (NOVO)
 │   └── functions/
 │       └── webhook-receiver/
 │           └── index.ts (NOVO)
 └── docs/
     ├── CONFIGURACAO_WEBHOOKS_GHL.md (NOVO)
+    ├── SEGURANCA_WEBHOOKS.md (NOVO)
     └── FASE1_RESUMO.md (NOVO)
 ```
 
@@ -119,7 +127,7 @@ Siga o guia completo em `docs/CONFIGURACAO_WEBHOOKS_GHL.md`
 
 Após aplicar as mudanças, verifique:
 
-- [ ] Tabelas `ghl_opportunities` e `ghl_webhook_logs` foram criadas
+- [ ] Tabelas `ghl_opportunities`, `ghl_webhook_logs` e `ghl_webhook_rate_limit` foram criadas
 - [ ] Edge Function `webhook-receiver` está deployada
 - [ ] Aplicação OAuth foi criada no GHL
 - [ ] Webhooks foram configurados no GHL
@@ -144,6 +152,7 @@ Com a Fase 1 implementada:
 - ✅ **Auditoria Completa:** Todos os eventos são logados para análise
 - ✅ **Escalabilidade:** Arquitetura preparada para alto volume de eventos
 - ✅ **Confiabilidade:** Idempotência garante que dados não sejam duplicados
+- ✅ **Segurança:** Rate limiting e validações previnem abuso e custos excessivos
 
 ## ⚠️ Notas Importantes
 
