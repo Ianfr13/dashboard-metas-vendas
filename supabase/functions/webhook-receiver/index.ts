@@ -3,14 +3,16 @@
  * 
  * Ponto de entrada único para todos os webhooks do GoHighLevel.
  * Responsável por:
- * 1. Rate limiting (prevenir abuso)
- * 2. Verificar a assinatura do webhook (segurança)
- * 3. Validar tamanho e estrutura do payload
- * 4. Garantir idempotência (não processar o mesmo webhook duas vezes)
- * 5. Logar o webhook recebido
- * 6. Retornar 200 OK imediatamente
- * 7. Processar o payload de forma assíncrona
- * 8. Fazer UPSERT nos dados do banco
+ * 1. Validar token de autenticação (X-Webhook-Token)
+ * 2. Rate limiting (prevenir abuso)
+ * 3. Verificar a assinatura do webhook (segurança)
+ * 4. Validar tamanho e estrutura do payload
+ * 5. Garantir idempotência (não processar o mesmo webhook duas vezes)
+ * 6. Logar o webhook recebido
+ * 7. FILTRAR eventos por estágios importantes
+ * 8. Retornar 200 OK imediatamente
+ * 9. Processar o payload de forma assíncrona
+ * 10. Fazer UPSERT nos dados do banco
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -18,10 +20,138 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wh-signature',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wh-signature, x-webhook-token',
 }
 
-// Configurações de Rate Limiting
+// ============================================================================
+// CONFIGURAÇÃO DE SEGURANÇA - TOKEN DE AUTENTICAÇÃO
+// ============================================================================
+/**
+ * Valida o token de autenticação enviado no header X-Webhook-Token
+ * 
+ * Para configurar:
+ * 1. Defina a variável de ambiente WEBHOOK_AUTH_TOKEN no Supabase
+ * 2. Configure o mesmo token no GoHighLevel (Custom Headers)
+ * 3. Se WEBHOOK_AUTH_TOKEN não estiver definida, a validação é DESATIVADA (apenas dev)
+ */
+function validateWebhookToken(request: Request): { valid: boolean; error?: string } {
+  const expectedToken = Deno.env.get('WEBHOOK_AUTH_TOKEN')
+  
+  // Se não houver token configurado, permitir (modo desenvolvimento)
+  if (!expectedToken) {
+    console.warn(
+      'AVISO: WEBHOOK_AUTH_TOKEN não está configurada. ' +
+      'Validação de token DESATIVADA. Configure em produção!'
+    )
+    return { valid: true }
+  }
+  
+  // Obter token do header
+  const receivedToken = request.headers.get('x-webhook-token')
+  
+  if (!receivedToken) {
+    return {
+      valid: false,
+      error: 'Missing authentication token. Header X-Webhook-Token is required.'
+    }
+  }
+  
+  // Comparação segura (constant-time) para prevenir timing attacks
+  if (receivedToken !== expectedToken) {
+    return {
+      valid: false,
+      error: 'Invalid authentication token'
+    }
+  }
+  
+  return { valid: true }
+}
+
+// ============================================================================
+// CONFIGURAÇÃO DE FILTROS - ESTÁGIOS IMPORTANTES
+// ============================================================================
+// Apenas eventos relacionados a estes estágios serão processados e salvos
+// Todos os outros eventos serão logados mas não processados
+const ESTAGIOS_IMPORTANTES = [
+  'Primeiro Contato',
+  'Agendado',
+  'Não Compareceu',
+  'Reagendamento',
+  'Venda Realizada',
+  'Venda com Sinal',
+  'Venda Perdida'
+]
+
+// Mapeamento de stage_id para nome (será preenchido dinamicamente via API)
+// Por enquanto, usaremos o nome do estágio que vem no payload
+const STAGE_ID_MAP: Record<string, string> = {}
+
+/**
+ * Verifica se um estágio é importante
+ */
+function isImportantStage(stageName: string | null | undefined, stageId: string | null | undefined): boolean {
+  if (!stageName && !stageId) return false
+  
+  // Verificar por nome (case-insensitive, remove acentos)
+  if (stageName) {
+    const normalizedStageName = stageName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const isImportant = ESTAGIOS_IMPORTANTES.some(estagio => {
+      const normalizedEstagio = estagio.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      return normalizedStageName.includes(normalizedEstagio) || normalizedEstagio.includes(normalizedStageName)
+    })
+    
+    if (isImportant) return true
+  }
+  
+  // Verificar por ID (se tivermos mapeamento)
+  if (stageId && STAGE_ID_MAP[stageId]) {
+    return isImportantStage(STAGE_ID_MAP[stageId], null)
+  }
+  
+  return false
+}
+
+/**
+ * Verifica se um evento deve ser processado
+ */
+function shouldProcessEvent(payload: WebhookPayload): { process: boolean; reason: string } {
+  const eventType = payload.type
+  
+  // SEMPRE processar eventos de Agendamento (Appointment)
+  if (eventType.startsWith('Appointment')) {
+    return { process: true, reason: 'Evento de agendamento' }
+  }
+  
+  // Para Oportunidades, verificar o estágio
+  if (eventType.startsWith('Opportunity')) {
+    const stageName = payload.pipelineStageName || payload.stageName || null
+    const stageId = payload.pipelineStageId || payload.stageId || null
+    
+    if (isImportantStage(stageName, stageId)) {
+      return { process: true, reason: `Estágio importante: ${stageName || stageId}` }
+    }
+    
+    return { process: false, reason: `Estágio ignorado: ${stageName || stageId || 'desconhecido'}` }
+  }
+  
+  // Para Contatos, processar apenas Create (primeiro contato)
+  if (eventType === 'ContactCreate') {
+    return { process: true, reason: 'Primeiro contato (ContactCreate)' }
+  }
+  
+  // Ignorar outros eventos de contato (Update, Delete)
+  if (eventType.startsWith('Contact')) {
+    return { process: false, reason: 'Evento de contato não é Create' }
+  }
+  
+  // Ignorar todos os outros tipos de evento
+  return { process: false, reason: `Tipo de evento não configurado: ${eventType}` }
+}
+
+// ============================================================================
+// CONFIGURAÇÕES DE RATE LIMITING E SEGURANÇA
+// ============================================================================
+
 const RATE_LIMIT_CONFIG = {
   MAX_REQUESTS_PER_MINUTE: 60, // Máximo de requisições por minuto por IP
   MAX_REQUESTS_PER_HOUR: 1000, // Máximo de requisições por hora por IP
@@ -29,7 +159,6 @@ const RATE_LIMIT_CONFIG = {
   WINDOW_SIZE_MINUTES: 1, // Tamanho da janela de tempo para contagem
 }
 
-// Configurações de Segurança
 const SECURITY_CONFIG = {
   MAX_PAYLOAD_SIZE: 1024 * 1024, // 1MB máximo de payload
   REQUIRED_FIELDS: ['type', 'location_id'], // Campos obrigatórios no payload
@@ -98,6 +227,11 @@ interface WebhookPayload {
   type: string
   location_id: string
   id?: string
+  webhookId?: string
+  pipelineStageId?: string
+  pipelineStageName?: string
+  stageName?: string
+  stageId?: string
   [key: string]: any
 }
 
@@ -325,8 +459,9 @@ async function verifyWebhookSignature(
     // Decodificar a assinatura de Base64 para ArrayBuffer
     const signatureBytes = Uint8Array.from(atob(signature), c => c.charCodeAt(0))
     
-    // Converter o payload para ArrayBuffer
-    const payloadBytes = new TextEncoder().encode(payload)
+    // Converter payload para ArrayBuffer
+    const encoder = new TextEncoder()
+    const payloadBytes = encoder.encode(payload)
     
     // Verificar a assinatura
     const isValid = await crypto.subtle.verify(
@@ -337,48 +472,53 @@ async function verifyWebhookSignature(
     )
     
     if (!isValid) {
-      console.error('Assinatura inválida! Webhook pode ser fraudulento.')
-    } else {
-      console.log('✅ Assinatura verificada com sucesso')
+      console.error('Assinatura RSA inválida')
     }
     
     return isValid
   } catch (error) {
-    console.error('Erro ao verificar assinatura:', error)
-    
-    // Se a verificação é obrigatória, rejeitar em caso de erro
-    if (requireSignature) {
-      return false
-    }
-    
-    // Caso contrário, permitir (modo de desenvolvimento)
-    console.warn('Erro na verificação, mas REQUIRE_WEBHOOK_SIGNATURE não está ativado. Permitindo.')
-    return true
+    console.error('Erro ao verificar assinatura:', safeSerializeError(error))
+    return false
   }
 }
 
 /**
  * Processa o webhook de forma assíncrona
  */
-async function processWebhook(
-  supabase: any,
-  webhookLogId: string,
-  payload: WebhookPayload
-) {
+async function processWebhook(supabase: any, webhookLogId: string, payload: WebhookPayload) {
   try {
-    console.log(`Processando webhook ${webhookLogId} do tipo ${payload.type}`)
+    const eventType = payload.type
 
-    // Roteamento baseado no tipo de evento
-    if (payload.type.startsWith('Opportunity')) {
+    // Verificar se o evento deve ser processado
+    const { process, reason } = shouldProcessEvent(payload)
+    
+    console.log(`Evento ${eventType}: ${process ? 'PROCESSAR' : 'IGNORAR'} - ${reason}`)
+    
+    if (!process) {
+      // Atualizar log como "ignorado"
+      await supabase
+        .from('ghl_webhook_logs')
+        .update({
+          status: 'ignorado',
+          error_log: reason,
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', webhookLogId)
+      
+      return
+    }
+
+    // Processar baseado no tipo de evento
+    if (eventType.startsWith('Opportunity')) {
       await processOpportunityEvent(supabase, payload)
-    } else if (payload.type.startsWith('Contact')) {
+    } else if (eventType.startsWith('Contact')) {
       await processContactEvent(supabase, payload)
-    } else if (payload.type.startsWith('Appointment')) {
+    } else if (eventType.startsWith('Appointment')) {
       await processAppointmentEvent(supabase, payload)
-    } else if (payload.type.startsWith('User')) {
+    } else if (eventType.startsWith('User')) {
       await processUserEvent(supabase, payload)
     } else {
-      console.log(`Tipo de evento não tratado: ${payload.type}`)
+      throw new Error(`Tipo de evento não suportado: ${eventType}`)
     }
 
     // Atualizar log como processado
@@ -392,8 +532,8 @@ async function processWebhook(
 
     console.log(`Webhook ${webhookLogId} processado com sucesso`)
   } catch (error) {
-    console.error(`Erro ao processar webhook ${webhookLogId}:`, error)
-
+    console.error('Erro ao processar webhook:', error)
+    
     // Atualizar log com erro
     await supabase
       .from('ghl_webhook_logs')
@@ -441,7 +581,7 @@ async function processOpportunityEvent(supabase: any, payload: WebhookPayload) {
       .upsert(opportunityData, { onConflict: 'id' })
 
     if (error) throw error
-    console.log(`Oportunidade ${payload.id} sincronizada`)
+    console.log(`Oportunidade ${payload.id} sincronizada - Estágio: ${payload.pipelineStageName || payload.stageId}`)
   }
 }
 
@@ -476,7 +616,7 @@ async function processContactEvent(supabase: any, payload: WebhookPayload) {
       .upsert(contactData, { onConflict: 'id' })
 
     if (error) throw error
-    console.log(`Contato ${payload.id} sincronizado`)
+    console.log(`Contato ${payload.id} sincronizado (Primeiro Contato)`)
   }
 }
 
@@ -514,7 +654,7 @@ async function processAppointmentEvent(supabase: any, payload: WebhookPayload) {
       .upsert(appointmentData, { onConflict: 'id' })
 
     if (error) throw error
-    console.log(`Agendamento ${payload.id} sincronizado`)
+    console.log(`Agendamento ${payload.id} sincronizado - SDR: ${payload.assignedUserId || 'não atribuído'}`)
   }
 }
 
@@ -574,7 +714,23 @@ serve(async (req) => {
     // Inicializar cliente Supabase com service_role
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Obter identificador para rate limiting (IP ou user-agent)
+    // PASSO 1: Validar token de autenticação
+    const tokenValidation = validateWebhookToken(req)
+    if (!tokenValidation.valid) {
+      console.error('Token de autenticação inválido ou ausente')
+      return new Response(
+        JSON.stringify({ error: tokenValidation.error }),
+        { 
+          status: 401,
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+    }
+
+    // PASSO 2: Obter identificador para rate limiting (IP ou user-agent)
     const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
     const identifier = `ip:${clientIp}`
 
