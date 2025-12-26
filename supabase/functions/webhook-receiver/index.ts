@@ -27,12 +27,15 @@ const corsHeaders = {
 // CONFIGURAÇÃO DE SEGURANÇA - TOKEN DE AUTENTICAÇÃO
 // ============================================================================
 /**
- * Valida o token de autenticação enviado no header X-Webhook-Token
+ * Valida o token de autenticação enviado via query parameter ?token=XXX
  * 
  * Para configurar:
  * 1. Defina a variável de ambiente WEBHOOK_AUTH_TOKEN no Supabase
- * 2. Configure o mesmo token no GoHighLevel (Custom Headers)
+ * 2. Configure a URL no GoHighLevel com query parameter:
+ *    https://auvvrewlbpyymekonilv.supabase.co/functions/v1/webhook-receiver?token=SEU_TOKEN
  * 3. Se WEBHOOK_AUTH_TOKEN não estiver definida, a validação é DESATIVADA (apenas dev)
+ * 
+ * Nota: GoHighLevel Marketplace App não suporta custom headers, por isso usamos query parameter
  */
 function validateWebhookToken(request: Request): { valid: boolean; error?: string } {
   const expectedToken = Deno.env.get('WEBHOOK_AUTH_TOKEN')
@@ -46,13 +49,14 @@ function validateWebhookToken(request: Request): { valid: boolean; error?: strin
     return { valid: true }
   }
   
-  // Obter token do header
-  const receivedToken = request.headers.get('x-webhook-token')
+  // Obter token do query parameter
+  const url = new URL(request.url)
+  const receivedToken = url.searchParams.get('token')
   
   if (!receivedToken) {
     return {
       valid: false,
-      error: 'Missing authentication token. Header X-Webhook-Token is required.'
+      error: 'Missing authentication token. Query parameter ?token=XXX is required.'
     }
   }
   
