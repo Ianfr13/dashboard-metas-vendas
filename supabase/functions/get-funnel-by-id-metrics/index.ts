@@ -33,6 +33,15 @@ interface GTMEvent {
   page_url: string | null;
 }
 
+interface ProdutoMetrics {
+  produto: string;
+  tipo: string;
+  ordem: number;
+  vendas: number;
+  receita: number;
+  taxaConversao: number; // Em relação ao produto anterior
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -106,14 +115,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Identificar produtos por tipo
-    const produtoFrontend = funil.produtos_funil?.find((p: ProdutoFunil) => p.tipo === 'frontend');
-    const produtoBackend = funil.produtos_funil?.find((p: ProdutoFunil) => p.tipo === 'backend');
-    const produtoDownsell = funil.produtos_funil?.find((p: ProdutoFunil) => p.tipo === 'downsell');
+    // 2. Ordenar produtos por ordem
+    const produtosOrdenados = (funil.produtos_funil || []).sort((a: ProdutoFunil, b: ProdutoFunil) => a.ordem - b.ordem);
 
-    if (!produtoFrontend) {
+    if (produtosOrdenados.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'Funnel must have a frontend product' }),
+        JSON.stringify({ error: 'Funnel must have at least one product' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -135,124 +142,83 @@ Deno.serve(async (req) => {
       return e.page_url?.includes(funil.url);
     });
 
-    // 5. Calcular métricas FRONTEND
+    // 5. Calcular métricas do produto FRONTEND (ordem 1)
+    const produtoFrontend = produtosOrdenados[0];
+    
     const visualizacoes = funnelEvents.filter((e: GTMEvent) => e.event_name === 'page_view').length;
     const leads = funnelEvents.filter((e: GTMEvent) => e.event_name === 'generate_lead').length;
     const checkouts = funnelEvents.filter((e: GTMEvent) => e.event_name === 'begin_checkout').length;
 
-    // Vendas frontend: filtrar por nome do produto E URL do funil
-    const vendasFrontendEvents = (events || []).filter((e: GTMEvent) => {
-      if (e.event_name !== 'purchase') return false;
+    // 6. Calcular vendas de TODOS os produtos (em ordem)
+    const produtosMetrics: ProdutoMetrics[] = [];
+    let vendasAnterior = 0;
+
+    for (let i = 0; i < produtosOrdenados.length; i++) {
+      const produto = produtosOrdenados[i];
       
-      const eventData = JSON.parse(e.event_data || '{}');
-      const productName = eventData.product_name || eventData.item_name || '';
-      
-      // Matching por nome do produto E URL do funil
-      const matchProduto = productName === produtoFrontend.products.name;
-      const matchUrl = funil.url ? e.page_url?.includes(funil.url) : true;
-      
-      return matchProduto && matchUrl;
-    });
-
-    const vendasFrontend = vendasFrontendEvents.length;
-    const receitaFrontend = vendasFrontendEvents.reduce((sum: number, e: GTMEvent) => {
-      const eventData = JSON.parse(e.event_data || '{}');
-      const value = parseFloat(eventData.value || eventData.transaction_value || '0');
-      return sum + value;
-    }, 0);
-
-    const taxaConversaoFrontend = visualizacoes > 0 ? (vendasFrontend / visualizacoes) * 100 : 0;
-
-    // 6. Calcular métricas BACKEND (se existir)
-    let backendMetrics = null;
-    if (produtoBackend) {
-      // 30% das vendas frontend recebem oferta de backend
-      const ofertasBackend = Math.round(vendasFrontend * 0.30);
-
-      const vendasBackendEvents = (events || []).filter((e: GTMEvent) => {
+      // Buscar vendas do produto (por nome E URL do funil)
+      const vendasProdutoEvents = (events || []).filter((e: GTMEvent) => {
         if (e.event_name !== 'purchase') return false;
         
         const eventData = JSON.parse(e.event_data || '{}');
         const productName = eventData.product_name || eventData.item_name || '';
         
-        return productName === produtoBackend.products.name;
+        // Matching por nome do produto E URL do funil
+        const matchProduto = productName === produto.products.name;
+        const matchUrl = funil.url ? e.page_url?.includes(funil.url) : true;
+        
+        return matchProduto && matchUrl;
       });
 
-      const vendasBackend = vendasBackendEvents.length;
-      const receitaBackend = vendasBackendEvents.reduce((sum: number, e: GTMEvent) => {
+      const vendas = vendasProdutoEvents.length;
+      const receita = vendasProdutoEvents.reduce((sum: number, e: GTMEvent) => {
         const eventData = JSON.parse(e.event_data || '{}');
         const value = parseFloat(eventData.value || eventData.transaction_value || '0');
         return sum + value;
       }, 0);
 
-      const taxaTakeBackend = ofertasBackend > 0 ? (vendasBackend / ofertasBackend) * 100 : 0;
+      // Calcular taxa de conversão
+      let taxaConversao = 0;
+      
+      if (i === 0) {
+        // Primeiro produto (frontend): conversão baseada em visualizações
+        taxaConversao = visualizacoes > 0 ? (vendas / visualizacoes) * 100 : 0;
+      } else {
+        // Produtos seguintes: conversão baseada nas vendas do produto ANTERIOR
+        taxaConversao = vendasAnterior > 0 ? (vendas / vendasAnterior) * 100 : 0;
+      }
 
-      backendMetrics = {
-        produto: produtoBackend.products.name,
-        ofertas: ofertasBackend,
-        vendas: vendasBackend,
-        receita: Math.round(receitaBackend * 100) / 100,
-        taxaTake: Math.round(taxaTakeBackend * 100) / 100
-      };
-    }
-
-    // 7. Calcular métricas DOWNSELL (se existir)
-    let downsellMetrics = null;
-    if (produtoDownsell && backendMetrics) {
-      // 20% dos que não compraram backend recebem oferta de downsell
-      const naoCompraramBackend = backendMetrics.ofertas - backendMetrics.vendas;
-      const ofertasDownsell = Math.round(naoCompraramBackend * 0.20);
-
-      const vendasDownsellEvents = (events || []).filter((e: GTMEvent) => {
-        if (e.event_name !== 'purchase') return false;
-        
-        const eventData = JSON.parse(e.event_data || '{}');
-        const productName = eventData.product_name || eventData.item_name || '';
-        
-        return productName === produtoDownsell.products.name;
+      produtosMetrics.push({
+        produto: produto.products.name,
+        tipo: produto.tipo,
+        ordem: produto.ordem,
+        vendas,
+        receita: Math.round(receita * 100) / 100,
+        taxaConversao: Math.round(taxaConversao * 100) / 100
       });
 
-      const vendasDownsell = vendasDownsellEvents.length;
-      const receitaDownsell = vendasDownsellEvents.reduce((sum: number, e: GTMEvent) => {
-        const eventData = JSON.parse(e.event_data || '{}');
-        const value = parseFloat(eventData.value || eventData.transaction_value || '0');
-        return sum + value;
-      }, 0);
-
-      const taxaTakeDownsell = ofertasDownsell > 0 ? (vendasDownsell / ofertasDownsell) * 100 : 0;
-
-      downsellMetrics = {
-        produto: produtoDownsell.products.name,
-        ofertas: ofertasDownsell,
-        vendas: vendasDownsell,
-        receita: Math.round(receitaDownsell * 100) / 100,
-        taxaTake: Math.round(taxaTakeDownsell * 100) / 100
-      };
+      // Atualizar vendas anterior para próxima iteração
+      vendasAnterior = vendas;
     }
 
-    // 8. Calcular totais
-    const vendasTotais = vendasFrontend + (backendMetrics?.vendas || 0) + (downsellMetrics?.vendas || 0);
-    const receitaTotal = receitaFrontend + (backendMetrics?.receita || 0) + (downsellMetrics?.receita || 0);
+    // 7. Calcular totais
+    const vendasTotais = produtosMetrics.reduce((sum, p) => sum + p.vendas, 0);
+    const receitaTotal = produtosMetrics.reduce((sum, p) => sum + p.receita, 0);
     const ticketMedio = vendasTotais > 0 ? receitaTotal / vendasTotais : 0;
 
-    // 9. Retornar resposta
+    // 8. Retornar resposta
     const response = {
       funil: {
         id: funil.id,
         nome: funil.nome,
         url: funil.url
       },
-      frontend: {
-        produto: produtoFrontend.products.name,
+      metricas_gerais: {
         visualizacoes,
         leads,
-        checkouts,
-        vendas: vendasFrontend,
-        receita: Math.round(receitaFrontend * 100) / 100,
-        taxaConversao: Math.round(taxaConversaoFrontend * 100) / 100
+        checkouts
       },
-      backend: backendMetrics,
-      downsell: downsellMetrics,
+      produtos: produtosMetrics,
       totais: {
         vendasTotais,
         receitaTotal: Math.round(receitaTotal * 100) / 100,

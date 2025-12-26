@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, TrendingUp, Users, ShoppingCart, DollarSign, ArrowRight } from "lucide-react";
+import { Loader2, TrendingUp, Users, ShoppingCart, DollarSign, ArrowRight, Info } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase";
 
 interface Funil {
@@ -11,35 +12,27 @@ interface Funil {
   active: number;
 }
 
+interface ProdutoMetrics {
+  produto: string;
+  tipo: string;
+  ordem: number;
+  vendas: number;
+  receita: number;
+  taxaConversao: number;
+}
+
 interface FunnelMetrics {
   funil: {
     id: number;
     nome: string;
     url: string | null;
   };
-  frontend: {
-    produto: string;
+  metricas_gerais: {
     visualizacoes: number;
     leads: number;
     checkouts: number;
-    vendas: number;
-    receita: number;
-    taxaConversao: number;
   };
-  backend: {
-    produto: string;
-    ofertas: number;
-    vendas: number;
-    receita: number;
-    taxaTake: number;
-  } | null;
-  downsell: {
-    produto: string;
-    ofertas: number;
-    vendas: number;
-    receita: number;
-    taxaTake: number;
-  } | null;
+  produtos: ProdutoMetrics[];
   totais: {
     vendasTotais: number;
     receitaTotal: number;
@@ -152,6 +145,23 @@ export default function FunisCadastrados({ startDate, endDate }: FunisCadastrado
 
   return (
     <div className="space-y-6">
+      {/* Explicação da Lógica */}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertTitle>Como funciona o cálculo de conversão</AlertTitle>
+        <AlertDescription>
+          <p className="mb-2">
+            <strong>Lógica em Cascata:</strong> Cada produto do funil calcula sua taxa de conversão baseado no produto IMEDIATAMENTE ANTERIOR.
+          </p>
+          <p className="text-sm">
+            <strong>Exemplo:</strong> Frontend (100 vendas) → Upsell 1 (30 vendas = 30%) → Upsell 2 (15 vendas = 50% dos 30) → Downsell (10 vendas = 66.67% dos 15 que não compraram Upsell 2)
+          </p>
+          <p className="text-sm mt-2 text-muted-foreground">
+            💡 O funil pode ter quantos produtos quiser, sempre seguindo essa lógica de cascata.
+          </p>
+        </AlertDescription>
+      </Alert>
+
       {/* Seletor de Funil */}
       <Card>
         <CardHeader>
@@ -253,113 +263,82 @@ export default function FunisCadastrados({ startDate, endDate }: FunisCadastrado
             </Card>
           </div>
 
-          {/* Métricas Frontend */}
+          {/* Métricas Gerais (Frontend) */}
           <Card>
             <CardHeader>
-              <CardTitle>Frontend - {metrics.frontend.produto}</CardTitle>
-              <CardDescription>Produto principal do funil</CardDescription>
+              <CardTitle>Métricas Gerais do Funil</CardTitle>
+              <CardDescription>Dados de entrada do funil</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Visualizações</p>
-                  <p className="text-2xl font-bold">{metrics.frontend.visualizacoes.toLocaleString('pt-BR')}</p>
+                  <p className="text-2xl font-bold">{metrics.metricas_gerais.visualizacoes.toLocaleString('pt-BR')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Leads</p>
-                  <p className="text-2xl font-bold">{metrics.frontend.leads.toLocaleString('pt-BR')}</p>
+                  <p className="text-2xl font-bold">{metrics.metricas_gerais.leads.toLocaleString('pt-BR')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Checkouts</p>
-                  <p className="text-2xl font-bold">{metrics.frontend.checkouts.toLocaleString('pt-BR')}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Vendas</p>
-                  <p className="text-2xl font-bold text-green-600">{metrics.frontend.vendas}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Receita</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    R$ {metrics.frontend.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Conversão</p>
-                  <p className="text-2xl font-bold text-blue-600">{metrics.frontend.taxaConversao.toFixed(2)}%</p>
+                  <p className="text-2xl font-bold">{metrics.metricas_gerais.checkouts.toLocaleString('pt-BR')}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Métricas Backend */}
-          {metrics.backend && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ArrowRight className="h-5 w-5" />
-                  Backend (Upsell) - {metrics.backend.produto}
-                </CardTitle>
-                <CardDescription>30% das vendas frontend recebem oferta de upsell</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Ofertas</p>
-                    <p className="text-2xl font-bold">{metrics.backend.ofertas}</p>
+          {/* Produtos do Funil (Dinâmico) */}
+          {metrics.produtos.map((produto, index) => {
+            const isFirst = index === 0;
+            const produtoAnterior = index > 0 ? metrics.produtos[index - 1] : null;
+            
+            return (
+              <Card key={index}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {!isFirst && <ArrowRight className="h-5 w-5" />}
+                    Etapa {produto.ordem}: {produto.produto}
+                  </CardTitle>
+                  <CardDescription>
+                    {isFirst 
+                      ? 'Produto principal (frontend) - Base do funil'
+                      : `Conversão baseada em ${produtoAnterior?.vendas} vendas de "${produtoAnterior?.produto}"`
+                    }
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Vendas</p>
+                      <p className="text-2xl font-bold text-green-600">{produto.vendas}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Receita</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        R$ {produto.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {isFirst ? 'Taxa de Conversão' : 'Taxa de Take'}
+                      </p>
+                      <p className="text-2xl font-bold text-blue-600">{produto.taxaConversao.toFixed(2)}%</p>
+                      {!isFirst && produtoAnterior && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {produto.vendas} de {produtoAnterior.vendas} compraram
+                        </p>
+                      )}
+                      {isFirst && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {produto.vendas} de {metrics.metricas_gerais.visualizacoes} visualizações
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Vendas</p>
-                    <p className="text-2xl font-bold text-green-600">{metrics.backend.vendas}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Receita</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      R$ {metrics.backend.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Taxa de Take</p>
-                    <p className="text-2xl font-bold text-blue-600">{metrics.backend.taxaTake.toFixed(2)}%</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Métricas Downsell */}
-          {metrics.downsell && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ArrowRight className="h-5 w-5" />
-                  Downsell - {metrics.downsell.produto}
-                </CardTitle>
-                <CardDescription>20% dos que não compraram backend recebem oferta de downsell</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Ofertas</p>
-                    <p className="text-2xl font-bold">{metrics.downsell.ofertas}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Vendas</p>
-                    <p className="text-2xl font-bold text-green-600">{metrics.downsell.vendas}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Receita</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      R$ {metrics.downsell.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Taxa de Take</p>
-                    <p className="text-2xl font-bold text-blue-600">{metrics.downsell.taxaTake.toFixed(2)}%</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            );
+          })}
 
           {/* Fluxo Visual */}
           <Card>
@@ -368,53 +347,35 @@ export default function FunisCadastrados({ startDate, endDate }: FunisCadastrado
               <CardDescription>Visualização do caminho do cliente através do funil</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col md:flex-row items-center justify-center gap-4 py-6">
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4 py-6 flex-wrap">
+                {/* Visualizações */}
                 <div className="text-center">
                   <div className="bg-blue-100 text-blue-700 rounded-lg p-4 mb-2">
                     <Users className="h-8 w-8 mx-auto mb-2" />
-                    <p className="text-2xl font-bold">{metrics.frontend.visualizacoes.toLocaleString('pt-BR')}</p>
+                    <p className="text-2xl font-bold">{metrics.metricas_gerais.visualizacoes.toLocaleString('pt-BR')}</p>
                     <p className="text-sm">Visualizações</p>
                   </div>
                 </div>
 
-                <ArrowRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
-
-                <div className="text-center">
-                  <div className="bg-green-100 text-green-700 rounded-lg p-4 mb-2">
-                    <ShoppingCart className="h-8 w-8 mx-auto mb-2" />
-                    <p className="text-2xl font-bold">{metrics.frontend.vendas}</p>
-                    <p className="text-sm">Vendas Frontend</p>
-                    <p className="text-xs text-muted-foreground mt-1">{metrics.frontend.taxaConversao.toFixed(2)}%</p>
+                {/* Produtos (Dinâmico) */}
+                {metrics.produtos.map((produto, index) => (
+                  <div key={index} className="flex items-center gap-4">
+                    <ArrowRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
+                    <div className="text-center">
+                      <div className={`rounded-lg p-4 mb-2 ${
+                        index === 0 ? 'bg-green-100 text-green-700' :
+                        index % 3 === 1 ? 'bg-purple-100 text-purple-700' :
+                        index % 3 === 2 ? 'bg-orange-100 text-orange-700' :
+                        'bg-pink-100 text-pink-700'
+                      }`}>
+                        <ShoppingCart className="h-8 w-8 mx-auto mb-2" />
+                        <p className="text-2xl font-bold">{produto.vendas}</p>
+                        <p className="text-sm">{produto.produto}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{produto.taxaConversao.toFixed(2)}%</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                {metrics.backend && (
-                  <>
-                    <ArrowRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
-                    <div className="text-center">
-                      <div className="bg-purple-100 text-purple-700 rounded-lg p-4 mb-2">
-                        <TrendingUp className="h-8 w-8 mx-auto mb-2" />
-                        <p className="text-2xl font-bold">{metrics.backend.vendas}</p>
-                        <p className="text-sm">Vendas Backend</p>
-                        <p className="text-xs text-muted-foreground mt-1">{metrics.backend.taxaTake.toFixed(2)}%</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {metrics.downsell && (
-                  <>
-                    <ArrowRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
-                    <div className="text-center">
-                      <div className="bg-orange-100 text-orange-700 rounded-lg p-4 mb-2">
-                        <DollarSign className="h-8 w-8 mx-auto mb-2" />
-                        <p className="text-2xl font-bold">{metrics.downsell.vendas}</p>
-                        <p className="text-sm">Vendas Downsell</p>
-                        <p className="text-xs text-muted-foreground mt-1">{metrics.downsell.taxaTake.toFixed(2)}%</p>
-                      </div>
-                    </div>
-                  </>
-                )}
+                ))}
               </div>
             </CardContent>
           </Card>
