@@ -58,12 +58,19 @@ export default function Metricas() {
         }
         
         // Buscar métricas da API
-        const metrics = await rankingAPI.getMetrics({
-          type: 'cards',
-          month: targetMonth
-        })
+        const [metrics, evolution] = await Promise.all([
+          rankingAPI.getMetrics({
+            type: 'cards',
+            month: targetMonth
+          }),
+          rankingAPI.getMetrics({
+            type: 'evolucao',
+            month: targetMonth
+          })
+        ])
         
         setCommercialMetrics(metrics)
+        setEvolutionData(evolution || [])
       } catch (err) {
         console.error('Erro ao carregar métricas comerciais:', err)
       } finally {
@@ -529,7 +536,7 @@ export default function Metricas() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={[]}>
+                    <LineChart data={evolutionData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis />
@@ -555,9 +562,11 @@ export default function Metricas() {
                       )}
                     </LineChart>
                   </ResponsiveContainer>
-                  <p className="text-center text-sm text-muted-foreground mt-4">
-                    Dados em tempo real serão carregados em breve
-                  </p>
+                  {evolutionData.length === 0 && !commercialLoading && (
+                    <p className="text-center text-sm text-muted-foreground mt-4">
+                      Nenhum dado disponível para o período selecionado
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
