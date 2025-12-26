@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS products (
   name TEXT NOT NULL,
   price NUMERIC(10, 2) NOT NULL,
   channel TEXT NOT NULL CHECK (channel IN ('marketing', 'comercial', 'ambos')),
-  type TEXT NOT NULL DEFAULT 'produto',
   url TEXT,
   active INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
