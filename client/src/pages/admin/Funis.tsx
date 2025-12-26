@@ -104,7 +104,7 @@ export default function AdminFunis() {
       const funisComProdutos = await Promise.all(
         (funisData || []).map(async (funil) => {
           const { data: produtosFunil, error } = await supabase
-            .from('funil_produtos')
+            .from('produtos_funil')
             .select(`
               *,
               produto:products(*)
@@ -206,7 +206,7 @@ export default function AdminFunis() {
     }
 
     try {
-      // Soft delete (CASCADE vai remover funil_produtos automaticamente)
+      // Soft delete (CASCADE vai remover produtos_funil automaticamente)
       const { error } = await supabase
         .from('funis')
         .update({ active: 0 })
@@ -244,7 +244,7 @@ export default function AdminFunis() {
       const ordem = funil?.produtos?.length || 0;
 
       const { error } = await supabase
-        .from('funil_produtos')
+        .from('produtos_funil')
         .insert([{
           funil_id: funilId,
           produto_id: parseInt(novoProdutoFunil.produto_id),
@@ -270,7 +270,7 @@ export default function AdminFunis() {
   async function removerProdutoDoFunil(funilId: number, produtoFunilId: number) {
     try {
       const { error } = await supabase
-        .from('funil_produtos')
+        .from('produtos_funil')
         .delete()
         .eq('id', produtoFunilId);
 
@@ -288,7 +288,7 @@ export default function AdminFunis() {
   async function atualizarTipoProduto(funilId: number, produtoFunilId: number, novoTipo: string) {
     try {
       const { error } = await supabase
-        .from('funil_produtos')
+        .from('produtos_funil')
         .update({ tipo: novoTipo })
         .eq('id', produtoFunilId);
 
