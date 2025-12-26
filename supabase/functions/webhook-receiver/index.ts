@@ -517,18 +517,19 @@ serve(async (req) => {
       throw logError
     }
 
-    // Retornar 200 OK imediatamente
-    const response = new Response(
+    // Processar webhook de forma assíncrona usando EdgeRuntime.waitUntil
+    // Isso garante que o processamento seja completado antes da função terminar
+    EdgeRuntime.waitUntil(
+      processWebhook(supabase, logData.id, payload).catch(error => {
+        console.error('Erro no processamento assíncrono:', error)
+      })
+    )
+
+    // Retornar 200 OK imediatamente (não bloqueia a resposta)
+    return new Response(
       JSON.stringify({ message: 'Webhook received', id: logData.id }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-
-    // Processar webhook de forma assíncrona (não bloqueia a resposta)
-    processWebhook(supabase, logData.id, payload).catch(error => {
-      console.error('Erro no processamento assíncrono:', error)
-    })
-
-    return response
   } catch (error) {
     console.error('Erro na Edge Function:', error)
     return new Response(
