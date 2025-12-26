@@ -105,6 +105,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (funilError) {
+      console.error('Error fetching funnel:', funilError);
       throw new Error(`Error fetching funnel: ${funilError.message}`);
     }
 
@@ -115,8 +116,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log('Funil encontrado:', JSON.stringify(funil, null, 2));
+    console.log('produtos_funil:', funil.produtos_funil);
+
     // 2. Ordenar produtos por ordem
     const produtosOrdenados = (funil.produtos_funil || []).sort((a: ProdutoFunil, b: ProdutoFunil) => a.ordem - b.ordem);
+    
+    console.log('Produtos ordenados:', produtosOrdenados.length);
 
     if (produtosOrdenados.length === 0) {
       return new Response(
