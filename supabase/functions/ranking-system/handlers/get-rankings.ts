@@ -36,15 +36,19 @@ export async function getRankings(params: GetRankingsParams) {
   }
 
   // Buscar ranking de uma função específica
+  // Buscar user_ids que têm a role específica
+  const { data: roleData } = await supabase
+    .from('sales_roles')
+    .select('user_id')
+    .eq('role', role)
+  
+  const userIds = roleData?.map(r => r.user_id) || []
+  
   let query = supabase
     .from('user_metrics')
-    .select(`
-      *,
-      ghl_users!inner(id, name, email, ghl_data),
-      sales_roles!inner(role)
-    `)
+    .select('*')
     .eq('month', monthStart)
-    .eq('sales_roles.role', role)
+    .in('user_id', userIds)
     .order('position', { ascending: true })
 
   if (limit) {
@@ -56,24 +60,29 @@ export async function getRankings(params: GetRankingsParams) {
   if (error) throw error
 
   // Buscar badges dos usuários
-  const userIds = rankings?.map(r => r.ghl_user_id) || []
+  const metricUserIds = rankings?.map(r => r.user_id) || []
   const { data: badges } = await supabase
     .from('badges')
     .select('*')
-    .in('ghl_user_id', userIds)
+    .in('user_id', metricUserIds)
     .eq('month', monthStart)
+  
+  // Buscar dados dos usuários do auth
+  const { data: users } = await supabase.auth.admin.listUsers()
+  const userMap = new Map(users?.users?.map(u => [u.id, u]) || [])
 
   // Montar resposta
   const result = rankings?.map(r => {
-    const userBadges = badges?.filter(b => b.ghl_user_id === r.ghl_user_id) || []
+    const userBadges = badges?.filter(b => b.user_id === r.user_id) || []
+    const user = userMap.get(r.user_id)
     
     return {
       position: r.position,
       user: {
-        id: r.ghl_user_id,
-        name: r.ghl_users?.name || 'Sem nome',
-        email: r.ghl_users?.email,
-        avatar: r.ghl_users?.ghl_data?.avatar || null
+        id: r.user_id,
+        name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Sem nome',
+        email: user?.email,
+        avatar: user?.user_metadata?.avatar_url || null
       },
       metrics: getMetricsByRole(role, r),
       score: r.score,
@@ -100,15 +109,19 @@ async function getChampions(supabase: any, month: string) {
   const champions: any = {}
 
   for (const role of roles) {
+    // Buscar user_ids com essa role
+    const { data: roleData } = await supabase
+      .from('sales_roles')
+      .select('user_id')
+      .eq('role', role)
+    
+    const userIds = roleData?.map(r => r.user_id) || []
+    
     const { data } = await supabase
       .from('user_metrics')
-      .select(`
-        *,
-        ghl_users!inner(id, name, email, ghl_data),
-        sales_roles!inner(role)
-      `)
+      .select('*')
       .eq('month', month)
-      .eq('sales_roles.role', role)
+      .in('user_id', userIds)
       .eq('position', 1)
       .single()
 
@@ -116,15 +129,17 @@ async function getChampions(supabase: any, month: string) {
       const { data: badges } = await supabase
         .from('badges')
         .select('*')
-        .eq('ghl_user_id', data.ghl_user_id)
+        .eq('user_id', data.user_id)
         .eq('month', month)
+      
+      const { data: { user } } = await supabase.auth.admin.getUserById(data.user_id)
 
       champions[role] = {
         user: {
-          id: data.ghl_user_id,
-          name: data.ghl_users?.name || 'Sem nome',
-          email: data.ghl_users?.email,
-          avatar: data.ghl_users?.ghl_data?.avatar || null
+          id: data.user_id,
+          name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Sem nome',
+          email: user?.email,
+          avatar: user?.user_metadata?.avatar_url || null
         },
         metrics: getMetricsByRole(role, data),
         score: data.score,
@@ -161,26 +176,32 @@ async function getHistoricalRankings(supabase: any, role: string, months: number
         champions: champions.champions
       })
     } else {
+      // Buscar user_ids com essa role
+      const { data: roleData } = await supabase
+        .from('sales_roles')
+        .select('user_id')
+        .eq('role', role)
+      
+      const userIds = roleData?.map(r => r.user_id) || []
+      
       const { data } = await supabase
         .from('user_metrics')
-        .select(`
-          *,
-          ghl_users!inner(id, name, email),
-          sales_roles!inner(role)
-        `)
+        .select('*')
         .eq('month', monthStart)
-        .eq('sales_roles.role', role)
+        .in('user_id', userIds)
         .eq('position', 1)
         .single()
 
       if (data) {
+        const { data: { user } } = await supabase.auth.admin.getUserById(data.user_id)
+        
         history.push({
           month: monthStr,
           champion: {
             user: {
-              id: data.ghl_user_id,
-              name: data.ghl_users?.name || 'Sem nome',
-              email: data.ghl_users?.email
+              id: data.user_id,
+              name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Sem nome',
+              email: user?.email
             },
             score: data.score
           }
