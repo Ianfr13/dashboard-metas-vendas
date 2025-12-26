@@ -475,8 +475,15 @@ serve(async (req) => {
       )
     }
 
-    // Gerar webhook_id único (usar o ID do evento + tipo + timestamp)
-    const webhookId = `${payload.type}_${payload.id}_${Date.now()}`
+    // Gerar webhook_id único usando o webhookId do GHL (garante verdadeira idempotência)
+    // Fallback para o esquema antigo apenas se o GHL não enviar webhookId
+    const webhookId = payload.webhookId 
+      ? `${payload.type}_${payload.webhookId}`
+      : `${payload.type}_${payload.id}_${Date.now()}`
+    
+    if (!payload.webhookId) {
+      console.warn(`Webhook sem webhookId do GHL. Usando fallback: ${webhookId}`)
+    }
 
     // Verificar idempotência
     const { data: existingLog } = await supabase
