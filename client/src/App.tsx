@@ -12,8 +12,10 @@ import AdminMetas from "./pages/admin/Metas";
 import AdminProdutos from "./pages/admin/Produtos";
 import AdminFunis from "./pages/admin/Funis";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
+import AdminUsuarios from "./pages/admin/Usuarios";
 import Metricas from "./pages/Metricas";
 import Ranking from "./pages/Ranking";
+import HallOfFame from "./pages/HallOfFame";
 import { LoginPage } from "./components/Auth/LoginPage";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 import { AdminRoute } from "./components/Auth/AdminRoute";
@@ -29,8 +31,10 @@ export const routes = [
   { path: '/admin/produtos', component: 'AdminProdutos' },
   { path: '/admin/funis', component: 'AdminFunis' },
   { path: '/admin/configuracoes', component: 'AdminConfiguracoes' },
+  { path: '/admin/usuarios', component: 'AdminUsuarios' },
   { path: '/metricas', component: 'Metricas' },
   { path: '/ranking', component: 'Ranking' },
+  { path: '/ranking/hall-of-fame', component: 'HallOfFame' },
   { path: '/404', component: 'NotFound' },
   { path: undefined, component: 'NotFound' }, // Fallback
 ] as const;
@@ -92,6 +96,14 @@ function Router() {
         )}
       </Route>
       
+      <Route path="/admin/usuarios">
+        {() => (
+          <ProtectedRoute>
+            <AdminUsuarios />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
       <Route path="/metricas">
         {() => (
           <ProtectedRoute>
@@ -104,6 +116,14 @@ function Router() {
         {() => (
           <ProtectedRoute>
             <Ranking />
+          </ProtectedRoute>
+        )}
+      </Route>
+      
+      <Route path="/ranking/hall-of-fame">
+        {() => (
+          <ProtectedRoute>
+            <HallOfFame />
           </ProtectedRoute>
         )}
       </Route>
