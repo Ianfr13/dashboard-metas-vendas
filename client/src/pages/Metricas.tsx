@@ -29,6 +29,13 @@ export default function Metricas() {
   const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
   const [groupBy, setGroupBy] = useState<'hour' | 'day' | 'week'>('day');
 
+  // Estados para aba Comercial
+  const [selectedRole, setSelectedRole] = useState<string>('todos');
+  const [selectedSeller, setSelectedSeller] = useState<string>('todos');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('mes_atual');
+  const [commercialMetrics, setCommercialMetrics] = useState<any>(null);
+  const [commercialLoading, setCommercialLoading] = useState(false);
+
   // Carregar dados do GTM
   useEffect(() => {
     async function loadMetrics() {
@@ -313,16 +320,176 @@ export default function Metricas() {
               </Card>
             </TabsContent>
 
-            {/* Comercial - Funil Marketing + Funil Comercial */}
+            {/* Comercial - Métricas de SDR e Closer */}
             <TabsContent value="comercial" className="space-y-6">
-              <FunilMarketing 
-                startDate={startDate}
-                endDate={endDate}
-              />
-              <FunilComercial 
-                startDate={startDate}
-                endDate={endDate}
-              />
+              {/* Filtros */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Métricas Comerciais</CardTitle>
+                  <CardDescription>Acompanhe o desempenho de SDRs e Closers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Filtro de Função */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Função</label>
+                      <select 
+                        className="w-full border rounded px-3 py-2"
+                        value={selectedRole}
+                        onChange={(e) => setSelectedRole(e.target.value)}
+                      >
+                        <option value="todos">Todos</option>
+                        <option value="sdr">SDR</option>
+                        <option value="closer">Closer</option>
+                        <option value="ciclo_completo">Ciclo Completo</option>
+                      </select>
+                    </div>
+
+                    {/* Filtro de Vendedor */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Vendedor</label>
+                      <select 
+                        className="w-full border rounded px-3 py-2"
+                        value={selectedSeller}
+                        onChange={(e) => setSelectedSeller(e.target.value)}
+                      >
+                        <option value="todos">Todos</option>
+                        {/* TODO: Carregar lista de vendedores dinamicamente */}
+                      </select>
+                    </div>
+
+                    {/* Filtro de Período */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Período</label>
+                      <select 
+                        className="w-full border rounded px-3 py-2"
+                        value={selectedPeriod}
+                        onChange={(e) => setSelectedPeriod(e.target.value)}
+                      >
+                        <option value="mes_atual">Mês Atual</option>
+                        <option value="mes_anterior">Mês Anterior</option>
+                        <option value="trimestre">Trimestre</option>
+                      </select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Métricas SDR */}
+              {(selectedRole === 'todos' || selectedRole === 'sdr') && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Métricas de SDR</CardTitle>
+                    <CardDescription>Performance de prospecção e agendamentos</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Ligações Realizadas</p>
+                        <p className="text-3xl font-bold mt-2">-</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Agendamentos Feitos</p>
+                        <p className="text-3xl font-bold mt-2">-</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
+                        <p className="text-3xl font-bold mt-2">-%</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Agendamentos Qualificados</p>
+                        <p className="text-3xl font-bold mt-2">-</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Tempo Médio Resposta</p>
+                        <p className="text-3xl font-bold mt-2">-min</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">No-shows</p>
+                        <p className="text-3xl font-bold mt-2">-</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Métricas Closer */}
+              {(selectedRole === 'todos' || selectedRole === 'closer') && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Métricas de Closer</CardTitle>
+                    <CardDescription>Performance de fechamento e vendas</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Vendas Fechadas</p>
+                        <p className="text-3xl font-bold mt-2">-</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Receita Gerada</p>
+                        <p className="text-3xl font-bold mt-2">R$ -</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
+                        <p className="text-3xl font-bold mt-2">-%</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                        <p className="text-3xl font-bold mt-2">R$ -</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Taxa de Presença</p>
+                        <p className="text-3xl font-bold mt-2">-%</p>
+                      </div>
+                      <div className="border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Follow-ups Realizados</p>
+                        <p className="text-3xl font-bold mt-2">-</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Gráfico de Evolução */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Evolução Temporal</CardTitle>
+                  <CardDescription>Acompanhe a evolução das métricas ao longo do tempo</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={[]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      {selectedRole === 'sdr' && (
+                        <>
+                          <Line type="monotone" dataKey="ligacoes" stroke="#8884d8" name="Ligações" />
+                          <Line type="monotone" dataKey="agendamentos" stroke="#82ca9d" name="Agendamentos" />
+                        </>
+                      )}
+                      {selectedRole === 'closer' && (
+                        <>
+                          <Line type="monotone" dataKey="vendas" stroke="#8884d8" name="Vendas" />
+                          <Line type="monotone" dataKey="receita" stroke="#82ca9d" name="Receita" />
+                        </>
+                      )}
+                      {selectedRole === 'todos' && (
+                        <>
+                          <Line type="monotone" dataKey="agendamentos" stroke="#8884d8" name="Agendamentos" />
+                          <Line type="monotone" dataKey="vendas" stroke="#82ca9d" name="Vendas" />
+                        </>
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <p className="text-center text-sm text-muted-foreground mt-4">
+                    Dados em tempo real serão carregados em breve
+                  </p>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Funis */}
