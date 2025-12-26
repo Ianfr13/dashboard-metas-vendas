@@ -36,6 +36,44 @@ export default function Metricas() {
   const [commercialMetrics, setCommercialMetrics] = useState<any>(null);
   const [commercialLoading, setCommercialLoading] = useState(false);
 
+  // Carregar métricas comerciais
+  useEffect(() => {
+    async function loadCommercialMetrics() {
+      if (!selectedRole || !selectedPeriod) return
+      
+      try {
+        setCommercialLoading(true)
+        
+        // Calcular mês baseado no período selecionado
+        const now = new Date()
+        let targetMonth: string
+        
+        if (selectedPeriod === 'mes_atual') {
+          targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+        } else if (selectedPeriod === 'mes_anterior') {
+          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+          targetMonth = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`
+        } else {
+          targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+        }
+        
+        // Buscar métricas da API
+        const metrics = await rankingAPI.getMetrics({
+          type: 'cards',
+          month: targetMonth
+        })
+        
+        setCommercialMetrics(metrics)
+      } catch (err) {
+        console.error('Erro ao carregar métricas comerciais:', err)
+      } finally {
+        setCommercialLoading(false)
+      }
+    }
+    
+    loadCommercialMetrics()
+  }, [selectedRole, selectedSeller, selectedPeriod])
+
   // Carregar dados do GTM
   useEffect(() => {
     async function loadMetrics() {
@@ -383,32 +421,48 @@ export default function Metricas() {
                     <CardDescription>Performance de prospecção e agendamentos</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Ligações Realizadas</p>
-                        <p className="text-3xl font-bold mt-2">-</p>
+                    {commercialLoading ? (
+                      <p className="text-center text-muted-foreground py-8">Carregando métricas...</p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Ligações Realizadas</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {commercialMetrics?.ligacoes_realizadas || 0}
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Agendamentos Feitos</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {commercialMetrics?.total_agendamentos || 0}
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {commercialMetrics?.taxa_conversao_agendamentos || 0}%
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Agendamentos Qualificados</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {commercialMetrics?.agendamentos_qualificados || 0}
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Tempo Médio Resposta</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {commercialMetrics?.tempo_medio_resposta || 0}min
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">No-shows</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {commercialMetrics?.no_shows || 0}
+                          </p>
+                        </div>
                       </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Agendamentos Feitos</p>
-                        <p className="text-3xl font-bold mt-2">-</p>
-                      </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                        <p className="text-3xl font-bold mt-2">-%</p>
-                      </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Agendamentos Qualificados</p>
-                        <p className="text-3xl font-bold mt-2">-</p>
-                      </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Tempo Médio Resposta</p>
-                        <p className="text-3xl font-bold mt-2">-min</p>
-                      </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">No-shows</p>
-                        <p className="text-3xl font-bold mt-2">-</p>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -421,32 +475,48 @@ export default function Metricas() {
                     <CardDescription>Performance de fechamento e vendas</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Vendas Fechadas</p>
-                        <p className="text-3xl font-bold mt-2">-</p>
+                    {commercialLoading ? (
+                      <p className="text-center text-muted-foreground py-8">Carregando métricas...</p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Vendas Fechadas</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {commercialMetrics?.total_vendas || 0}
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Receita Gerada</p>
+                          <p className="text-3xl font-bold mt-2">
+                            R$ {(commercialMetrics?.faturamento_total || 0).toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {commercialMetrics?.taxa_conversao_geral || 0}%
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                          <p className="text-3xl font-bold mt-2">
+                            R$ {(commercialMetrics?.ticket_medio || 0).toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Taxa de Presença</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {(100 - (commercialMetrics?.taxa_nao_comparecimento || 0)).toFixed(1)}%
+                          </p>
+                        </div>
+                        <div className="border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground">Follow-ups Realizados</p>
+                          <p className="text-3xl font-bold mt-2">
+                            {commercialMetrics?.follow_ups || 0}
+                          </p>
+                        </div>
                       </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Receita Gerada</p>
-                        <p className="text-3xl font-bold mt-2">R$ -</p>
-                      </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                        <p className="text-3xl font-bold mt-2">-%</p>
-                      </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Ticket Médio</p>
-                        <p className="text-3xl font-bold mt-2">R$ -</p>
-                      </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Taxa de Presença</p>
-                        <p className="text-3xl font-bold mt-2">-%</p>
-                      </div>
-                      <div className="border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Follow-ups Realizados</p>
-                        <p className="text-3xl font-bold mt-2">-</p>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
