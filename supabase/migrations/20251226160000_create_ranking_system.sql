@@ -1,7 +1,7 @@
 -- Migration: Sistema de Ranking e Gamificação
 -- Autor: Manus AI
 -- Data: 2024-12-26
--- Descrição: Cria tabelas para sistema de ranking de SDRs, Closers e Ciclo Completo
+-- Descrição: Cria tabelas para sistema de ranking de SDRs, Closers e Auto Prospecção
 
 -- ============================================================================
 -- Tabela: user_roles
@@ -9,7 +9,7 @@
 CREATE TABLE IF NOT EXISTS user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL REFERENCES ghl_users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('sdr', 'closer', 'ciclo_completo')),
+  role TEXT NOT NULL CHECK (role IN ('sdr', 'closer', 'auto_prospeccao')),
   active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
 CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role);
 
-COMMENT ON TABLE user_roles IS 'Funções dos usuários do GoHighLevel (SDR, Closer, Ciclo Completo)';
+COMMENT ON TABLE user_roles IS 'Funções dos usuários do GoHighLevel (SDR, Closer, Auto Prospecção)';
 
 -- ============================================================================
 -- Tabela: user_metrics
@@ -45,8 +45,8 @@ CREATE TABLE IF NOT EXISTS user_metrics (
   ticket_medio NUMERIC(12, 2) DEFAULT 0,
   taxa_conversao NUMERIC(5, 2) DEFAULT 0,
   
-  -- Métricas Ciclo Completo
-  vendas_ciclo_completo INTEGER DEFAULT 0,
+  -- Métricas Auto Prospecção
+  vendas_auto_prospeccao INTEGER DEFAULT 0,
   taxa_conversao_ponta_a_ponta NUMERIC(5, 2) DEFAULT 0,
   
   -- Score e Posição

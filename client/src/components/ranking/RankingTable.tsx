@@ -11,7 +11,7 @@ import { Medal } from "lucide-react"
 
 interface RankingTableProps {
   rankings: any[]
-  role: 'sdr' | 'closer' | 'ciclo_completo'
+  role: 'sdr' | 'closer' | 'auto_prospeccao'
 }
 
 export default function RankingTable({ rankings, role }: RankingTableProps) {
@@ -47,7 +47,7 @@ export default function RankingTable({ rankings, role }: RankingTableProps) {
       ]
     } else {
       return [
-        { key: 'vendas_ciclo_completo', label: 'Vendas' },
+        { key: 'vendas_auto_prospeccao', label: 'Vendas' },
         { key: 'taxa_conversao_ponta_a_ponta', label: 'Taxa Conv. (%)', format: (v: number) => v.toFixed(1) }
       ]
     }

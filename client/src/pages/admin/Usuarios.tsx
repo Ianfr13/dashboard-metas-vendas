@@ -81,7 +81,7 @@ export default function Usuarios() {
     if (!role) return 'Sem função';
     if (role === 'sdr') return 'SDR';
     if (role === 'closer') return 'Closer';
-    if (role === 'ciclo_completo') return 'Ciclo Completo';
+    if (role === 'auto_prospeccao') return 'Auto Prospecção';
     return role;
   };
 
@@ -89,7 +89,7 @@ export default function Usuarios() {
     if (!role) return 'outline';
     if (role === 'sdr') return 'default';
     if (role === 'closer') return 'secondary';
-    if (role === 'ciclo_completo') return 'destructive';
+    if (role === 'auto_prospeccao') return 'destructive';
     return 'outline';
   };
 
@@ -230,7 +230,7 @@ export default function Usuarios() {
                                 <SelectItem value="none">Sem função</SelectItem>
                                 <SelectItem value="sdr">SDR</SelectItem>
                                 <SelectItem value="closer">Closer</SelectItem>
-                                <SelectItem value="ciclo_completo">Ciclo Completo</SelectItem>
+                                <SelectItem value="auto_prospeccao">Auto Prospecção</SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>
@@ -262,7 +262,7 @@ export default function Usuarios() {
               <strong>Closer:</strong> Responsável por fechar vendas e converter oportunidades.
             </p>
             <p>
-              <strong>Ciclo Completo:</strong> Responsável por todo o ciclo de vendas, desde o agendamento até o fechamento.
+              <strong>Auto Prospecção:</strong> Responsável por todo o ciclo de vendas, desde o agendamento até o fechamento.
             </p>
             <p className="mt-4">
               Após atribuir funções, clique em <strong>"Recalcular Rankings"</strong> para atualizar as métricas e posições.

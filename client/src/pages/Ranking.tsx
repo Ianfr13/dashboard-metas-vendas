@@ -11,7 +11,7 @@ import RankingTable from "@/components/ranking/RankingTable";
 import { Link } from "wouter";
 
 export default function Ranking() {
-  const [selectedRole, setSelectedRole] = useState<'sdr' | 'closer' | 'ciclo_completo'>('sdr');
+  const [selectedRole, setSelectedRole] = useState<'sdr' | 'closer' | 'auto_prospeccao'>('sdr');
   const [selectedMonth, setSelectedMonth] = useState<string>(
     new Date().toISOString().slice(0, 7)
   );
@@ -66,7 +66,7 @@ export default function Ranking() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Ranking do Time</h1>
             <p className="text-muted-foreground">
-              Desempenho dos SDRs, Closers e Ciclo Completo
+              Desempenho dos SDRs, Closers e Auto Prospecção
             </p>
           </div>
 
@@ -132,7 +132,7 @@ export default function Ranking() {
               <TabsList className="grid w-full max-w-md grid-cols-3">
                 <TabsTrigger value="sdr">SDRs</TabsTrigger>
                 <TabsTrigger value="closer">Closers</TabsTrigger>
-                <TabsTrigger value="ciclo_completo">Ciclo Completo</TabsTrigger>
+                <TabsTrigger value="auto_prospeccao">Auto Prospecção</TabsTrigger>
               </TabsList>
 
               <TabsContent value={selectedRole} className="space-y-6 mt-6">
@@ -146,7 +146,7 @@ export default function Ranking() {
                   <Card>
                     <CardHeader>
                       <CardTitle>
-                        Ranking Completo - {selectedRole === 'sdr' ? 'SDRs' : selectedRole === 'closer' ? 'Closers' : 'Ciclo Completo'}
+                        Ranking Completo - {selectedRole === 'sdr' ? 'SDRs' : selectedRole === 'closer' ? 'Closers' : 'Auto Prospecção'}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -172,7 +172,7 @@ export default function Ranking() {
                     {monthOptions.find(m => m.value === selectedMonth)?.label}
                   </span>
                   {" • "}
-                  Total de {rankings.total} {selectedRole === 'sdr' ? 'SDRs' : selectedRole === 'closer' ? 'Closers' : 'Ciclo Completo'}
+                  Total de {rankings.total} {selectedRole === 'sdr' ? 'SDRs' : selectedRole === 'closer' ? 'Closers' : 'Auto Prospecção'}
                 </p>
               </CardContent>
             </Card>

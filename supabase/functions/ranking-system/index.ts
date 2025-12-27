@@ -1,7 +1,7 @@
 /**
  * Edge Function: ranking-system
  * 
- * Sistema de ranking e gamificação para SDRs, Closers e Ciclo Completo.
+ * Sistema de ranking e gamificação para SDRs, Closers e Auto Prospecção.
  * Responsável por:
  * 1. Calcular métricas e rankings
  * 2. Atribuir badges automaticamente
