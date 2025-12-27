@@ -63,7 +63,7 @@ export async function calculate(params: CalculateParams) {
   const metricsByRole = {
     sdr: metricsToUpsert.filter(m => m.role === 'sdr'),
     closer: metricsToUpsert.filter(m => m.role === 'closer'),
-    ciclo_completo: metricsToUpsert.filter(m => m.role === 'ciclo_completo')
+    auto_prospeccao: metricsToUpsert.filter(m => m.role === 'auto_prospeccao')
   }
 
   // Calcular scores
@@ -121,12 +121,12 @@ async function calculateUserMetrics(
     valor_total_vendido: 0,
     ticket_medio: 0,
     taxa_conversao: 0,
-    vendas_ciclo_completo: 0,
+    vendas_auto_prospeccao: 0,
     taxa_conversao_ponta_a_ponta: 0
   }
 
   // Métricas SDR
-  if (role === 'sdr' || role === 'ciclo_completo') {
+  if (role === 'sdr' || role === 'auto_prospeccao') {
     // Contar agendamentos criados pelo usuário
     const { data: appointments } = await supabase
       .from('ghl_appointments')
@@ -163,7 +163,7 @@ async function calculateUserMetrics(
   }
 
   // Métricas Closer
-  if (role === 'closer' || role === 'ciclo_completo') {
+  if (role === 'closer' || role === 'auto_prospeccao') {
     // Contar vendas fechadas
     const { data: sales } = await supabase
       .from('ghl_opportunities')
@@ -197,12 +197,12 @@ async function calculateUserMetrics(
     }
   }
 
-  // Métricas Ciclo Completo
-  if (role === 'ciclo_completo') {
+  // Métricas Auto Prospecção
+  if (role === 'auto_prospeccao') {
     // Vendas onde o mesmo usuário fez agendamento e fechamento
-    metrics.vendas_ciclo_completo = metrics.vendas // simplificado
+    metrics.vendas_auto_prospeccao = metrics.vendas // simplificado
     metrics.taxa_conversao_ponta_a_ponta = metrics.agendamentos > 0
-      ? (metrics.vendas_ciclo_completo / metrics.agendamentos * 100)
+      ? (metrics.vendas_auto_prospeccao / metrics.agendamentos * 100)
       : 0
   }
 
@@ -224,8 +224,8 @@ function calculateScore(role: string, metrics: any): number {
     score = (metrics.vendas * 100) +
             (metrics.taxa_conversao * 10) +
             (metrics.ticket_medio / 100)
-  } else if (role === 'ciclo_completo') {
-    score = (metrics.vendas_ciclo_completo * 150) +
+  } else if (role === 'auto_prospeccao') {
+    score = (metrics.vendas_auto_prospeccao * 150) +
             (metrics.taxa_conversao_ponta_a_ponta * 15)
   }
 

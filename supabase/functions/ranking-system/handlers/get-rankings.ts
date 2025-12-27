@@ -1,13 +1,13 @@
 /**
  * Handler: get-rankings
  * 
- * Retorna rankings por função (SDR, Closer, Ciclo Completo)
+ * Retorna rankings por função (SDR, Closer, Auto Prospecção)
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 interface GetRankingsParams {
-  role: 'sdr' | 'closer' | 'ciclo_completo' | 'all'
+  role: 'sdr' | 'closer' | 'auto_prospeccao' | 'all'
   month?: string // formato: YYYY-MM (opcional, default: mês atual)
   limit?: number // número de resultados (opcional, default: todos)
   months?: number // número de meses para histórico (para hall of fame)
@@ -105,7 +105,7 @@ export async function getRankings(params: GetRankingsParams) {
  * Busca campeões de todas as categorias
  */
 async function getChampions(supabase: any, month: string) {
-  const roles = ['sdr', 'closer', 'ciclo_completo']
+  const roles = ['sdr', 'closer', 'auto_prospeccao']
   const champions: any = {}
 
   for (const role of roles) {
@@ -236,9 +236,9 @@ function getMetricsByRole(role: string, data: any) {
       ticket_medio: data.ticket_medio,
       taxa_conversao: data.taxa_conversao
     }
-  } else if (role === 'ciclo_completo') {
+  } else if (role === 'auto_prospeccao') {
     return {
-      vendas_ciclo_completo: data.vendas_ciclo_completo,
+      vendas_auto_prospeccao: data.vendas_auto_prospeccao,
       taxa_conversao_ponta_a_ponta: data.taxa_conversao_ponta_a_ponta
     }
   }

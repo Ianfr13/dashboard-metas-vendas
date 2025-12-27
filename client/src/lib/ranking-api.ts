@@ -79,7 +79,7 @@ async function callRankingAPI(params: RankingAPIParams) {
  * Busca rankings por função
  */
 export async function getRankings(params: {
-  role: 'sdr' | 'closer' | 'ciclo_completo' | 'all'
+  role: 'sdr' | 'closer' | 'auto_prospeccao' | 'all'
   month?: string
   limit?: number
   months?: number
@@ -122,7 +122,7 @@ export async function recalculateRankings(month?: string) {
  */
 export async function setUserRole(params: {
   user_id: string
-  role: 'sdr' | 'closer' | 'ciclo_completo'
+  role: 'sdr' | 'closer' | 'auto_prospeccao'
   active?: boolean
 }) {
   return await callRankingAPI({

@@ -10,13 +10,13 @@ import { calculate } from './calculate.ts'
 interface AdminParams {
   subaction: 'set-role' | 'recalculate' | 'list-users'
   user_id?: string
-  role?: 'sdr' | 'closer' | 'ciclo_completo'
+  role?: 'sdr' | 'closer' | 'auto_prospeccao'
   active?: boolean
   month?: string
 }
 
 // Roles permitidos
-const ALLOWED_ROLES = ['sdr', 'closer', 'ciclo_completo'] as const
+const ALLOWED_ROLES = ['sdr', 'closer', 'auto_prospeccao'] as const
 
 /**
  * Verificar se o usuário tem permissão de admin

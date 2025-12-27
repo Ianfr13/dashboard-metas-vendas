@@ -387,7 +387,6 @@ export default function Metricas() {
                         <option value="todos">Todos</option>
                         <option value="sdr">SDR</option>
                         <option value="closer">Closer</option>
-                        <option value="ciclo_completo">Ciclo Completo</option>
                       </select>
                     </div>
 

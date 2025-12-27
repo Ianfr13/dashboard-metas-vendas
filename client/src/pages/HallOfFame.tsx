@@ -49,7 +49,7 @@ export default function HallOfFame() {
   const getRoleLabel = (role: string) => {
     if (role === 'sdr') return 'SDR';
     if (role === 'closer') return 'Closer';
-    if (role === 'ciclo_completo') return 'Ciclo Completo';
+    if (role === 'auto_prospeccao') return 'Auto Prospecção';
     return role;
   };
 
