@@ -34,18 +34,41 @@ jobs:
           for function_dir in supabase/functions/*/; do
             if [ -d "$function_dir" ]; then
               function_name=$(basename "$function_dir")
+              
+              # Pular pasta _shared (não é uma função)
+              if [ "$function_name" = "_shared" ]; then
+                echo "⏭️  Skipping _shared directory"
+                continue
+              fi
+              
+              # Verificar se existe index.ts
+              if [ ! -f "$function_dir/index.ts" ]; then
+                echo "⚠️  Skipping $function_name (no index.ts found)"
+                continue
+              fi
+              
               echo "📦 Deploying function: $function_name"
+              
+              # Copiar pasta _shared para dentro da função (se existir)
+              if [ -d "supabase/functions/_shared" ]; then
+                echo "   📁 Copying _shared to $function_name..."
+                cp -r supabase/functions/_shared "$function_dir/"
+              fi
               
               # Deploy da função
               supabase functions deploy "$function_name" \
-                --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
-                --no-verify-jwt false
+                --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
               
               if [ $? -eq 0 ]; then
                 echo "✅ $function_name deployed successfully!"
               else
                 echo "❌ Failed to deploy $function_name"
                 exit 1
+              fi
+              
+              # Limpar pasta _shared copiada
+              if [ -d "$function_dir/_shared" ]; then
+                rm -rf "$function_dir/_shared"
               fi
             fi
           done
@@ -60,4 +83,16 @@ jobs:
           echo "- Project: ${{ secrets.SUPABASE_PROJECT_REF }}"
           echo "- Branch: ${{ github.ref_name }}"
           echo "- Commit: ${{ github.sha }}"
-          echo "- Functions deployed: $(ls -d supabase/functions/*/ | wc -l)"
+          
+          # Contar funções válidas (com index.ts, excluindo _shared)
+          function_count=0
+          for function_dir in supabase/functions/*/; do
+            if [ -d "$function_dir" ]; then
+              function_name=$(basename "$function_dir")
+              if [ "$function_name" != "_shared" ] && [ -f "$function_dir/index.ts" ]; then
+                function_count=$((function_count + 1))
+              fi
+            fi
+          done
+          
+          echo "- Functions deployed: $function_count"
