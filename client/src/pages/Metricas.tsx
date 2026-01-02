@@ -14,6 +14,7 @@ import { ptBR } from "date-fns/locale";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { gtmAnalyticsAPI } from "@/lib/edge-functions";
 import { rankingAPI } from "@/lib/ranking-api";
+import { useAuth } from "@/_core/hooks/useAuth";
 import FunilMarketing from "@/components/metricas/FunilMarketing";
 import FunilComercial from "@/components/metricas/FunilComercial";
 import FunisCadastrados from "@/components/metricas/FunisCadastrados";
@@ -22,6 +23,7 @@ import AdvancedFunnel from "@/components/metrics/AdvancedFunnel";
 import { TrafficSourceMetrics } from "@/lib/edge-functions";
 
 export default function Metricas() {
+  const { user, loading: authLoading } = useAuth();
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [funnelData, setFunnelData] = useState<any>(null);
@@ -43,7 +45,7 @@ export default function Metricas() {
   // Carregar métricas comerciais
   useEffect(() => {
     async function loadCommercialMetrics() {
-      if (!selectedRole || !selectedPeriod) return
+      if (authLoading || !user || !selectedRole || !selectedPeriod) return
 
       try {
         setCommercialLoading(true)
@@ -83,11 +85,13 @@ export default function Metricas() {
     }
 
     loadCommercialMetrics()
-  }, [selectedRole, selectedSeller, selectedPeriod])
+  }, [selectedRole, selectedSeller, selectedPeriod, user, authLoading])
 
   // Carregar dados do GTM
   useEffect(() => {
     async function loadMetrics() {
+      if (authLoading || !user) return;
+
       try {
         setLoading(true);
         setError(null);
@@ -116,7 +120,7 @@ export default function Metricas() {
     }
 
     loadMetrics();
-  }, [startDate, endDate, selectedEvent, groupBy]);
+  }, [startDate, endDate, selectedEvent, groupBy, user, authLoading]);
 
   // Preparar dados para gráfico de funil
   const funnelChartData = funnelData ? [

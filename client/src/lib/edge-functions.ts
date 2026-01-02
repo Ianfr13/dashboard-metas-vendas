@@ -17,6 +17,14 @@ const FUNCTIONS_URL = 'https://auvvrewlbpyymekonilv.supabase.co/functions/v1';
 async function getAuthHeaders(): Promise<HeadersInit> {
   const { data: { session } } = await supabase.auth.getSession();
 
+  // DEBUG: Log session status
+  console.log('[edge-functions] Session status:', {
+    hasSession: !!session,
+    hasToken: !!session?.access_token,
+    tokenPreview: session?.access_token ? `${session.access_token.substring(0, 20)}...` : 'NO TOKEN',
+    user: session?.user?.email
+  });
+
   return {
     'Content-Type': 'application/json',
     ...(session ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
