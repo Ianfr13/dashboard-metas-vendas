@@ -1,393 +1,450 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  CalendarIcon,
-  Loader2,
-} from "lucide-react";
-import DashboardLayout from "@/components/DashboardLayout";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Target, BarChart3, Home as HomeIcon, Settings, Moon, Sun } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import MobileNav from "@/components/MobileNav";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { gtmAnalyticsAPI } from "@/lib/edge-functions";
-import FunilMarketing from "@/components/metricas/FunilMarketing";
-import FunilComercial from "@/components/metricas/FunilComercial";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Metricas() {
-  const { user, loading: authLoading } = useAuth();
-  const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  const [endDate, setEndDate] = useState<Date>(new Date());
-  const [funnelData, setFunnelData] = useState<any>(null);
-  const [evolutionData, setEvolutionData] = useState<any[]>([]);
-  const [productData, setProductData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
-  const [groupBy, setGroupBy] = useState<'hour' | 'day' | 'week'>('day');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("monthly");
+  const { theme, toggleTheme } = useTheme();
+  const [location] = useLocation();
 
-  // Carregar dados do GTM
-  useEffect(() => {
-    async function loadMetrics() {
-      // Aguardar autenticação
-      if (authLoading) return;
-      if (!user) return;
+  // Mock data - substituir por dados reais da API
+  const mockMetrics = {
+    totalSales: 850,
+    totalRevenue: 850000,
+    totalLeads: 4368,
+    conversionRate: 19.5,
+    avgTicket: 1000,
+    cpa: 450,
+    cpl: 30,
+    roi: 90.8,
+    roas: 1.91,
+  };
 
-      try {
-        setLoading(true);
-        setError(null);
+  const mockProductSales = [
+    { name: "Creatina Pro 797", sales: 450, revenue: 358650, percentage: 42.2 },
+    { name: "Upsell Premium", sales: 200, revenue: 49400, percentage: 23.5 },
+    { name: "High-Ticket VIP", sales: 150, revenue: 375000, percentage: 17.6 },
+    { name: "Outros", sales: 50, revenue: 66950, percentage: 5.9 },
+  ];
 
-        const start = format(startDate, 'yyyy-MM-dd');
-        const end = format(endDate, 'yyyy-MM-dd');
+  const mockChannelMetrics = {
+    marketing: {
+      sales: 650,
+      revenue: 650000,
+      leads: 4000,
+      conversionRate: 16.25,
+      cpa: 430,
+    },
+    comercial: {
+      sales: 200,
+      revenue: 200000,
+      meetings: 120,
+      conversionRate: 20,
+      avgTicket: 1000,
+    },
+  };
 
-        // Buscar dados em paralelo
-        const [funnel, evolution, products] = await Promise.all([
-          gtmAnalyticsAPI.getFunnelMetrics(start, end),
-          gtmAnalyticsAPI.getEvolutionChart(start, end, selectedEvent, groupBy),
-          gtmAnalyticsAPI.getProductMetrics(start, end),
-        ]);
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
-        setFunnelData(funnel);
-        setEvolutionData(evolution);
-        setProductData(products);
-      } catch (err) {
-        console.error('Erro ao carregar métricas:', err);
-        setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadMetrics();
-  }, [startDate, endDate, selectedEvent, groupBy, user, authLoading]);
-
-  // Preparar dados para gráfico de funil
-  const funnelChartData = funnelData ? [
-    { etapa: 'Visualizações', valor: funnelData.etapas.pageViews, cor: '#8884d8' },
-    { etapa: 'Leads', valor: funnelData.etapas.leads, cor: '#82ca9d' },
-    { etapa: 'Checkouts', valor: funnelData.etapas.checkouts, cor: '#ffc658' },
-    { etapa: 'Vendas', valor: funnelData.etapas.purchases, cor: '#ff7c7c' },
-  ] : [];
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat("pt-BR").format(value);
+  };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Filtros de Data */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Período de Análise</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card md:sticky md:top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <img
+                src="/douravita-logo.png"
+                alt="DouraVita"
+                className="h-12 w-auto drop-shadow-md"
+              />
               <div>
-                <label className="text-sm font-medium mb-2 block">Data Inicial</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[200px] justify-start text-left">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(startDate, "dd/MM/yyyy", { locale: ptBR })}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={(date) => date && setStartDate(date)}
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Data Final</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[200px] justify-start text-left">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(endDate, "dd/MM/yyyy", { locale: ptBR })}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={(date) => date && setEndDate(date)}
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Dashboard de Metas</h1>
+                <p className="text-xs text-muted-foreground font-medium">
+                  Janeiro 2025
+                </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {loading ? (
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-              <p className="text-muted-foreground">Carregando métricas...</p>
+            <div className="flex items-center gap-3">
+              {/* Menu Mobile */}
+              <MobileNav />
+
+              {/* Navegação Desktop */}
+              <nav className="hidden md:flex items-center gap-2">
+                <Link href="/">
+                  <Button variant={location === "/" ? "default" : "ghost"} className="gap-2">
+                    <HomeIcon className="h-4 w-4" />
+                    Home
+                  </Button>
+                </Link>
+                <Link href="/metricas">
+                  <Button variant={location === "/metricas" ? "default" : "ghost"} className="gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Métricas
+                  </Button>
+                </Link>
+                <Link href="/admin">
+                  <Button variant={location === "/admin" ? "default" : "ghost"} className="gap-2">
+                    <Settings className="h-4 w-4" />
+                    Admin
+                  </Button>
+                </Link>
+              </nav>
+
+              {/* Toggle Tema */}
+              <Button variant="outline" size="icon" onClick={toggleTheme} className="rounded-full">
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
             </div>
           </div>
-        ) : error ? (
-          <Card className="border-destructive">
-            <CardHeader>
-              <CardTitle className="text-destructive">Erro ao carregar métricas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">{error}</p>
-              <Button onClick={() => window.location.reload()}>
-                Tentar novamente
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Tabs defaultValue="funil" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="funil">Funil de Conversão</TabsTrigger>
-              <TabsTrigger value="evolucao">Evolução</TabsTrigger>
-              <TabsTrigger value="produtos">Produtos</TabsTrigger>
-              <TabsTrigger value="marketing">Funil Marketing</TabsTrigger>
-              <TabsTrigger value="comercial">Funil Comercial</TabsTrigger>
-            </TabsList>
+        </div>
+      </header>
 
-            {/* Funil de Conversão */}
-            <TabsContent value="funil" className="space-y-6">
+      {/* Main Content */}
+      <main className="container mx-auto px-6 py-8">
+        {/* Filtros */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold">Análise de Performance</h2>
+            <p className="text-sm text-muted-foreground">Acompanhe suas métricas em tempo real</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Filtro de Período */}
+            <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Diário</SelectItem>
+                <SelectItem value="weekly">Semanal</SelectItem>
+                <SelectItem value="monthly">Mensal</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Calendário */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        <Tabs defaultValue="geral" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="geral">Visão Geral</TabsTrigger>
+            <TabsTrigger value="produtos">Por Produto</TabsTrigger>
+            <TabsTrigger value="canais">Por Canal</TabsTrigger>
+            <TabsTrigger value="funil">Funil de Vendas</TabsTrigger>
+          </TabsList>
+
+          {/* Tab Visão Geral */}
+          <TabsContent value="geral" className="space-y-6 mt-6">
+            {/* Cards de Métricas Principais */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
-                <CardHeader>
-                  <CardTitle>Funil de Conversão</CardTitle>
-                  <CardDescription>
-                    Visualização do funil completo de marketing e vendas
-                  </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total de Vendas</CardTitle>
+                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={funnelChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="etapa" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="valor" radius={[8, 8, 0, 0]}>
-                        {funnelChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.cor} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="text-2xl font-bold">{formatNumber(mockMetrics.totalSales)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="text-green-500 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      +12.5% vs. período anterior
+                    </span>
+                  </p>
                 </CardContent>
               </Card>
 
-              {/* Cards de Métricas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Visualizações
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.pageViews || 0}</div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Leads Gerados
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.leads || 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {funnelData?.conversao.viewsParaLeads.toFixed(1)}% conversão
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Checkouts Iniciados
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.checkouts || 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {funnelData?.conversao.leadsParaCheckout.toFixed(1)}% conversão
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Vendas Concluídas
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.purchases || 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {funnelData?.conversao.checkoutParaVenda.toFixed(1)}% conversão
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Financeiro */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Receita Total</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold">
-                      R$ {funnelData?.financeiro.receitaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Ticket Médio</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold">
-                      R$ {funnelData?.financeiro.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Evolução Temporal */}
-            <TabsContent value="evolucao" className="space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Evolução Temporal</CardTitle>
-                  <CardDescription>
-                    Acompanhe a evolução dos eventos ao longo do tempo
-                  </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-4 mb-6">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Evento</label>
-                      <select
-                        className="border rounded px-3 py-2"
-                        value={selectedEvent}
-                        onChange={(e) => setSelectedEvent(e.target.value as any)}
-                      >
-                        <option value="purchase">Vendas</option>
-                        <option value="generate_lead">Leads</option>
-                        <option value="begin_checkout">Checkouts</option>
-                      </select>
-                    </div>
+                  <div className="text-2xl font-bold">{formatCurrency(mockMetrics.totalRevenue)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="text-green-500 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      +15.3% vs. período anterior
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
 
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatNumber(mockMetrics.totalLeads)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="text-green-500 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      +8.7% vs. período anterior
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{mockMetrics.conversionRate}%</div>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="text-green-500 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      +2.1% vs. período anterior
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Métricas Secundárias */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold">{formatCurrency(mockMetrics.avgTicket)}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">CPA</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold">{formatCurrency(mockMetrics.cpa)}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">CPL</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold">{formatCurrency(mockMetrics.cpl)}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">ROI</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold text-green-500">{mockMetrics.roi}%</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">ROAS</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold text-green-500">{mockMetrics.roas}x</div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Tab Por Produto */}
+          <TabsContent value="produtos" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Vendas por Produto
+                </CardTitle>
+                <CardDescription>
+                  Performance detalhada de cada produto no período
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockProductSales.map((product, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatNumber(product.sales)} vendas • {formatCurrency(product.revenue)}
+                          </p>
+                        </div>
+                        <span className="text-sm font-medium text-primary">
+                          {product.percentage}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full transition-all"
+                          style={{ width: `${product.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab Por Canal */}
+          <TabsContent value="canais" className="space-y-6 mt-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Marketing Direto */}
+              <Card className="border-2 border-green-500/20">
+                <CardHeader>
+                  <CardTitle className="text-green-500">Marketing Direto</CardTitle>
+                  <CardDescription>Performance do tráfego pago</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Agrupar por</label>
-                      <select
-                        className="border rounded px-3 py-2"
-                        value={groupBy}
-                        onChange={(e) => setGroupBy(e.target.value as any)}
-                      >
-                        <option value="hour">Hora</option>
-                        <option value="day">Dia</option>
-                        <option value="week">Semana</option>
-                      </select>
+                      <p className="text-sm text-muted-foreground">Vendas</p>
+                      <p className="text-2xl font-bold">{formatNumber(mockChannelMetrics.marketing.sales)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Receita</p>
+                      <p className="text-2xl font-bold">{formatCurrency(mockChannelMetrics.marketing.revenue)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Leads</p>
+                      <p className="text-2xl font-bold">{formatNumber(mockChannelMetrics.marketing.leads)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Conversão</p>
+                      <p className="text-2xl font-bold">{mockChannelMetrics.marketing.conversionRate}%</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">CPA</p>
+                      <p className="text-xl font-bold">{formatCurrency(mockChannelMetrics.marketing.cpa)}</p>
                     </div>
                   </div>
-
-                  <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={evolutionData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} name="Quantidade" />
-                    </LineChart>
-                  </ResponsiveContainer>
                 </CardContent>
               </Card>
-            </TabsContent>
 
-            {/* Produtos */}
-            <TabsContent value="produtos" className="space-y-6">
-              <Card>
+              {/* Time Comercial */}
+              <Card className="border-2 border-purple-500/20">
                 <CardHeader>
-                  <CardTitle>Desempenho por Produto</CardTitle>
-                  <CardDescription>
-                    Análise de vendas e receita por produto
-                  </CardDescription>
+                  <CardTitle className="text-purple-500">Time Comercial</CardTitle>
+                  <CardDescription>Performance do time de vendas</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {productData.length > 0 ? (
-                    <>
-                      <ResponsiveContainer width="100%" height={400}>
-                        <BarChart data={productData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="produto" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="vendas" fill="#8884d8" name="Vendas" />
-                          <Bar dataKey="receita" fill="#82ca9d" name="Receita (R$)" />
-                        </BarChart>
-                      </ResponsiveContainer>
-
-                      <div className="mt-6">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-2">Produto</th>
-                              <th className="text-right py-2">Vendas</th>
-                              <th className="text-right py-2">Receita</th>
-                              <th className="text-right py-2">Ticket Médio</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {productData.map((product, index) => (
-                              <tr key={index} className="border-b">
-                                <td className="py-2">{product.produto}</td>
-                                <td className="text-right">{product.vendas}</td>
-                                <td className="text-right">R$ {product.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="text-right">R$ {product.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      Nenhum dado de produto encontrado para o período selecionado
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Vendas</p>
+                      <p className="text-2xl font-bold">{formatNumber(mockChannelMetrics.comercial.sales)}</p>
                     </div>
-                  )}
+                    <div>
+                      <p className="text-sm text-muted-foreground">Receita</p>
+                      <p className="text-2xl font-bold">{formatCurrency(mockChannelMetrics.comercial.revenue)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Reuniões</p>
+                      <p className="text-2xl font-bold">{formatNumber(mockChannelMetrics.comercial.meetings)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Conversão</p>
+                      <p className="text-2xl font-bold">{mockChannelMetrics.comercial.conversionRate}%</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                      <p className="text-xl font-bold">{formatCurrency(mockChannelMetrics.comercial.avgTicket)}</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </div>
+          </TabsContent>
 
-            {/* Funil Marketing */}
-            <TabsContent value="marketing" className="space-y-6">
-              <FunilMarketing
-                startDate={startDate}
-                endDate={endDate}
-              />
-            </TabsContent>
-
-            {/* Funil Comercial */}
-            <TabsContent value="comercial" className="space-y-6">
-              <FunilComercial
-                startDate={startDate}
-                endDate={endDate}
-              />
-            </TabsContent>
-          </Tabs>
-        )}
-      </div>
-    </DashboardLayout>
+          {/* Tab Funil de Vendas */}
+          <TabsContent value="funil" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Funil de Conversão</CardTitle>
+                <CardDescription>
+                  Acompanhe cada etapa do processo de vendas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {[
+                    { stage: "Views VSL", count: 291200, percentage: 100, color: "bg-blue-500" },
+                    { stage: "Leads Gerados", count: 4368, percentage: 1.5, color: "bg-green-500" },
+                    { stage: "Checkout Iniciado", count: 3494, percentage: 80, color: "bg-yellow-500" },
+                    { stage: "Vendas Concluídas", count: 850, percentage: 24.3, color: "bg-purple-500" },
+                  ].map((stage, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-foreground">{stage.stage}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatNumber(stage.count)} • {stage.percentage}% do total
+                          </p>
+                        </div>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-3">
+                        <div
+                          className={`${stage.color} h-3 rounded-full transition-all`}
+                          style={{ width: `${stage.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
   );
 }
