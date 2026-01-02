@@ -24,7 +24,7 @@ export function GoalManager({ mainGoal: initialMainGoal, subGoals: initialSubGoa
   const addSubGoal = () => {
     const value = parseFloat(newSubGoalValue);
     if (isNaN(value) || value <= 0) return;
-    
+
     setSubGoals([...subGoals, { value, completed: false }].sort((a, b) => a.value - b.value));
     setNewSubGoalValue("");
   };
@@ -39,9 +39,9 @@ export function GoalManager({ mainGoal: initialMainGoal, subGoals: initialSubGoa
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
-      return `R$ ${(value / 1000000).toFixed(1)}M`;
+      return `R$ ${(value / 1000000 || 0).toFixed(1)}M`;
     }
-    return `R$ ${(value / 1000).toFixed(0)}k`;
+    return `R$ ${(value / 1000 || 0).toFixed(0)}k`;
   };
 
   return (

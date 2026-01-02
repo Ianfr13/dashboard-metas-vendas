@@ -16,7 +16,7 @@ const FUNCTIONS_URL = 'https://auvvrewlbpyymekonilv.supabase.co/functions/v1';
  */
 async function getAuthHeaders(): Promise<HeadersInit> {
   const { data: { session } } = await supabase.auth.getSession();
-  
+
   return {
     'Content-Type': 'application/json',
     ...(session ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
@@ -78,7 +78,7 @@ export const dashboardAPI = {
     if (year) params.append('year', year.toString());
 
     const url = `${FUNCTIONS_URL}/get-dashboard-data${params.toString() ? '?' + params.toString() : ''}`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -166,8 +166,8 @@ export const dashboardAPI = {
     // Calcular totais
     const totals = (purchases || []).reduce(
       (acc, event) => {
-        const eventData = typeof event.event_data === 'string' 
-          ? JSON.parse(event.event_data) 
+        const eventData = typeof event.event_data === 'string'
+          ? JSON.parse(event.event_data)
           : event.event_data;
 
         const value = parseFloat(eventData?.value || 0);
@@ -223,8 +223,8 @@ export const dashboardAPI = {
 
     (purchases || []).forEach((event) => {
       const date = new Date(event.timestamp).toISOString().split('T')[0];
-      const eventData = typeof event.event_data === 'string' 
-        ? JSON.parse(event.event_data) 
+      const eventData = typeof event.event_data === 'string'
+        ? JSON.parse(event.event_data)
         : event.event_data;
 
       const value = parseFloat(eventData?.value || 0);
@@ -293,6 +293,10 @@ export const dashboardAPI = {
 export interface FunnelMetrics {
   etapas: {
     pageViews: number;
+    viewItem: number;
+    addToCart: number;
+    viewCart: number;
+    beginCheckout: number;
     leads: number;
     checkouts: number;
     purchases: number;
@@ -319,6 +323,16 @@ export interface ProductMetricsGTM {
   vendas: number;
   receita: number;
   ticketMedio: number;
+}
+
+export interface TrafficSourceMetrics {
+  source: string;
+  medium: string;
+  sessions: number;
+  leads: number;
+  sales: number;
+  revenue: number;
+  conversionRate: number;
 }
 
 export const gtmAnalyticsAPI = {
@@ -373,6 +387,23 @@ export const gtmAnalyticsAPI = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch product metrics');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Obtém métricas por fonte de tráfego
+   */
+  getTrafficSources: async (startDate: string, endDate: string): Promise<TrafficSourceMetrics[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/gtm-analytics?action=traffic_sources&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch traffic sources');
     }
 
     return response.json();

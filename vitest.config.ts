@@ -1,9 +1,12 @@
-import { defineConfig } from "vitest/config";
+/// <reference types="vitest" />
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 import path from "path";
 
 const templateRoot = path.resolve(import.meta.dirname);
 
 export default defineConfig({
+  plugins: [react()],
   root: templateRoot,
   resolve: {
     alias: {
@@ -25,4 +28,4 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./client/src/test/setup.ts"],
   },
-});
+} as any);

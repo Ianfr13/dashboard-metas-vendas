@@ -2,11 +2,12 @@
  * Função segura para formatar números com casas decimais
  * Retorna "0" se o valor for undefined, null ou NaN
  */
-export function safeToFixed(value: number | undefined | null, decimals: number = 2): string {
-  if (value === undefined || value === null || isNaN(value)) {
+export function safeToFixed(value: number | undefined | null | string, decimals: number = 2): string {
+  const num = Number(value);
+  if (value === undefined || value === null || isNaN(num)) {
     return (0).toFixed(decimals);
   }
-  return value.toFixed(decimals);
+  return num.toFixed(decimals);
 }
 
 /**

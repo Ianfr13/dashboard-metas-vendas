@@ -67,7 +67,7 @@ export default function ProductsTable({ data }: ProductsTableProps) {
                   <TableCell className="text-right">{formatNumber(product.sales)}</TableCell>
                   <TableCell className="text-right font-semibold">{formatCurrency(product.revenue)}</TableCell>
                   <TableCell className="text-right">
-                    <Badge variant="secondary">{product.percentage.toFixed(1)}%</Badge>
+                    <Badge variant="secondary">{(product.percentage || 0).toFixed(1)}%</Badge>
                   </TableCell>
                   <TableCell className="text-right">{formatCurrency(product.avgTicket)}</TableCell>
                   <TableCell className="text-right">
@@ -77,7 +77,7 @@ export default function ProductsTable({ data }: ProductsTableProps) {
                       ) : (
                         <TrendingDown className="h-4 w-4" />
                       )}
-                      {Math.abs(product.growth).toFixed(1)}%
+                      {Math.abs(product.growth || 0).toFixed(1)}%
                     </span>
                   </TableCell>
                 </TableRow>

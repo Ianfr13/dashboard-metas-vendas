@@ -18,11 +18,11 @@ interface MetricCardProps {
 export default function MetricCard({ title, value, change, icon: Icon, format = 'number' }: MetricCardProps) {
   const formatValue = (val: string | number) => {
     if (typeof val === 'string') return val
-    
+
     if (format === 'currency') {
       return `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     } else if (format === 'percentage') {
-      return `${val.toFixed(1)}%`
+      return `${Number(val || 0).toFixed(1)}%`
     } else {
       return val.toLocaleString('pt-BR')
     }

@@ -90,7 +90,7 @@ export default function HealthScore({ metrics }: HealthScoreProps) {
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <ScoreIcon className={`h-8 w-8 ${scoreInfo.color}`} />
                 <p className={`text-3xl font-bold ${scoreInfo.color}`}>
-                  {totalScore.toFixed(0)}
+                  {(totalScore || 0).toFixed(0)}
                 </p>
               </div>
             </div>
@@ -145,12 +145,12 @@ export default function HealthScore({ metrics }: HealthScoreProps) {
                     </Badge>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {metric.value.toFixed(0)} / {metric.target.toFixed(0)}
+                    {(metric.value || 0).toFixed(0)} / {(metric.target || 0).toFixed(0)}
                   </span>
                 </div>
                 <Progress value={Math.min(percentage, 100)} className="h-2" />
                 <p className="text-xs text-muted-foreground">
-                  {percentage.toFixed(1)}% da meta atingida
+                  {(percentage || 0).toFixed(1)}% da meta atingida
                 </p>
               </div>
             );
@@ -172,14 +172,14 @@ export default function HealthScore({ metrics }: HealthScoreProps) {
             .map((metric, index) => {
               const status = getMetricStatus(metric.status);
               const StatusIcon = status.icon;
-              
+
               return (
                 <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                   <StatusIcon className={`h-5 w-5 ${status.color} mt-0.5`} />
                   <div className="flex-1">
                     <p className="font-medium text-sm">{metric.name}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {metric.status === 'critical' 
+                      {metric.status === 'critical'
                         ? `Atenção! Métrica abaixo de 50% da meta. Ação imediata necessária.`
                         : `Métrica abaixo do esperado. Considere revisar estratégias.`}
                     </p>

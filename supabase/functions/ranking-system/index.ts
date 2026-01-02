@@ -21,44 +21,46 @@ import { adminActions } from './handlers/admin.ts'
 async function verifyAuth(req: Request) {
   const authHeader = req.headers.get('Authorization')
   
-  console.log('[ranking-system] Auth header:', authHeader ? authHeader.substring(0, 30) + '...' : 'MISSING')
-  
   if (!authHeader) {
-    throw new Error('Token de autenticação não fornecido')
+    throw new Error('Token de autenticação não fornecido no header Authorization')
   }
 
-  // Extrair o token JWT do header "Bearer <token>"
-  const token = authHeader.replace('Bearer ', '')
-  
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  
-  console.log('[ranking-system] Using SERVICE_ROLE_KEY for auth validation')
-  console.log('[ranking-system] Token preview:', token.substring(0, 20) + '...')
-  
-  // Criar client com SERVICE_ROLE_KEY
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  // Validar o token JWT passando-o como parâmetro
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('CRITICAL: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars')
+    throw new Error('Erro de configuração no servidor (variáveis de ambiente)')
+  }
+  
+  // Criar client com SERVICE_ROLE_KEY para ter permissões de admin
+  // Mas validar o usuário usando o token enviado
+  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+
+  // Extrair apenas o token sem o "Bearer "
+  const token = authHeader.replace(/^Bearer\s+/i, '')
+  
+  if (!token || token === 'undefined' || token === 'null') {
+     throw new Error('Token malformado ou inválido')
+  }
+
+  // Validar o token JWT
   const { data: { user }, error } = await supabase.auth.getUser(token)
   
   if (error) {
-    console.error('[ranking-system] Auth error details:', {
-      message: error.message,
-      status: error.status,
-      name: error.name
-    })
+    console.error('[verifyAuth] Auth error:', error.message)
+    throw new Error(`Autenticação falhou: ${error.message}`)
   }
   
   if (!user) {
-    console.error('[ranking-system] No user returned from getUser()')
-  }
-  
-  if (error || !user) {
-    throw new Error('Token inválido ou expirado')
+    throw new Error('Usuário não encontrado para o token fornecido')
   }
 
-  console.log('[ranking-system] User authenticated successfully:', user.email)
   return { user, supabase }
 }
 

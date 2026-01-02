@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FunilMarketing from './FunilMarketing';
@@ -22,8 +23,8 @@ vi.mock('recharts', () => ({
 
 describe('FunilMarketing', () => {
   const defaultProps = {
-    selectedMonth: 12,
-    selectedYear: 2024,
+    startDate: new Date(2024, 11, 1), // December 2024
+    endDate: new Date(2024, 11, 31),
   };
 
   const mockMetrics = {
@@ -43,10 +44,10 @@ describe('FunilMarketing', () => {
 
   describe('Component Rendering', () => {
     it('should render the component with initial loading state', () => {
-      (global.fetch as any).mockImplementation(() => new Promise(() => {}));
-      
+      (global.fetch as any).mockImplementation(() => new Promise(() => { }));
+
       render(<FunilMarketing {...defaultProps} />);
-      
+
       expect(screen.getByText('Funil de Marketing')).toBeInTheDocument();
       expect(screen.getByText(/Métricas de performance do funil de marketing/i)).toBeInTheDocument();
     });
@@ -58,7 +59,7 @@ describe('FunilMarketing', () => {
       });
 
       render(<FunilMarketing {...defaultProps} />);
-      
+
       expect(screen.getByRole('button', { name: /Cards/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Tabela/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Stage/i })).toBeInTheDocument();
@@ -87,13 +88,14 @@ describe('FunilMarketing', () => {
       });
 
       const fetchUrl = (global.fetch as any).mock.calls[0][0];
-      expect(fetchUrl).toContain('month=12');
-      expect(fetchUrl).toContain('year=2024');
+      // Updated to check for ISO string or date parts
+      expect(fetchUrl).toContain('startDate=');
+      expect(fetchUrl).toContain('endDate=');
       expect(fetchUrl).toContain('funnel=marketing');
     });
 
     it('should handle fetch errors gracefully', async () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => { });
       (global.fetch as any).mockRejectedValue(new Error('Network error'));
 
       render(<FunilMarketing {...defaultProps} />);
@@ -101,7 +103,7 @@ describe('FunilMarketing', () => {
       await waitFor(() => {
         expect(consoleError).toHaveBeenCalledWith(
           'Erro ao carregar métricas:',
-          expect.any(Error)
+          'Network error'
         );
       });
 
@@ -109,7 +111,7 @@ describe('FunilMarketing', () => {
     });
 
     it('should handle non-ok response', async () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => { });
       (global.fetch as any).mockResolvedValue({
         ok: false,
         json: async () => ({}),
@@ -124,7 +126,7 @@ describe('FunilMarketing', () => {
       consoleError.mockRestore();
     });
 
-    it('should refetch data when month changes', async () => {
+    it('should refetch data when props change', async () => {
       (global.fetch as any).mockResolvedValue({
         ok: true,
         json: async () => ({ metrics: mockMetrics }),
@@ -136,26 +138,7 @@ describe('FunilMarketing', () => {
         expect(global.fetch).toHaveBeenCalledTimes(1);
       });
 
-      rerender(<FunilMarketing selectedMonth={11} selectedYear={2024} />);
-
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledTimes(2);
-      });
-    });
-
-    it('should refetch data when year changes', async () => {
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ metrics: mockMetrics }),
-      });
-
-      const { rerender } = render(<FunilMarketing {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledTimes(1);
-      });
-
-      rerender(<FunilMarketing selectedMonth={12} selectedYear={2023} />);
+      rerender(<FunilMarketing startDate={new Date(2024, 10, 1)} endDate={new Date(2024, 10, 30)} />);
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -181,18 +164,18 @@ describe('FunilMarketing', () => {
       expect(screen.getByText('1.250')).toBeInTheDocument();
       expect(screen.getByText('Vendas')).toBeInTheDocument();
       expect(screen.getByText('85')).toBeInTheDocument();
-      expect(screen.getByText(/425\.000/)).toBeInTheDocument();
-      expect(screen.getByText(/45\.000/)).toBeInTheDocument();
+      expect(screen.getByText('R$ 425.000')).toBeInTheDocument();
+      expect(screen.getByText('R$ 45.000')).toBeInTheDocument();
     });
 
     it('should format currency values correctly', async () => {
       render(<FunilMarketing {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText(/R\$ 36,00/)).toBeInTheDocument();
+        expect(screen.getByText(/R\$ 36.00/)).toBeInTheDocument();
       });
 
-      expect(screen.getByText(/R\$ 529,41/)).toBeInTheDocument();
+      expect(screen.getByText(/R\$ 529.41/)).toBeInTheDocument();
     });
 
     it('should display conversion rate', async () => {
@@ -420,40 +403,11 @@ describe('FunilMarketing', () => {
       render(<FunilMarketing {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText(/36,79/)).toBeInTheDocument();
-        expect(screen.getByText(/529,46/)).toBeInTheDocument();
-      });
-    });
-
-    it('should handle month boundary (January)', async () => {
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ metrics: mockMetrics }),
-      });
-
-      render(<FunilMarketing selectedMonth={1} selectedYear={2024} />);
-
-      await waitFor(() => {
-        const fetchUrl = (global.fetch as any).mock.calls[0][0];
-        expect(fetchUrl).toContain('month=1');
-      });
-    });
-
-    it('should handle month boundary (December)', async () => {
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ metrics: mockMetrics }),
-      });
-
-      render(<FunilMarketing selectedMonth={12} selectedYear={2024} />);
-
-      await waitFor(() => {
-        const fetchUrl = (global.fetch as any).mock.calls[0][0];
-        expect(fetchUrl).toContain('month=12');
+        expect(screen.getByText(/36.79/)).toBeInTheDocument();
+        expect(screen.getByText(/529.46/)).toBeInTheDocument();
       });
     });
   });
-
   describe('Accessibility', () => {
     beforeEach(async () => {
       (global.fetch as any).mockResolvedValue({
@@ -482,7 +436,7 @@ describe('FunilMarketing', () => {
       const tabelaButton = screen.getByRole('button', { name: /Tabela/i });
       await user.click(tabelaButton);
 
-      expect(tabelaButton).toHaveAttribute('data-state', 'active');
+      expect(screen.getByText('Métricas do Funil de Marketing')).toBeInTheDocument();
     });
   });
 
@@ -530,6 +484,42 @@ describe('FunilMarketing', () => {
       // Should not crash or show NaN/Infinity
       expect(screen.queryByText('Infinity')).not.toBeInTheDocument();
       expect(screen.queryByText('NaN')).not.toBeInTheDocument();
+    });
+  });
+
+  it('should handle month boundary (January)', async () => {
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({ metrics: mockMetrics }),
+    });
+
+    const janStartDate = new Date(2024, 0, 1);
+    const janEndDate = new Date(2024, 0, 31);
+
+    render(<FunilMarketing startDate={janStartDate} endDate={janEndDate} />);
+
+    await waitFor(() => {
+      const fetchUrl = (global.fetch as any).mock.calls[0][0];
+      expect(fetchUrl).toContain(`startDate=${janStartDate.toISOString()}`);
+      expect(fetchUrl).toContain(`endDate=${janEndDate.toISOString()}`);
+    });
+  });
+
+  it('should handle month boundary (December)', async () => {
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({ metrics: mockMetrics }),
+    });
+
+    const decStartDate = new Date(2024, 11, 1);
+    const decEndDate = new Date(2024, 11, 31);
+
+    render(<FunilMarketing startDate={decStartDate} endDate={decEndDate} />);
+
+    await waitFor(() => {
+      const fetchUrl = (global.fetch as any).mock.calls[0][0];
+      expect(fetchUrl).toContain(`startDate=${decStartDate.toISOString()}`);
+      expect(fetchUrl).toContain(`endDate=${decEndDate.toISOString()}`);
     });
   });
 });

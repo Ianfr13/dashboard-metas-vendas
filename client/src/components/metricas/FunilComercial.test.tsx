@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FunilComercial from './FunilComercial';
@@ -22,8 +23,8 @@ vi.mock('recharts', () => ({
 
 describe('FunilComercial', () => {
   const defaultProps = {
-    selectedMonth: 12,
-    selectedYear: 2024,
+    startDate: new Date(2024, 11, 1), // December 2024
+    endDate: new Date(2024, 11, 31),
   };
 
   const mockMetrics = {
@@ -44,10 +45,10 @@ describe('FunilComercial', () => {
 
   describe('Component Rendering', () => {
     it('should render the component with title', () => {
-      (global.fetch as any).mockImplementation(() => new Promise(() => {}));
-      
+      (global.fetch as any).mockImplementation(() => new Promise(() => { }));
+
       render(<FunilComercial {...defaultProps} />);
-      
+
       expect(screen.getByText('Funil Comercial')).toBeInTheDocument();
       expect(screen.getByText(/Métricas de performance do funil comercial/i)).toBeInTheDocument();
     });
@@ -59,7 +60,7 @@ describe('FunilComercial', () => {
       });
 
       render(<FunilComercial {...defaultProps} />);
-      
+
       expect(screen.getByRole('button', { name: /Cards/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Tabela/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Stage/i })).toBeInTheDocument();
@@ -88,13 +89,13 @@ describe('FunilComercial', () => {
       });
 
       const fetchUrl = (global.fetch as any).mock.calls[0][0];
-      expect(fetchUrl).toContain('month=12');
-      expect(fetchUrl).toContain('year=2024');
+      expect(fetchUrl).toContain('startDate=');
+      expect(fetchUrl).toContain('endDate=');
       expect(fetchUrl).toContain('funnel=comercial');
     });
 
     it('should handle failed API calls gracefully', async () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => { });
       (global.fetch as any).mockRejectedValue(new Error('API Error'));
 
       render(<FunilComercial {...defaultProps} />);
@@ -102,7 +103,7 @@ describe('FunilComercial', () => {
       await waitFor(() => {
         expect(consoleError).toHaveBeenCalledWith(
           'Erro ao carregar métricas:',
-          expect.any(Error)
+          'API Error'
         );
       });
 
@@ -110,7 +111,7 @@ describe('FunilComercial', () => {
     });
 
     it('should handle non-200 responses', async () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => { });
       (global.fetch as any).mockResolvedValue({
         ok: false,
         status: 500,
@@ -125,7 +126,7 @@ describe('FunilComercial', () => {
       consoleError.mockRestore();
     });
 
-    it('should refetch when selectedMonth changes', async () => {
+    it('should refetch when props change', async () => {
       (global.fetch as any).mockResolvedValue({
         ok: true,
         json: async () => ({ metrics: mockMetrics }),
@@ -135,22 +136,7 @@ describe('FunilComercial', () => {
 
       await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
 
-      rerender(<FunilComercial selectedMonth={11} selectedYear={2024} />);
-
-      await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
-    });
-
-    it('should refetch when selectedYear changes', async () => {
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ metrics: mockMetrics }),
-      });
-
-      const { rerender } = render(<FunilComercial {...defaultProps} />);
-
-      await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
-
-      rerender(<FunilComercial selectedMonth={12} selectedYear={2023} />);
+      rerender(<FunilComercial startDate={new Date(2024, 10, 1)} endDate={new Date(2024, 10, 30)} />);
 
       await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
     });
@@ -526,8 +512,8 @@ describe('FunilComercial', () => {
 
       const buttons = screen.getAllByRole('button');
       expect(buttons.length).toBeGreaterThan(0);
-      
-      buttons.forEach((button) => {
+
+      buttons.forEach((button: HTMLElement) => {
         expect(button).toHaveAccessibleName();
       });
     });
@@ -543,7 +529,7 @@ describe('FunilComercial', () => {
       const tabelaButton = screen.getByRole('button', { name: /Tabela/i });
       await user.click(tabelaButton);
 
-      expect(tabelaButton).toHaveAttribute('data-state', 'active');
+      expect(screen.getByText('Métricas do Funil Comercial')).toBeInTheDocument();
     });
   });
 

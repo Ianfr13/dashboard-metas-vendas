@@ -58,7 +58,7 @@ export function DashboardExample() {
       {/* Header com controles */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Dashboard de Metas</h1>
-        
+
         <div className="flex items-center gap-4">
           {/* Seletor de mês/ano */}
           <select
@@ -112,7 +112,7 @@ export function DashboardExample() {
 
         <div className="p-6 border rounded-lg">
           <p className="text-sm text-muted-foreground mb-2">Progresso da Meta</p>
-          <p className="text-3xl font-bold">{data.totals.progress.toFixed(1)}%</p>
+          <p className="text-3xl font-bold">{(data.totals.progress || 0).toFixed(1)}%</p>
         </div>
       </div>
 

@@ -18,40 +18,40 @@ export class MetricsCalculator {
   calculateMarketingMetrics(targetSales: number): CalculatedMetrics {
     // Conversão efetiva = VSL Conv × Checkout Conv
     const effectiveConversionRate = (this.params.vslConversionRate / 100) * (this.params.checkoutConversionRate / 100);
-    
+
     // Views necessárias na VSL
     const requiredViews = Math.ceil(targetSales / effectiveConversionRate);
-    
+
     // Leads = Views × CTR
     const requiredLeads = Math.ceil(requiredViews * (this.params.avgCTR / 100));
-    
+
     // Clicks necessários (assumindo que leads = clicks em landing page)
     const requiredClicks = requiredLeads;
-    
+
     // Investimento em tráfego
     const trafficInvestment = targetSales * this.params.targetCPA;
-    
+
     // CPL e CPA reais
     const actualCPL = requiredLeads > 0 ? trafficInvestment / requiredLeads : 0;
     const actualCPA = targetSales > 0 ? trafficInvestment / targetSales : 0;
-    
+
     // Breakdown de vendas (front + upsell)
     const frontSales = targetSales;
     const upsellSales = Math.ceil(targetSales * (this.params.upsellConversionRate / 100));
     const totalSales = frontSales + upsellSales;
-    
+
     // Receita breakdown
     const frontRevenue = frontSales * this.params.frontTicket;
     const upsellRevenue = upsellSales * this.params.upsellTicket;
     const totalRevenue = frontRevenue + upsellRevenue;
-    
+
     // Receita esperada com ticket médio
     const expectedRevenue = targetSales * this.params.avgTicket;
-    
+
     // ROI e ROAS
     const roi = trafficInvestment > 0 ? ((expectedRevenue - trafficInvestment) / trafficInvestment) * 100 : 0;
     const roas = trafficInvestment > 0 ? expectedRevenue / trafficInvestment : 0;
-    
+
     return {
       requiredViews,
       requiredLeads,
@@ -78,18 +78,18 @@ export class MetricsCalculator {
   calculateCommercialMetrics(targetSales: number, workingDays: number): CalculatedMetrics {
     // Agendamentos necessários
     const requiredMeetings = Math.ceil(targetSales / (this.params.sdrConversionRate / 100));
-    
+
     // Capacidade do time
     const teamCapacity = this.params.sdrCount * this.params.sdrDailyMeetings * workingDays;
-    
+
     // Investimento (assumindo custo de operação do time)
     // Simplificado: sem custo de tráfego para comercial (leads vêm de outras fontes)
     const trafficInvestment = 0;
-    
+
     // Receita esperada (mix de produtos)
     // Distribuição: 60% em 25k, 20% em 15k, 15% em 5k, 5% em 60k
     const expectedRevenue = targetSales * 20000; // Ticket médio aproximado
-    
+
     return {
       requiredViews: 0,
       requiredLeads: requiredMeetings,
@@ -168,13 +168,19 @@ export function formatNumber(value: number): string {
 /**
  * Formata percentual
  */
-export function formatPercentage(value: number, decimals: number = 1): string {
+export function formatPercentage(value: number | undefined | null, decimals: number = 1): string {
+  if (value === undefined || value === null || isNaN(value)) {
+    return `${(0).toFixed(decimals)}%`;
+  }
   return `${value.toFixed(decimals)}%`;
 }
 
 /**
  * Formata multiplicador (ROAS)
  */
-export function formatMultiplier(value: number, decimals: number = 2): string {
+export function formatMultiplier(value: number | undefined | null, decimals: number = 2): string {
+  if (value === undefined || value === null || isNaN(value)) {
+    return `${(0).toFixed(decimals)}x`;
+  }
   return `${value.toFixed(decimals)}x`;
 }

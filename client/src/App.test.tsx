@@ -226,8 +226,8 @@ describe('App', () => {
       // This test ensures we removed /metrics and kept everything else
       // Routes: /, /login, /dashboard, /admin, /admin/metas, /admin/produtos,
       // /admin/funis, /admin/configuracoes, /metricas, /ranking, /404, fallback
-      expect(routes).toHaveLength(12);
-      
+      expect(routes).toHaveLength(14);
+
       // Verify key routes exist
       const routePaths = routes.map(r => r.path);
       expect(routePaths).toContain('/');

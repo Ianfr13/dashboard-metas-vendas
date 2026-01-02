@@ -115,7 +115,7 @@ export default function RealtimeMetrics({ data }: RealtimeMetricsProps) {
                   ) : (
                     <TrendingDown className="h-3 w-3" />
                   )}
-                  {Math.abs(todayVsYesterday.sales).toFixed(1)}%
+                  {(Math.abs(todayVsYesterday.sales) || 0).toFixed(1)}%
                 </Badge>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function RealtimeMetrics({ data }: RealtimeMetricsProps) {
                   ) : (
                     <TrendingDown className="h-3 w-3" />
                   )}
-                  {Math.abs(todayVsYesterday.revenue).toFixed(1)}%
+                  {(Math.abs(todayVsYesterday.revenue) || 0).toFixed(1)}%
                 </Badge>
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function RealtimeMetrics({ data }: RealtimeMetricsProps) {
                   ) : (
                     <TrendingDown className="h-3 w-3" />
                   )}
-                  {Math.abs(todayVsYesterday.leads).toFixed(1)}%
+                  {(Math.abs(todayVsYesterday.leads) || 0).toFixed(1)}%
                 </Badge>
               </div>
             </div>
@@ -172,13 +172,13 @@ export default function RealtimeMetrics({ data }: RealtimeMetricsProps) {
               </span>
             </div>
             <div className="w-full bg-muted rounded-full h-3">
-              <div 
+              <div
                 className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all"
                 style={{ width: `${Math.min(dailyProgress.sales, 100)}%` }}
               />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {dailyProgress.sales.toFixed(1)}% da meta
+              {(dailyProgress.sales || 0).toFixed(1)}% da meta
             </p>
           </div>
 
@@ -190,13 +190,13 @@ export default function RealtimeMetrics({ data }: RealtimeMetricsProps) {
               </span>
             </div>
             <div className="w-full bg-muted rounded-full h-3">
-              <div 
+              <div
                 className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all"
                 style={{ width: `${Math.min(dailyProgress.revenue, 100)}%` }}
               />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {dailyProgress.revenue.toFixed(1)}% da meta
+              {(dailyProgress.revenue || 0).toFixed(1)}% da meta
             </p>
           </div>
         </CardContent>

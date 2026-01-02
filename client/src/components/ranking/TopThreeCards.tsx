@@ -51,14 +51,14 @@ export default function TopThreeCards({ rankings }: TopThreeCardsProps) {
                 <AvatarFallback className="text-2xl">
                   {(ranking?.user?.name ?? '')
                     .split(' ')
-                    .filter(n => n.length > 0)
-                    .map(n => n[0])
+                    .filter((n: string) => n.length > 0)
+                    .map((n: string) => n[0])
                     .join('')
                     .slice(0, 2)
                     .toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
-              
+
               <div>
                 <h3 className="font-bold text-lg">{ranking.user.name}</h3>
                 <p className="text-sm text-muted-foreground">{ranking.user.email}</p>

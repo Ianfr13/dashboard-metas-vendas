@@ -3,11 +3,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
-  Calculator, 
-  TrendingUp, 
-  Users, 
-  Eye, 
+import {
+  Calculator,
+  TrendingUp,
+  Users,
+  Eye,
   MousePointerClick,
   DollarSign,
   Target,
@@ -26,7 +26,7 @@ export function MetricsSimulator({ scenario }: MetricsSimulatorProps) {
     const revenues = { '3M': 3000000, '4M': 4000000, '5M': 5000000 };
     return revenues[scenario];
   });
-  
+
   const [vslConversionRate, setVslConversionRate] = useState(1.5);
   const [checkoutConversionRate, setCheckoutConversionRate] = useState(80);
   const [upsellConversionRate, setUpsellConversionRate] = useState(25);
@@ -334,7 +334,7 @@ export function MetricsSimulator({ scenario }: MetricsSimulatorProps) {
               <span className="text-xs text-white/50">ROI</span>
             </div>
             <div className="text-2xl font-bold text-white">
-              {calculatedMetrics.roi.toFixed(1)}%
+              {(calculatedMetrics.roi || 0).toFixed(1)}%
             </div>
             <div className="text-xs text-white/50 mt-1">retorno sobre investimento</div>
           </Card>
@@ -346,7 +346,7 @@ export function MetricsSimulator({ scenario }: MetricsSimulatorProps) {
               <span className="text-xs text-white/50">ROAS</span>
             </div>
             <div className="text-2xl font-bold text-white">
-              {calculatedMetrics.roas.toFixed(2)}x
+              {(calculatedMetrics.roas || 0).toFixed(2)}x
             </div>
             <div className="text-xs text-white/50 mt-1">retorno por real investido</div>
           </Card>

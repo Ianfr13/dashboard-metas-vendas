@@ -67,7 +67,7 @@ export default function FunisCadastrados({ startDate, endDate }: FunisCadastrado
         if (error) throw error;
 
         setFunis(data || []);
-        
+
         // Selecionar primeiro funil automaticamente
         if (data && data.length > 0) {
           setSelectedFunilId(data[0].id);
@@ -291,7 +291,7 @@ export default function FunisCadastrados({ startDate, endDate }: FunisCadastrado
           {metrics.produtos.map((produto, index) => {
             const isFirst = index === 0;
             const produtoAnterior = index > 0 ? metrics.produtos[index - 1] : null;
-            
+
             return (
               <Card key={index}>
                 <CardHeader>
@@ -300,7 +300,7 @@ export default function FunisCadastrados({ startDate, endDate }: FunisCadastrado
                     Etapa {produto.ordem}: {produto.produto}
                   </CardTitle>
                   <CardDescription>
-                    {isFirst 
+                    {isFirst
                       ? 'Produto principal (frontend) - Base do funil'
                       : `Conversão baseada em ${produtoAnterior?.vendas} vendas de "${produtoAnterior?.produto}"`
                     }
@@ -322,7 +322,7 @@ export default function FunisCadastrados({ startDate, endDate }: FunisCadastrado
                       <p className="text-sm text-muted-foreground mb-1">
                         {isFirst ? 'Taxa de Conversão' : 'Taxa de Take'}
                       </p>
-                      <p className="text-2xl font-bold text-blue-600">{produto.taxaConversao.toFixed(2)}%</p>
+                      <p className="text-2xl font-bold text-blue-600">{(produto.taxaConversao || 0).toFixed(2)}%</p>
                       {!isFirst && produtoAnterior && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {produto.vendas} de {produtoAnterior.vendas} compraram
@@ -362,16 +362,15 @@ export default function FunisCadastrados({ startDate, endDate }: FunisCadastrado
                   <div key={index} className="flex items-center gap-4">
                     <ArrowRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
                     <div className="text-center">
-                      <div className={`rounded-lg p-4 mb-2 ${
-                        index === 0 ? 'bg-green-100 text-green-700' :
+                      <div className={`rounded-lg p-4 mb-2 ${index === 0 ? 'bg-green-100 text-green-700' :
                         index % 3 === 1 ? 'bg-purple-100 text-purple-700' :
-                        index % 3 === 2 ? 'bg-orange-100 text-orange-700' :
-                        'bg-pink-100 text-pink-700'
-                      }`}>
+                          index % 3 === 2 ? 'bg-orange-100 text-orange-700' :
+                            'bg-pink-100 text-pink-700'
+                        }`}>
                         <ShoppingCart className="h-8 w-8 mx-auto mb-2" />
                         <p className="text-2xl font-bold">{produto.vendas}</p>
                         <p className="text-sm">{produto.produto}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{produto.taxaConversao.toFixed(2)}%</p>
+                        <p className="text-xs text-muted-foreground mt-1">{(produto.taxaConversao || 0).toFixed(2)}%</p>
                       </div>
                     </div>
                   </div>

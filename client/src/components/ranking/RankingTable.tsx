@@ -35,20 +35,20 @@ export default function RankingTable({ rankings, role }: RankingTableProps) {
       return [
         { key: 'agendamentos', label: 'Agendamentos' },
         { key: 'comparecimentos', label: 'Comparecimentos' },
-        { key: 'taxa_comparecimento', label: 'Taxa Comp. (%)', format: (v: number) => v.toFixed(1) },
+        { key: 'taxa_comparecimento', label: 'Taxa Comp. (%)', format: (v: number) => (v || 0).toFixed(1) },
         { key: 'vendas_geradas', label: 'Vendas Geradas' }
       ]
     } else if (role === 'closer') {
       return [
         { key: 'vendas', label: 'Vendas' },
-        { key: 'valor_total_vendido', label: 'Valor Total', format: (v: number) => `R$ ${v.toLocaleString('pt-BR')}` },
-        { key: 'ticket_medio', label: 'Ticket Médio', format: (v: number) => `R$ ${v.toLocaleString('pt-BR')}` },
-        { key: 'taxa_conversao', label: 'Taxa Conv. (%)', format: (v: number) => v.toFixed(1) }
+        { key: 'valor_total_vendido', label: 'Valor Total', format: (v: number) => `R$ ${(v || 0).toLocaleString('pt-BR')}` },
+        { key: 'ticket_medio', label: 'Ticket Médio', format: (v: number) => `R$ ${(v || 0).toLocaleString('pt-BR')}` },
+        { key: 'taxa_conversao', label: 'Taxa Conv. (%)', format: (v: number) => (v || 0).toFixed(1) }
       ]
     } else {
       return [
         { key: 'vendas_auto_prospeccao', label: 'Vendas' },
-        { key: 'taxa_conversao_ponta_a_ponta', label: 'Taxa Conv. (%)', format: (v: number) => v.toFixed(1) }
+        { key: 'taxa_conversao_ponta_a_ponta', label: 'Taxa Conv. (%)', format: (v: number) => (v || 0).toFixed(1) }
       ]
     }
   }
@@ -75,11 +75,10 @@ export default function RankingTable({ rankings, role }: RankingTableProps) {
               <TableCell className="font-bold">
                 <div className="flex items-center gap-2">
                   {ranking.position <= 3 && (
-                    <Medal className={`h-5 w-5 ${
-                      ranking.position === 1 ? 'text-yellow-500' :
+                    <Medal className={`h-5 w-5 ${ranking.position === 1 ? 'text-yellow-500' :
                       ranking.position === 2 ? 'text-gray-400' :
-                      'text-amber-600'
-                    }`} />
+                        'text-amber-600'
+                      }`} />
                   )}
                   {ranking.position}º
                 </div>
@@ -91,8 +90,8 @@ export default function RankingTable({ rankings, role }: RankingTableProps) {
                     <AvatarFallback>
                       {(ranking?.user?.name ?? '')
                         .split(' ')
-                        .filter(n => n.length > 0)
-                        .map(n => n[0])
+                        .filter((n: string) => n.length > 0)
+                        .map((n: string) => n[0])
                         .join('')
                         .slice(0, 2)
                         .toUpperCase() || 'U'}
@@ -106,7 +105,7 @@ export default function RankingTable({ rankings, role }: RankingTableProps) {
               </TableCell>
               {metricColumns.map(col => (
                 <TableCell key={col.key} className="text-right">
-                  {col.format 
+                  {col.format
                     ? col.format(ranking.metrics[col.key] || 0)
                     : (ranking.metrics[col.key] || 0)
                   }

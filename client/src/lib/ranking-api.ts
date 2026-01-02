@@ -20,7 +20,7 @@ async function callRankingAPI(params: RankingAPIParams) {
   try {
     // Obter token de autenticação
     const { data: { session } } = await supabase.auth.getSession()
-    
+
     // DEBUG: Log da sessão
     console.log('[ranking-api] Session:', {
       hasSession: !!session,
@@ -28,7 +28,7 @@ async function callRankingAPI(params: RankingAPIParams) {
       tokenPreview: session?.access_token ? session.access_token.substring(0, 20) + '...' : 'NO TOKEN',
       user: session?.user?.email
     })
-    
+
     const headers: any = {
       'Content-Type': 'application/json'
     }
@@ -46,24 +46,29 @@ async function callRankingAPI(params: RankingAPIParams) {
     })
 
     if (!response.ok) {
-      let errorMessage = 'Erro ao chamar API de ranking'
+      let errorMessage = `Erro ${response.status}: ${response.statusText}`
       try {
         const error = await response.json()
-        errorMessage = error.error || errorMessage
+        errorMessage = error.error || error.message || errorMessage
+        if (error.details) {
+          console.error('[ranking-api] Error details:', error.details)
+        }
       } catch (parseError) {
         // Se não for JSON, tenta ler como texto
         try {
           const errorText = await response.text()
-          errorMessage = errorText || `${response.status} ${response.statusText}`
+          if (errorText) {
+            errorMessage = `${errorMessage} - ${errorText.substring(0, 200)}`
+          }
         } catch {
-          errorMessage = `${response.status} ${response.statusText}`
+          // Ignorar erro de leitura de texto
         }
       }
       throw new Error(errorMessage)
     }
 
     const result = await response.json()
-    
+
     if (!result.success) {
       throw new Error(result.error || 'Erro desconhecido')
     }

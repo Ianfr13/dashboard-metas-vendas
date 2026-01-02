@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Crown, Trophy, Loader2 } from "lucide-react";
 import { rankingAPI } from "@/lib/ranking-api";
-import BadgeIcon from "@/components/ranking/BadgeIcon";
+import BadgeIcon from "@/components/Ranking/BadgeIcon";
 import { Link } from "wouter";
 
 export default function HallOfFame() {
@@ -118,7 +118,7 @@ export default function HallOfFame() {
                               {champion.user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          
+
                           <div>
                             <h3 className="font-bold text-lg">{champion.user.name}</h3>
                             <p className="text-sm text-muted-foreground">{champion.user.email}</p>
@@ -126,7 +126,7 @@ export default function HallOfFame() {
 
                           <div className="flex items-center gap-2 text-xl font-bold text-yellow-600">
                             <Trophy className="h-5 w-5" />
-                            {champion.score.toFixed(2)} pts
+                            {Number(champion.score || 0).toFixed(2)} pts
                           </div>
 
                           {champion.badges && champion.badges.length > 0 && (
@@ -154,7 +154,7 @@ export default function HallOfFame() {
                   <div className="space-y-6">
                     {history.history.map((item: any, idx: number) => {
                       if (idx === 0) return null; // Pular o mês atual (já mostrado acima)
-                      
+
                       const monthLabel = new Date(item.month + '-01').toLocaleDateString('pt-BR', {
                         month: 'long',
                         year: 'numeric'
@@ -165,7 +165,7 @@ export default function HallOfFame() {
                           <h3 className="font-semibold text-lg mb-3">
                             {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
                           </h3>
-                          
+
                           {item.champions && (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               {Object.entries(item.champions).map(([role, champion]: [string, any]) => (
@@ -176,12 +176,12 @@ export default function HallOfFame() {
                                       {champion.user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                                     </AvatarFallback>
                                   </Avatar>
-                                  
+
                                   <div className="flex-1">
                                     <div className="text-xs text-muted-foreground">{getRoleLabel(role)}</div>
                                     <div className="font-medium">{champion.user.name}</div>
                                     <div className="text-sm text-muted-foreground">
-                                      {champion.score.toFixed(2)} pts
+                                      {Number(champion.score || 0).toFixed(2)} pts
                                     </div>
                                   </div>
 

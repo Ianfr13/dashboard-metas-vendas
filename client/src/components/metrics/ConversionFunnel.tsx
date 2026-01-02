@@ -29,12 +29,12 @@ export default function ConversionFunnel({ data }: ConversionFunnelProps) {
         <div className="space-y-4">
           {data.map((stage, index) => {
             const widthPercentage = (stage.value / maxValue) * 100;
-            
+
             return (
               <div key={index} className="space-y-2">
                 {/* Etapa do Funil */}
                 <div className="relative">
-                  <div 
+                  <div
                     className="mx-auto rounded-lg p-4 transition-all hover:scale-[1.02]"
                     style={{
                       width: `${Math.max(widthPercentage, 30)}%`,
@@ -47,12 +47,12 @@ export default function ConversionFunnel({ data }: ConversionFunnelProps) {
                       <div>
                         <p className="font-semibold text-sm">{stage.name}</p>
                         <p className="text-xs opacity-90">
-                          {formatNumber(stage.value)} ({stage.percentage.toFixed(1)}% do total)
+                          {formatNumber(stage.value)} ({(stage.percentage || 0).toFixed(1)}% do total)
                         </p>
                       </div>
                       {stage.conversionFromPrevious && (
                         <div className="text-right">
-                          <p className="text-lg font-bold">{stage.conversionFromPrevious.toFixed(1)}%</p>
+                          <p className="text-lg font-bold">{(stage.conversionFromPrevious || 0).toFixed(1)}%</p>
                           <p className="text-xs opacity-90">conversão</p>
                         </div>
                       )}
@@ -66,7 +66,7 @@ export default function ConversionFunnel({ data }: ConversionFunnelProps) {
                     <ArrowDown className="h-5 w-5 text-muted-foreground" />
                     {data[index + 1]?.conversionFromPrevious && (
                       <span className="text-xs text-muted-foreground font-medium mt-1">
-                        {data[index + 1]?.conversionFromPrevious?.toFixed(1)}% avançam
+                        {(data[index + 1]?.conversionFromPrevious || 0).toFixed(1)}% avançam
                       </span>
                     )}
                   </div>
@@ -91,7 +91,7 @@ export default function ConversionFunnel({ data }: ConversionFunnelProps) {
             <div className="text-center">
               <p className="text-sm text-muted-foreground">Maior Gargalo</p>
               <p className="text-2xl font-bold text-orange-500">
-                {Math.min(...data.filter(s => s.conversionFromPrevious).map(s => s.conversionFromPrevious!)).toFixed(1)}%
+                {(Math.min(...data.filter(s => s.conversionFromPrevious).map(s => s.conversionFromPrevious!)) || 0).toFixed(1)}%
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 {data.find(s => s.conversionFromPrevious === Math.min(...data.filter(s => s.conversionFromPrevious).map(s => s.conversionFromPrevious!)))?.name || 'N/A'}

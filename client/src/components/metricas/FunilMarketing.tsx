@@ -48,7 +48,7 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
       try {
         setLoading(true);
         setError(null);
-        
+
         // Chamar Edge Function do Supabase (sem expor chaves)
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&funnel=marketing`,
@@ -58,11 +58,11 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
             }
           }
         );
-        
+
         if (!response.ok) {
           throw new Error('Erro ao carregar métricas');
         }
-        
+
         const data = await response.json();
         setMetrics(data.metrics);
         setEvolutionData(data.evolutionData || []);
@@ -152,7 +152,7 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold">
-            R$ {metrics.cpl.toFixed(2)}
+            R$ {(metrics.cpl || 0).toFixed(2)}
           </div>
         </CardContent>
       </Card>
@@ -165,7 +165,7 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold">
-            R$ {metrics.cpa.toFixed(2)}
+            R$ {(metrics.cpa || 0).toFixed(2)}
           </div>
         </CardContent>
       </Card>
@@ -189,8 +189,8 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold">
-            {metrics.custoTotal > 0 
-              ? ((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1) 
+            {metrics.custoTotal > 0
+              ? ((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1)
               : '0.0'
             }%
           </div>
@@ -232,11 +232,11 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
               </tr>
               <tr className="border-b hover:bg-muted/50">
                 <td className="p-4">CPL (Custo por Lead)</td>
-                <td className="p-4 text-right font-mono">R$ {metrics.cpl.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono">R$ {(metrics.cpl || 0).toFixed(2)}</td>
               </tr>
               <tr className="border-b hover:bg-muted/50">
                 <td className="p-4">CPA (Custo por Aquisição)</td>
-                <td className="p-4 text-right font-mono">R$ {metrics.cpa.toFixed(2)}</td>
+                <td className="p-4 text-right font-mono">R$ {(metrics.cpa || 0).toFixed(2)}</td>
               </tr>
               <tr className="border-b hover:bg-muted/50">
                 <td className="p-4">Taxa de Conversão</td>
@@ -245,8 +245,8 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
               <tr className="hover:bg-muted/50">
                 <td className="p-4 font-semibold">ROI</td>
                 <td className="p-4 text-right font-mono font-semibold">
-                  {metrics.custoTotal > 0 
-                    ? ((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1) 
+                  {metrics.custoTotal > 0
+                    ? ((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1)
                     : '0.0'
                   }%
                 </td>
@@ -312,11 +312,11 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
               </div>
               <div className="flex justify-between">
                 <span>CPL:</span>
-                <span className="font-bold">R$ {metrics.cpl.toFixed(2)}</span>
+                <span className="font-bold">R$ {(metrics.cpl || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>CPA:</span>
-                <span className="font-bold">R$ {metrics.cpa.toFixed(2)}</span>
+                <span className="font-bold">R$ {(metrics.cpa || 0).toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
@@ -335,8 +335,8 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
               <div className="flex justify-between">
                 <span>ROI:</span>
                 <span className="font-bold text-green-600">
-                  {metrics.custoTotal > 0 
-                    ? ((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1) 
+                  {metrics.custoTotal > 0
+                    ? ((metrics.receita / metrics.custoTotal - 1) * 100).toFixed(1)
                     : '0.0'
                   }%
                 </span>
@@ -344,7 +344,7 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
               <div className="flex justify-between">
                 <span>Ticket Médio:</span>
                 <span className="font-bold">
-                  R$ {metrics.vendas > 0 
+                  R$ {metrics.vendas > 0
                     ? (metrics.receita / metrics.vendas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
                     : '0,00'
                   }
@@ -397,7 +397,7 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, value }) => `${name}: R$ ${value.toFixed(2)}`}
+                  label={({ name, value }) => `${name}: R$ ${Number(value || 0).toFixed(2)}`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"

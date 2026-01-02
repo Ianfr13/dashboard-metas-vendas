@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, Trophy, Loader2 } from "lucide-react";
 import { rankingAPI } from "@/lib/ranking-api";
-import TopThreeCards from "@/components/ranking/TopThreeCards";
-import RankingTable from "@/components/ranking/RankingTable";
+import TopThreeCards from "@/components/Ranking/TopThreeCards";
+import RankingTable from "@/components/Ranking/RankingTable";
 import { Link } from "wouter";
 
 export default function Ranking() {

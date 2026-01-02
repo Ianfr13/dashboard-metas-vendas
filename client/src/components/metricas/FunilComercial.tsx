@@ -50,7 +50,7 @@ export default function FunilComercial({ startDate, endDate }: FunilComercialPro
       try {
         setLoading(true);
         setError(null);
-        
+
         // Chamar Edge Function do Supabase (sem expor chaves)
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&funnel=comercial`,
@@ -60,11 +60,11 @@ export default function FunilComercial({ startDate, endDate }: FunilComercialPro
             }
           }
         );
-        
+
         if (!response.ok) {
           throw new Error('Erro ao carregar métricas');
         }
-        
+
         const data = await response.json();
         setMetrics(data.metrics);
         setEvolutionData(data.evolutionData || []);
@@ -170,8 +170,8 @@ export default function FunilComercial({ startDate, endDate }: FunilComercialPro
         <CardContent>
           <div className="text-3xl font-bold">{metrics.noShow}</div>
           <p className="text-xs text-muted-foreground mt-1">
-            {metrics.agendamentos > 0 
-              ? ((metrics.noShow / metrics.agendamentos) * 100).toFixed(1) 
+            {metrics.agendamentos > 0
+              ? ((metrics.noShow / metrics.agendamentos) * 100).toFixed(1)
               : '0.0'
             }% dos agendamentos
           </p>
@@ -344,8 +344,8 @@ export default function FunilComercial({ startDate, endDate }: FunilComercialPro
               <div className="flex justify-between">
                 <span>% No-Show:</span>
                 <span className="font-bold text-red-600">
-                  {metrics.agendamentos > 0 
-                    ? ((metrics.noShow / metrics.agendamentos) * 100).toFixed(1) 
+                  {metrics.agendamentos > 0
+                    ? ((metrics.noShow / metrics.agendamentos) * 100).toFixed(1)
                     : '0.0'
                   }%
                 </span>
@@ -353,7 +353,7 @@ export default function FunilComercial({ startDate, endDate }: FunilComercialPro
               <div className="flex justify-between">
                 <span>Ticket Médio:</span>
                 <span className="font-bold">
-                  R$ {metrics.vendas > 0 
+                  R$ {metrics.vendas > 0
                     ? (metrics.receita / metrics.vendas).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
                     : '0,00'
                   }
@@ -452,11 +452,11 @@ export default function FunilComercial({ startDate, endDate }: FunilComercialPro
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart 
+            <BarChart
               data={[
                 { name: 'Presença', value: metrics.taxaPresenca, color: '#10b981' },
                 { name: 'No-Show', value: metrics.agendamentos > 0 ? (metrics.noShow / metrics.agendamentos) * 100 : 0, color: '#ef4444' }
-              ]} 
+              ]}
               layout="vertical"
             >
               <CartesianGrid strokeDasharray="3 3" />

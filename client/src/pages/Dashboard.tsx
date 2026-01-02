@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
-  
+
   // Filtros
   const hoje = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(hoje.getMonth() + 1);
@@ -43,22 +43,25 @@ export default function Dashboard() {
 
   const getTodaySales = (salesByDay: any) => {
     const today = new Date().toISOString().split('T')[0];
+    if (Array.isArray(salesByDay)) {
+      return salesByDay.find((d: any) => d.date === today)?.revenue || 0;
+    }
     return salesByDay?.[today]?.revenue || 0;
   };
 
   const getThisWeekSales = (salesByDay: any) => {
     if (!salesByDay) return 0;
-    
+
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0 = Domingo, 6 = Sábado
-    
+
     // Encontrar o domingo desta semana
     const sunday = new Date(now);
     sunday.setDate(now.getDate() - dayOfWeek);
     sunday.setHours(0, 0, 0, 0);
-    
+
     let weekRevenue = 0;
-    
+
     // Somar vendas de domingo até hoje
     for (let i = 0; i <= dayOfWeek; i++) {
       const date = new Date(sunday);
@@ -66,7 +69,7 @@ export default function Dashboard() {
       const dateStr = date.toISOString().split('T')[0];
       weekRevenue += salesByDay[dateStr]?.revenue || 0;
     }
-    
+
     return weekRevenue;
   };
 
@@ -75,7 +78,7 @@ export default function Dashboard() {
       setLoading(true);
       const data = await dashboardAPI.getMetaPrincipal(selectedMonth, selectedYear);
       setDashboardData(data);
-      
+
       if (data?.metaPrincipal?.progresso >= 100) {
         setShowCelebration(true);
       }
@@ -105,11 +108,11 @@ export default function Dashboard() {
 
   const meta = dashboardData?.metaPrincipal;
   const subMetas = dashboardData?.subMetas || [];
-  
+
   // Percentuais configurados no Admin (padrão 85/15)
   const percentualMarketing = meta?.percentual_marketing || 85;
   const percentualComercial = meta?.percentual_comercial || 15;
-  
+
   // Se uma submeta está selecionada, usar seu valor como meta
   const subMetaSelecionada = selectedSubMeta !== null ? subMetas.find((sm: any) => sm.id === selectedSubMeta) : null;
   const valorMeta = subMetaSelecionada ? subMetaSelecionada.valor : (meta?.valor_meta || 0);
@@ -118,19 +121,19 @@ export default function Dashboard() {
 
   // Calcular dias baseado no mês/ano selecionado
   const diasNoMes = getDaysInMonth(selectedMonth, selectedYear);
-  
+
   // Determinar se o mês selecionado é passado, atual ou futuro
   const mesAtual = selectedMonth === (hoje.getMonth() + 1) && selectedYear === hoje.getFullYear();
-  const mesPassado = selectedYear < hoje.getFullYear() || 
-                     (selectedYear === hoje.getFullYear() && selectedMonth < (hoje.getMonth() + 1));
-  const mesFuturo = selectedYear > hoje.getFullYear() || 
-                    (selectedYear === hoje.getFullYear() && selectedMonth > (hoje.getMonth() + 1));
-  
+  const mesPassado = selectedYear < hoje.getFullYear() ||
+    (selectedYear === hoje.getFullYear() && selectedMonth < (hoje.getMonth() + 1));
+  const mesFuturo = selectedYear > hoje.getFullYear() ||
+    (selectedYear === hoje.getFullYear() && selectedMonth > (hoje.getMonth() + 1));
+
   // Calcular dias decorridos e restantes baseado no período
   let diaAtual: number;
   let diasDecorridos: number;
   let diasRestantes: number;
-  
+
   if (mesPassado) {
     // Mês passado: todos os dias decorridos, nenhum restante
     diaAtual = diasNoMes;
@@ -219,18 +222,18 @@ export default function Dashboard() {
         const metaDiaria = valorMeta / daysInMonth;
         const vendasHoje = getTodaySales(salesByDay);
         const progressoDiario = metaDiaria > 0 ? (vendasHoje / metaDiaria) * 100 : 0;
-        
+
         console.log('📅 MODO DIÁRIO:');
         console.log('  metaDiaria:', metaDiaria);
         console.log('  vendasHoje:', vendasHoje);
         console.log('  progressoDiario:', progressoDiario);
-        
+
         // Se mês passado ou futuro, não calcular horas (não faz sentido)
         let horasRestantes: number;
         let progressoEsperadoDia: number;
         let ritmoAtualDia: number;
         let ritmoNecessarioDia: number;
-        
+
         if (mesPassado) {
           // Mês passado: dia completo
           horasRestantes = 0;
@@ -251,19 +254,19 @@ export default function Dashboard() {
           const faltaHoje = metaDiaria - vendasHoje;
           ritmoNecessarioDia = horasRestantes > 0 ? faltaHoje / horasRestantes : 0;
         }
-        
+
         const deficitDiario = vendasHoje - (metaDiaria * (progressoEsperadoDia / 100));
-        
+
         // Marketing e Comercial
         const metaMarketingDia = metaDiaria * (percentualMarketing / 100);
         const metaComercialDia = metaDiaria * (percentualComercial / 100);
         const vendasMarketingDia = vendasHoje * (percentualMarketing / 100);
         const vendasComercialDia = vendasHoje * (percentualComercial / 100);
-        
+
         // Ticket médio (vendas hoje / número de vendas hoje)
         const vendasCountHoje = salesByDay[now.toISOString().split('T')[0]]?.sales || 0;
         const ticketMedioDia = vendasCountHoje > 0 ? vendasHoje / vendasCountHoje : 0;
-        
+
         return {
           meta: metaDiaria,
           atual: vendasHoje,
@@ -283,18 +286,18 @@ export default function Dashboard() {
           ticketMedio: ticketMedioDia
         };
       }
-      
+
       case 'week': {
         // Meta e vendas semanais
         const metaSemanal = (valorMeta / daysInMonth) * 7;
         const vendasSemana = getThisWeekSales(salesByDay);
         const progressoSemanal = metaSemanal > 0 ? (vendasSemana / metaSemanal) * 100 : 0;
-        
+
         // Dias da semana - ajustar baseado no mês selecionado
         let diasDecorridosSemana: number;
         let diasRestantesSemana: number;
         let progressoEsperadoSemana: number;
-        
+
         if (mesPassado) {
           // Mês passado: semana completa
           diasDecorridosSemana = 7;
@@ -312,26 +315,27 @@ export default function Dashboard() {
           diasRestantesSemana = 7 - diasDecorridosSemana;
           progressoEsperadoSemana = (diasDecorridosSemana / 7) * 100;
         }
-        
+
         // Déficit/superávit semanal
         const deficitSemanal = vendasSemana - (metaSemanal * (progressoEsperadoSemana / 100));
-        
+
         // Ritmo atual (vendas por dia esta semana)
         const ritmoAtualSemana = diasDecorridosSemana > 0 ? vendasSemana / diasDecorridosSemana : 0;
-        
+
         // Ritmo necessário (quanto precisa vender por dia restante)
         const faltaSemana = metaSemanal - vendasSemana;
         const ritmoNecessarioSemana = diasRestantesSemana > 0 ? faltaSemana / diasRestantesSemana : 0;
-        
+
         // Marketing e Comercial
         const metaMarketingSemana = metaSemanal * (percentualMarketing / 100);
         const metaComercialSemana = metaSemanal * (percentualComercial / 100);
         const vendasMarketingSemana = vendasSemana * (percentualMarketing / 100);
         const vendasComercialSemana = vendasSemana * (percentualComercial / 100);
-        
+
         // Ticket médio da semana
         let vendasCountSemana = 0;
         const sunday = new Date(now);
+        const dayOfWeek = now.getDay();
         sunday.setDate(now.getDate() - dayOfWeek);
         for (let i = 0; i <= dayOfWeek; i++) {
           const date = new Date(sunday);
@@ -340,7 +344,7 @@ export default function Dashboard() {
           vendasCountSemana += salesByDay[dateStr]?.sales || 0;
         }
         const ticketMedioSemana = vendasCountSemana > 0 ? vendasSemana / vendasCountSemana : 0;
-        
+
         return {
           meta: metaSemanal,
           atual: vendasSemana,
@@ -360,25 +364,25 @@ export default function Dashboard() {
           ticketMedio: ticketMedioSemana
         };
       }
-      
+
       default: { // 'month'
         // Cálculos mensais - usar variáveis do escopo externo que já consideram mês selecionado
         // diasNoMes, diasDecorridos, diasRestantes já foram calculados corretamente acima
         const progressoEsperadoMensal = (diasDecorridos / diasNoMes) * 100;
         const deficitMensal = valorAtual - (valorMeta * (progressoEsperadoMensal / 100));
-        
+
         const ritmoAtualMensal = diasDecorridos > 0 ? valorAtual / diasDecorridos : 0;
         const ritmoNecessarioMensal = diasRestantes > 0 ? (valorMeta - valorAtual) / diasRestantes : 0;
-        
+
         const metaMarketing = valorMeta * (percentualMarketing / 100);
         const metaComercial = valorMeta * (percentualComercial / 100);
         const vendasMarketing = valorAtual * (percentualMarketing / 100);
         const vendasComercial = valorAtual * (percentualComercial / 100);
-        
+
         // Ticket médio do mês (vendas totais / número total de vendas)
         const vendasCountMes = Object.values(salesByDay).reduce((sum: number, day: any) => sum + (day?.sales || 0), 0);
         const ticketMedio = vendasCountMes > 0 ? valorAtual / vendasCountMes : 0;
-        
+
         return {
           meta: valorMeta,
           atual: valorAtual,
@@ -401,9 +405,6 @@ export default function Dashboard() {
     }
   };
 
-  // Calcular valores de exibição (não usar useMemo para evitar erro #310)
-  const displayValues = getDisplayValues();
-
   // Loading state
   if (loading || !dashboardData) {
     return (
@@ -415,10 +416,10 @@ export default function Dashboard() {
         onMonthChange={setSelectedMonth}
         onYearChange={setSelectedYear}
         onViewModeChange={(mode) => {
-        console.log('🔄 onViewModeChange called with:', mode);
-        setViewMode(mode as 'month' | 'week' | 'day');
-        console.log('✅ setViewMode called');
-      }}
+          console.log('🔄 onViewModeChange called with:', mode);
+          setViewMode(mode as 'month' | 'week' | 'day');
+          console.log('✅ setViewMode called');
+        }}
         onRefresh={handleRefresh}
       >
         <div className="flex items-center justify-center min-h-screen">
@@ -430,6 +431,9 @@ export default function Dashboard() {
       </DashboardLayout>
     );
   }
+
+  // Calcular valores de exibição (não usar useMemo para evitar erro #310)
+  const displayValues = getDisplayValues();
 
   return (
     <DashboardLayout
@@ -447,11 +451,11 @@ export default function Dashboard() {
       onRefresh={handleRefresh}
     >
       {showCelebration && <GoalCelebration show={showCelebration} />}
-      
+
       <div className="space-y-6">
         {/* Goal Gauge */}
         <div className="flex justify-center mb-8">
-          <GoalGauge 
+          <GoalGauge
             percentage={displayValues.progresso}
             current={displayValues.atual}
             target={displayValues.meta}
@@ -496,7 +500,7 @@ export default function Dashboard() {
                 Meta: {displayValues.metaMarketing.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </p>
               <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-teal-500 to-teal-600 dark:from-teal-400 dark:to-teal-500 transition-all duration-500"
                   style={{ width: `${Math.min(100, (displayValues.vendasMarketing / displayValues.metaMarketing) * 100)}%` }}
                 ></div>
@@ -517,7 +521,7 @@ export default function Dashboard() {
                 Meta: {displayValues.metaComercial.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
               </p>
               <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-amber-500 to-amber-600 dark:from-amber-400 dark:to-amber-500 transition-all duration-500"
                   style={{ width: `${Math.min(100, (displayValues.vendasComercial / displayValues.metaComercial) * 100)}%` }}
                 ></div>
