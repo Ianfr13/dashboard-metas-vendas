@@ -13,8 +13,10 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { gtmAnalyticsAPI } from "@/lib/edge-functions";
+import { rankingAPI } from "@/lib/ranking-api";
 import FunilMarketing from "@/components/metricas/FunilMarketing";
 import FunilComercial from "@/components/metricas/FunilComercial";
+import FunisCadastrados from "@/components/metricas/FunisCadastrados";
 
 export default function Metricas() {
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -139,17 +141,16 @@ export default function Metricas() {
             </CardContent>
           </Card>
         ) : (
-          <Tabs defaultValue="funil" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="funil">Funil de Conversão</TabsTrigger>
-              <TabsTrigger value="evolucao">Evolução</TabsTrigger>
+          <Tabs defaultValue="marketing" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="marketing">Marketing</TabsTrigger>
               <TabsTrigger value="produtos">Produtos</TabsTrigger>
-              <TabsTrigger value="marketing">Funil Marketing</TabsTrigger>
-              <TabsTrigger value="comercial">Funil Comercial</TabsTrigger>
+              <TabsTrigger value="comercial">Comercial</TabsTrigger>
+              <TabsTrigger value="funis">Funis</TabsTrigger>
             </TabsList>
 
-            {/* Funil de Conversão */}
-            <TabsContent value="funil" className="space-y-6">
+            {/* Marketing - Funil de Conversão */}
+            <TabsContent value="marketing" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Funil de Conversão</CardTitle>
@@ -256,58 +257,6 @@ export default function Metricas() {
               </div>
             </TabsContent>
 
-            {/* Evolução Temporal */}
-            <TabsContent value="evolucao" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Evolução Temporal</CardTitle>
-                  <CardDescription>
-                    Acompanhe a evolução dos eventos ao longo do tempo
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-4 mb-6">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Evento</label>
-                      <select 
-                        className="border rounded px-3 py-2"
-                        value={selectedEvent}
-                        onChange={(e) => setSelectedEvent(e.target.value as any)}
-                      >
-                        <option value="purchase">Vendas</option>
-                        <option value="generate_lead">Leads</option>
-                        <option value="begin_checkout">Checkouts</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Agrupar por</label>
-                      <select 
-                        className="border rounded px-3 py-2"
-                        value={groupBy}
-                        onChange={(e) => setGroupBy(e.target.value as any)}
-                      >
-                        <option value="hour">Hora</option>
-                        <option value="day">Dia</option>
-                        <option value="week">Semana</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={evolutionData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} name="Quantidade" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
             {/* Produtos */}
             <TabsContent value="produtos" className="space-y-6">
               <Card>
@@ -364,19 +313,23 @@ export default function Metricas() {
               </Card>
             </TabsContent>
 
-            {/* Funil Marketing */}
-            <TabsContent value="marketing" className="space-y-6">
+            {/* Comercial - Funil Marketing + Funil Comercial */}
+            <TabsContent value="comercial" className="space-y-6">
               <FunilMarketing 
-                selectedMonth={startDate.getMonth() + 1}
-                selectedYear={startDate.getFullYear()}
+                startDate={startDate}
+                endDate={endDate}
+              />
+              <FunilComercial 
+                startDate={startDate}
+                endDate={endDate}
               />
             </TabsContent>
 
-            {/* Funil Comercial */}
-            <TabsContent value="comercial" className="space-y-6">
-              <FunilComercial 
-                selectedMonth={startDate.getMonth() + 1}
-                selectedYear={startDate.getFullYear()}
+            {/* Funis */}
+            <TabsContent value="funis" className="space-y-6">
+              <FunisCadastrados 
+                startDate={startDate}
+                endDate={endDate}
               />
             </TabsContent>
           </Tabs>
