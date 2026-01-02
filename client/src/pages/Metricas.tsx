@@ -15,8 +15,10 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { gtmAnalyticsAPI } from "@/lib/edge-functions";
 import FunilMarketing from "@/components/metricas/FunilMarketing";
 import FunilComercial from "@/components/metricas/FunilComercial";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Metricas() {
+  const { user, loading: authLoading } = useAuth();
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [funnelData, setFunnelData] = useState<any>(null);
@@ -30,6 +32,10 @@ export default function Metricas() {
   // Carregar dados do GTM
   useEffect(() => {
     async function loadMetrics() {
+      // Aguardar autenticação
+      if (authLoading) return;
+      if (!user) return;
+
       try {
         setLoading(true);
         setError(null);
@@ -56,7 +62,7 @@ export default function Metricas() {
     }
 
     loadMetrics();
-  }, [startDate, endDate, selectedEvent, groupBy]);
+  }, [startDate, endDate, selectedEvent, groupBy, user, authLoading]);
 
   // Preparar dados para gráfico de funil
   const funnelChartData = funnelData ? [
