@@ -16,7 +16,7 @@ const FUNCTIONS_URL = 'https://auvvrewlbpyymekonilv.supabase.co/functions/v1';
  */
 async function getAuthHeaders(): Promise<HeadersInit> {
   const { data: { session } } = await supabase.auth.getSession();
-  
+
   return {
     'Content-Type': 'application/json',
     ...(session ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
@@ -50,7 +50,8 @@ export const gtmAPI = {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to send event');
+      console.error('Edge Function Error:', error);
+      throw new Error(error.error || JSON.stringify(error));
     }
 
     return response.json();
@@ -78,7 +79,7 @@ export const dashboardAPI = {
     if (year) params.append('year', year.toString());
 
     const url = `${FUNCTIONS_URL}/get-dashboard-data${params.toString() ? '?' + params.toString() : ''}`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -166,8 +167,8 @@ export const dashboardAPI = {
     // Calcular totais
     const totals = (purchases || []).reduce(
       (acc, event) => {
-        const eventData = typeof event.event_data === 'string' 
-          ? JSON.parse(event.event_data) 
+        const eventData = typeof event.event_data === 'string'
+          ? JSON.parse(event.event_data)
           : event.event_data;
 
         const value = parseFloat(eventData?.value || 0);
@@ -223,8 +224,8 @@ export const dashboardAPI = {
 
     (purchases || []).forEach((event) => {
       const date = new Date(event.timestamp).toISOString().split('T')[0];
-      const eventData = typeof event.event_data === 'string' 
-        ? JSON.parse(event.event_data) 
+      const eventData = typeof event.event_data === 'string'
+        ? JSON.parse(event.event_data)
         : event.event_data;
 
       const value = parseFloat(eventData?.value || 0);

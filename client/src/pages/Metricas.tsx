@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { 
-  CalendarIcon, 
+import {
+  CalendarIcon,
   Loader2,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -275,7 +275,7 @@ export default function Metricas() {
                   <div className="flex gap-4 mb-6">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Evento</label>
-                      <select 
+                      <select
                         className="border rounded px-3 py-2"
                         value={selectedEvent}
                         onChange={(e) => setSelectedEvent(e.target.value as any)}
@@ -288,7 +288,7 @@ export default function Metricas() {
 
                     <div>
                       <label className="text-sm font-medium mb-2 block">Agrupar por</label>
-                      <select 
+                      <select
                         className="border rounded px-3 py-2"
                         value={groupBy}
                         onChange={(e) => setGroupBy(e.target.value as any)}
@@ -372,7 +372,7 @@ export default function Metricas() {
 
             {/* Funil Marketing */}
             <TabsContent value="marketing" className="space-y-6">
-              <FunilMarketing 
+              <FunilMarketing
                 startDate={startDate}
                 endDate={endDate}
               />
@@ -380,7 +380,7 @@ export default function Metricas() {
 
             {/* Funil Comercial */}
             <TabsContent value="comercial" className="space-y-6">
-              <FunilComercial 
+              <FunilComercial
                 startDate={startDate}
                 endDate={endDate}
               />
