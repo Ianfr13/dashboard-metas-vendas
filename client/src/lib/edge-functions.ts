@@ -50,8 +50,7 @@ export const gtmAPI = {
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('Edge Function Error:', error);
-      throw new Error(error.error || JSON.stringify(error));
+      throw new Error(error.error || 'Failed to send event');
     }
 
     return response.json();
@@ -294,6 +293,10 @@ export const dashboardAPI = {
 export interface FunnelMetrics {
   etapas: {
     pageViews: number;
+    viewItem: number;
+    addToCart: number;
+    viewCart: number;
+    beginCheckout: number;
     leads: number;
     checkouts: number;
     purchases: number;
@@ -320,6 +323,16 @@ export interface ProductMetricsGTM {
   vendas: number;
   receita: number;
   ticketMedio: number;
+}
+
+export interface TrafficSourceMetrics {
+  source: string;
+  medium: string;
+  sessions: number;
+  leads: number;
+  sales: number;
+  revenue: number;
+  conversionRate: number;
 }
 
 export const gtmAnalyticsAPI = {
@@ -374,6 +387,23 @@ export const gtmAnalyticsAPI = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch product metrics');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Obtém métricas por fonte de tráfego
+   */
+  getTrafficSources: async (startDate: string, endDate: string): Promise<TrafficSourceMetrics[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/gtm-analytics?action=traffic_sources&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch traffic sources');
     }
 
     return response.json();

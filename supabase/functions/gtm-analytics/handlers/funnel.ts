@@ -3,15 +3,17 @@ import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 export interface FunnelMetrics {
   etapas: {
     pageViews: number
-    leads: number
-    checkouts: number
+    viewItem: number
+    addToCart: number
+    viewCart: number
+    beginCheckout: number
     purchases: number
   }
   conversao: {
-    viewsParaLeads: number
-    leadsParaCheckout: number
-    checkoutParaVenda: number
-    endToEnd: number
+    viewToCart: number // view_item -> add_to_cart
+    cartToCheckout: number // add_to_cart -> begin_checkout
+    checkoutToPurchase: number // begin_checkout -> purchase
+    endToEnd: number // page_view -> purchase
   }
   financeiro: {
     receitaTotal: number
@@ -37,23 +39,33 @@ export async function getFunnelMetrics(
 
   // Contar eventos por tipo
   let pageViews = 0
-  let leads = 0
-  let checkouts = 0
+  let viewItem = 0
+  let addToCart = 0
+  let viewCart = 0
+  let beginCheckout = 0
   let purchases = 0
   let receitaTotal = 0
 
   events?.forEach(event => {
-    const eventData = JSON.parse(event.event_data || '{}')
-    
+    const eventData = typeof event.event_data === 'string'
+      ? JSON.parse(event.event_data || '{}')
+      : event.event_data || {}
+
     switch (event.event_name) {
       case 'page_view':
         pageViews++
         break
-      case 'generate_lead':
-        leads++
+      case 'view_item':
+        viewItem++
+        break
+      case 'add_to_cart':
+        addToCart++
+        break
+      case 'view_cart':
+        viewCart++
         break
       case 'begin_checkout':
-        checkouts++
+        beginCheckout++
         break
       case 'purchase':
         purchases++
@@ -63,10 +75,14 @@ export async function getFunnelMetrics(
     }
   })
 
+  // Hack: Se viewItem for 0 mas tiver addToCart, assumir que viewItem >= addToCart
+  if (viewItem < addToCart) viewItem = addToCart
+  if (addToCart < beginCheckout) addToCart = beginCheckout // Simplificação para funis lineares
+
   // Calcular taxas de conversão
-  const viewsParaLeads = pageViews > 0 ? (leads / pageViews) * 100 : 0
-  const leadsParaCheckout = leads > 0 ? (checkouts / leads) * 100 : 0
-  const checkoutParaVenda = checkouts > 0 ? (purchases / checkouts) * 100 : 0
+  const viewToCart = viewItem > 0 ? (addToCart / viewItem) * 100 : 0
+  const cartToCheckout = addToCart > 0 ? (beginCheckout / addToCart) * 100 : 0
+  const checkoutToPurchase = beginCheckout > 0 ? (purchases / beginCheckout) * 100 : 0
   const endToEnd = pageViews > 0 ? (purchases / pageViews) * 100 : 0
 
   const ticketMedio = purchases > 0 ? receitaTotal / purchases : 0
@@ -74,14 +90,16 @@ export async function getFunnelMetrics(
   return {
     etapas: {
       pageViews,
-      leads,
-      checkouts,
+      viewItem,
+      addToCart,
+      viewCart,
+      beginCheckout,
       purchases
     },
     conversao: {
-      viewsParaLeads: Math.round(viewsParaLeads * 100) / 100,
-      leadsParaCheckout: Math.round(leadsParaCheckout * 100) / 100,
-      checkoutParaVenda: Math.round(checkoutParaVenda * 100) / 100,
+      viewToCart: Math.round(viewToCart * 100) / 100,
+      cartToCheckout: Math.round(cartToCheckout * 100) / 100,
+      checkoutToPurchase: Math.round(checkoutToPurchase * 100) / 100,
       endToEnd: Math.round(endToEnd * 100) / 100
     },
     financeiro: {

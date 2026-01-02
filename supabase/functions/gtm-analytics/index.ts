@@ -3,6 +3,11 @@ import { corsHeaders } from '../_shared/cors.ts'
 import { getFunnelMetrics } from './handlers/funnel.ts'
 import { getEvolutionChart } from './handlers/evolution.ts'
 import { getProductMetrics } from './handlers/products.ts'
+import { getTrafficSources } from './handlers/traffic_sources.ts'
+import { RateLimiter } from './rate-limiter.ts'
+
+// Configurar Rate Limiter: 100 requisições por minuto por IP
+const rateLimiter = new RateLimiter(60000, 100)
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -13,10 +18,20 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
+    // 1. Rate Limiting
+    const ip = req.headers.get('x-forwarded-for') || 'unknown'
+    if (!rateLimiter.check(ip)) {
+      return new Response(
+        JSON.stringify({ error: 'Too Many Requests' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Debug: Verificar váriaveis de ambiente
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('Missing env vars')
-      return new Response(JSON.stringify({ error: 'Configuration Error', details: 'Missing SUPABASE_URL or SUPABASE_ANON_KEY' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Configuration Error', details: 'Missing SUPABASE_URL or SUPABASE_ANON_KEY' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // Obter o header de autorização (já verificado pelo Gateway)
@@ -56,9 +71,13 @@ Deno.serve(async (req) => {
         result = await getProductMetrics(supabase, startDate, endDate)
         break
 
+      case 'traffic_sources':
+        result = await getTrafficSources(supabase, startDate, endDate)
+        break
+
       default:
         return new Response(
-          JSON.stringify({ error: 'Invalid action. Use: funnel, evolution, or products' }),
+          JSON.stringify({ error: 'Invalid action. Use: funnel, evolution, products or traffic_sources' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
     }
