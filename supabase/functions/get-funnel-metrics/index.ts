@@ -1,5 +1,88 @@
-import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders } from '../_shared/cors.ts';
+
+interface ProdutoFunil {
+  id: number;
+  funil_id: number;
+  produto_id: number;
+  tipo: 'frontend' | 'backend' | 'downsell';
+  ordem: number;
+  products: {
+    id: number;
+    name: string;
+    price: number;
+    channel: string;
+    url: string | null;
+  };
+}
+
+interface Funil {
+  id: number;
+  nome: string;
+  url: string | null;
+  ticket_medio: number | null;
+  active: number;
+  created_at: string;
+  produtos_funil: ProdutoFunil[];
+}
+
+interface GTMEvent {
+  event_name: string;
+  event_data: string;
+  timestamp: string;
+  page_url: string | null;
+}
+
+interface ProdutoMetrics {
+  produto: string;
+  tipo: string;
+  ordem: number;
+  vendas: number;
+  receita: number;
+  taxaConversao: number; // Em relação ao produto anterior
+}
+
+// Helper para verificar autenticação manualmente
+async function verifyAuth(req: Request) {
+  const authHeader = req.headers.get('Authorization')
+
+  if (!authHeader) {
+    throw new Error('Autenticação necessária: Header Authorization ausente')
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('CRITICAL: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars')
+    throw new Error('Erro de configuração no servidor')
+  }
+
+  // Criar client com SERVICE_ROLE_KEY apenas para validação do token
+  const authClient = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+
+  // Extrair o token
+  const token = authHeader.replace(/^Bearer\s+/i, '')
+
+  if (!token || token === 'undefined' || token === 'null') {
+    throw new Error('Token de autenticação inválido ou malformado')
+  }
+
+  // Validar o token JWT via Supabase Auth
+  const { data: { user }, error } = await authClient.auth.getUser(token)
+
+  if (error || !user) {
+    console.error('[verifyAuth] Auth error:', error?.message || 'User not found')
+    throw new Error(`Falha na autenticação: ${error?.message || 'Usuário inválido'}`)
+  }
+
+  return user
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -7,288 +90,198 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // 1. Verificar autenticação
+    await verifyAuth(req)
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const url = new URL(req.url);
+    const funnelIdParam = url.searchParams.get('funnel_id');
     const startDateParam = url.searchParams.get('startDate');
     const endDateParam = url.searchParams.get('endDate');
-    const funnel = url.searchParams.get('funnel') || 'comercial'; // 'comercial' ou 'marketing'
 
-    // Validar startDate
-    if (!startDateParam) {
+    // Validações
+    if (!funnelIdParam) {
       return new Response(
-        JSON.stringify({ error: 'startDate parameter is required' }),
+        JSON.stringify({ error: 'funnel_id parameter is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const funnelId = parseInt(funnelIdParam);
+    if (isNaN(funnelId)) {
+      return new Response(
+        JSON.stringify({ error: 'funnel_id must be a valid number' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!startDateParam || !endDateParam) {
+      return new Response(
+        JSON.stringify({ error: 'startDate and endDate parameters are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const startDate = new Date(startDateParam);
-    if (isNaN(startDate.getTime())) {
-      return new Response(
-        JSON.stringify({ error: 'startDate must be a valid ISO date string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validar endDate
-    if (!endDateParam) {
-      return new Response(
-        JSON.stringify({ error: 'endDate parameter is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
     const endDate = new Date(endDateParam);
-    if (isNaN(endDate.getTime())) {
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       return new Response(
-        JSON.stringify({ error: 'endDate must be a valid ISO date string' }),
+        JSON.stringify({ error: 'Invalid date format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validar que endDate >= startDate
-    if (endDate < startDate) {
+    // 1. Buscar funil com produtos
+    const { data: funil, error: funilError } = await supabaseClient
+      .from('funis')
+      .select(`
+        *,
+        produtos_funil (
+          *,
+          products (*)
+        )
+      `)
+      .eq('id', funnelId)
+      .single();
+
+    if (funilError) {
+      throw new Error(`Error fetching funnel: ${funilError.message}`);
+    }
+
+    if (!funil) {
       return new Response(
-        JSON.stringify({ error: 'endDate must be greater than or equal to startDate' }),
+        JSON.stringify({ error: 'Funnel not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 2. Ordenar produtos por ordem
+    const produtosOrdenados = (funil.produtos_funil || []).sort((a: ProdutoFunil, b: ProdutoFunil) => a.ordem - b.ordem);
+
+    if (produtosOrdenados.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Funnel must have at least one product' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (funnel === 'comercial') {
-      // FUNIL COMERCIAL
-      
-      // 1. Agendamentos (exceto cancelados)
-      const { data: appointments, error: apptError } = await supabaseClient
-        .from('ghl_appointments')
-        .select('id, contact_id, status, start_time')
-        .gte('start_time', startDate.toISOString())
-        .lte('start_time', endDate.toISOString())
-        .neq('status', 'cancelled');
+    // 3. Buscar eventos do GTM no período
+    const { data: events, error: eventsError } = await supabaseClient
+      .from('gtm_events')
+      .select('event_name, event_data, timestamp, page_url')
+      .gte('timestamp', startDate.toISOString())
+      .lte('timestamp', endDate.toISOString());
 
-      if (apptError) throw apptError;
+    if (eventsError) {
+      throw new Error(`Error fetching GTM events: ${eventsError.message}`);
+    }
 
-      const totalAgendamentos = appointments?.length || 0;
-      const noShows = appointments?.filter(a => a.status === 'no_show').length || 0;
-      const presencas = totalAgendamentos - noShows;
-      const taxaPresenca = totalAgendamentos > 0 ? (presencas / totalAgendamentos) * 100 : 0;
+    // 4. Filtrar eventos relacionados ao funil (por URL)
+    const funnelEvents = (events || []).filter((e: GTMEvent) => {
+      if (!funil.url) return false;
+      return e.page_url?.includes(funil.url);
+    });
 
-      // 2. Contatos únicos
-      const contatosUnicos = new Set(appointments?.map(a => a.contact_id) || []).size;
+    // 5. Calcular métricas do produto FRONTEND (ordem 1)
+    const produtoFrontend = produtosOrdenados[0];
 
-      // 3. Vendas do comercial (via GTM events ou crm_gtm_sync)
-      const { data: vendas, error: vendasError } = await supabaseClient
-        .from('crm_gtm_sync')
-        .select('purchase_value')
-        .gte('purchase_date', startDate.toISOString())
-        .lte('purchase_date', endDate.toISOString());
+    const visualizacoes = funnelEvents.filter((e: GTMEvent) => e.event_name === 'page_view').length;
+    const leads = funnelEvents.filter((e: GTMEvent) => e.event_name === 'generate_lead').length;
+    const checkouts = funnelEvents.filter((e: GTMEvent) => e.event_name === 'begin_checkout').length;
 
-      if (vendasError) throw vendasError;
+    // 6. Calcular vendas de TODOS os produtos (em ordem)
+    const produtosMetrics: ProdutoMetrics[] = [];
+    let vendasAnterior = 0;
 
-      const totalVendas = vendas?.length || 0;
-      const receitaTotal = vendas?.reduce((sum, v) => sum + (parseFloat(v.purchase_value) || 0), 0) || 0;
+    for (let i = 0; i < produtosOrdenados.length; i++) {
+      const produto = produtosOrdenados[i];
 
-      // 4. Taxas
-      const taxaConversao = contatosUnicos > 0 ? (totalVendas / contatosUnicos) * 100 : 0;
-      const taxaAgendamento = contatosUnicos > 0 ? (totalAgendamentos / contatosUnicos) * 100 : 0;
+      // Buscar vendas do produto (por nome E URL do funil)
+      const vendasProdutoEvents = (events || []).filter((e: GTMEvent) => {
+        if (e.event_name !== 'purchase') return false;
 
-      // 5. Evolution Data (por semana)
-      const weeksInMonth = Math.ceil(diasNoMes / 7);
-      const evolutionData = [];
-      for (let week = 1; week <= weeksInMonth; week++) {
-        const weekStart = new Date(year, month - 1, (week - 1) * 7 + 1);
-        const weekEnd = new Date(year, month - 1, Math.min(week * 7, diasNoMes), 23, 59, 59, 999);
-        
-        const { data: weekAppointments } = await supabaseClient
-          .from('ghl_appointments')
-          .select('id, status, contact_id')
-          .gte('start_time', weekStart.toISOString())
-          .lte('start_time', weekEnd.toISOString())
-          .neq('status', 'cancelled');
-        
-        const { data: weekSales } = await supabaseClient
-          .from('crm_gtm_sync')
-          .select('id')
-          .gte('purchase_date', weekStart.toISOString())
-          .lte('purchase_date', weekEnd.toISOString());
-        
-        evolutionData.push({
-          periodo: `Sem ${week}`,
-          agendamentos: weekAppointments?.length || 0,
-          contatos: new Set(weekAppointments?.map(a => a.contact_id) || []).size,
-          vendas: weekSales?.length || 0
-        });
-      }
+        const eventData = JSON.parse(e.event_data || '{}');
+        const productName = eventData.product_name || eventData.item_name || '';
 
-      return new Response(
-        JSON.stringify({
-          funnel: 'comercial',
-          period: { month, year, startDate, endDate },
-          metrics: {
-            agendamentos: totalAgendamentos,
-            contatos: contatosUnicos,
-            vendas: totalVendas,
-            receita: receitaTotal,
-            taxaConversao: parseFloat(taxaConversao.toFixed(2)),
-            taxaAgendamento: parseFloat(taxaAgendamento.toFixed(2)),
-            noShow: noShows,
-            taxaPresenca: parseFloat(taxaPresenca.toFixed(2))
-          },
-          evolutionData
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+        // Matching por nome do produto E URL do funil
+        const matchProduto = productName === produto.products.name;
+        const matchUrl = funil.url ? e.page_url?.includes(funil.url) : true;
 
-    } else if (funnel === 'marketing') {
-      // FUNIL DE MARKETING
-
-      // 1. Leads gerados (contacts com source = marketing ou tags específicas)
-      const { data: leads, error: leadsError } = await supabaseClient
-        .from('ghl_contacts')
-        .select('id, created_at')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-        .or('source.eq.marketing,tags.cs.{marketing}');
-
-      if (leadsError) throw leadsError;
-
-      const totalLeads = leads?.length || 0;
-
-      // 2. Custos do período
-      // Calcular range de mês/ano
-      const startMonth = startDate.getMonth() + 1;
-      const startYear = startDate.getFullYear();
-      const endMonth = endDate.getMonth() + 1;
-      const endYear = endDate.getFullYear();
-
-      // Buscar custos e filtrar no código para maior robustez
-      let query = supabaseClient
-        .from('custos')
-        .select('valor_mensal, mes, ano')
-        .eq('canal', 'marketing');
-
-      // Se mesmo ano, filtrar por mês
-      if (startYear === endYear) {
-        query = query.eq('ano', startYear).gte('mes', startMonth).lte('mes', endMonth);
-      } else {
-        // Range multi-ano: (ano > startYear OR (ano = startYear AND mes >= startMonth)) AND (ano < endYear OR (ano = endYear AND mes <= endMonth))
-        query = query.gte('ano', startYear).lte('ano', endYear);
-      }
-
-      const { data: custosData, error: custosError } = await query;
-
-      if (custosError) throw custosError;
-
-      // Filtrar manualmente para garantir range correto em casos multi-ano
-      const custos = custosData?.filter(c => {
-        if (c.ano > startYear && c.ano < endYear) return true;
-        if (c.ano === startYear && c.mes >= startMonth) return true;
-        if (c.ano === endYear && c.mes <= endMonth) return true;
-        return false;
-      }) || [];
-
-      const custoTotal = custos.reduce((sum, c) => sum + (parseFloat(c.valor_mensal || '0') || 0), 0);
-
-      // 3. Vendas do marketing (GTM events com purchase)
-      const { data: gtmEvents, error: gtmError } = await supabaseClient
-        .from('gtm_events')
-        .select('event_data')
-        .eq('event_name', 'purchase')
-        .gte('timestamp', startDate.toISOString())
-        .lte('timestamp', endDate.toISOString());
-
-      if (gtmError) throw gtmError;
-
-      let totalVendas = 0;
-      let receitaTotal = 0;
-
-      gtmEvents?.forEach(event => {
-        try {
-          const data = typeof event.event_data === 'string' 
-            ? JSON.parse(event.event_data) 
-            : event.event_data;
-          
-          if (data.value) {
-            totalVendas++;
-            receitaTotal += parseFloat(data.value) || 0;
-          }
-        } catch (e) {
-          console.error('Error parsing event_data:', e);
-        }
+        return matchProduto && matchUrl;
       });
 
-      // 4. Métricas calculadas
-      const cpl = totalLeads > 0 ? custoTotal / totalLeads : 0;
-      const cpa = totalVendas > 0 ? custoTotal / totalVendas : 0;
-      const taxaConversao = totalLeads > 0 ? (totalVendas / totalLeads) * 100 : 0;
+      const vendas = vendasProdutoEvents.length;
+      const receita = vendasProdutoEvents.reduce((sum: number, e: GTMEvent) => {
+        const eventData = JSON.parse(e.event_data || '{}');
+        const value = parseFloat(eventData.value || eventData.transaction_value || '0');
+        return sum + value;
+      }, 0);
 
-      // 5. Evolution Data (por semana)
-      const weeksInMonth = Math.ceil(diasNoMes / 7);
-      const evolutionData = [];
-      for (let week = 1; week <= weeksInMonth; week++) {
-        const weekStart = new Date(year, month - 1, (week - 1) * 7 + 1);
-        const weekEnd = new Date(year, month - 1, Math.min(week * 7, diasNoMes), 23, 59, 59, 999);
-        
-        const { data: weekLeads } = await supabaseClient
-          .from('ghl_contacts')
-          .select('id')
-          .gte('date_added', weekStart.toISOString())
-          .lte('date_added', weekEnd.toISOString());
-        
-        const { data: weekSales } = await supabaseClient
-          .from('gtm_events')
-          .select('event_data')
-          .eq('event_name', 'purchase')
-          .gte('timestamp', weekStart.toISOString())
-          .lte('timestamp', weekEnd.toISOString());
-        
-        let weekReceita = 0;
-        weekSales?.forEach(event => {
-          try {
-            const data = typeof event.event_data === 'string' ? JSON.parse(event.event_data) : event.event_data;
-            if (data.value) weekReceita += parseFloat(data.value) || 0;
-          } catch (e) {}
-        });
-        
-        evolutionData.push({
-          periodo: `Sem ${week}`,
-          leads: weekLeads?.length || 0,
-          vendas: weekSales?.length || 0,
-          receita: weekReceita
-        });
+      // Calcular taxa de conversão
+      let taxaConversao = 0;
+
+      if (i === 0) {
+        // Primeiro produto (frontend): conversão baseada em visualizações
+        taxaConversao = visualizacoes > 0 ? (vendas / visualizacoes) * 100 : 0;
+      } else {
+        // Produtos seguintes: conversão baseada nas vendas do produto ANTERIOR
+        taxaConversao = vendasAnterior > 0 ? (vendas / vendasAnterior) * 100 : 0;
       }
 
-      return new Response(
-        JSON.stringify({
-          funnel: 'marketing',
-          period: { month, year, startDate, endDate },
-          metrics: {
-            leads: totalLeads,
-            vendas: totalVendas,
-            receita: receitaTotal,
-            custoTotal: custoTotal,
-            cpl: parseFloat(cpl.toFixed(2)),
-            cpa: parseFloat(cpa.toFixed(2)),
-            taxaConversao: parseFloat(taxaConversao.toFixed(2))
-          },
-          evolutionData
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      produtosMetrics.push({
+        produto: produto.products.name,
+        tipo: produto.tipo,
+        ordem: produto.ordem,
+        vendas,
+        receita: Math.round(receita * 100) / 100,
+        taxaConversao: Math.round(taxaConversao * 100) / 100
+      });
+
+      // Atualizar vendas anterior para próxima iteração
+      vendasAnterior = vendas;
     }
 
+    // 7. Calcular totais
+    const vendasTotais = produtosMetrics.reduce((sum, p) => sum + p.vendas, 0);
+    const receitaTotal = produtosMetrics.reduce((sum, p) => sum + p.receita, 0);
+    const ticketMedio = vendasTotais > 0 ? receitaTotal / vendasTotais : 0;
+
+    // 8. Retornar resposta
+    const responseBody = {
+      funil: {
+        id: funil.id,
+        nome: funil.nome,
+        url: funil.url
+      },
+      metricas_gerais: {
+        visualizacoes,
+        leads,
+        checkouts
+      },
+      produtos: produtosMetrics,
+      totais: {
+        vendasTotais,
+        receitaTotal: Math.round(receitaTotal * 100) / 100,
+        ticketMedio: Math.round(ticketMedio * 100) / 100
+      }
+    };
+
     return new Response(
-      JSON.stringify({ error: 'Invalid funnel type. Use "comercial" or "marketing"' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify(responseBody),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    // Type narrowing para acessar error.message com segurança
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Error in get-funnel-metrics:', errorMessage);
+    console.error('Error in get-funnel-metrics:', error);
+    const isAuthError = error.message.includes('Autenticação') || error.message.includes('Token') || error.message.includes('Falha na autenticação')
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: error.message || 'Internal server error' }),
+      { status: isAuthError ? 401 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
