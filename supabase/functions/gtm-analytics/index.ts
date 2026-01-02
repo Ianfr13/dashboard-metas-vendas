@@ -14,6 +14,12 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
+    // Debug: Verificar váriaveis de ambiente
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing env vars')
+      return new Response(JSON.stringify({ error: 'Configuration Error', details: 'Missing SUPABASE_URL or SUPABASE_ANON_KEY' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     // Verificar JWT manualmente
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -21,10 +27,23 @@ Deno.serve(async (req) => {
     }
 
     const authClient = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } })
-    const { data: { user }, error: authError } = await authClient.auth.getUser()
+
+    // Explicitly pass token to getUser
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await authClient.auth.getUser(token)
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized', details: authError }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      console.error('Auth Error:', authError)
+      return new Response(JSON.stringify({
+        error: 'Unauthorized',
+        details: authError,
+        debug: {
+          hasAuthHeader: !!authHeader,
+          authHeaderLength: authHeader.length,
+          hasUser: !!user,
+          errorMsg: authError?.message
+        }
+      }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // Cliente com permissão de serviço (usado APÓS verificar autenticação)
