@@ -35,10 +35,10 @@ FUNCTION_NAME=$1
 
 if [ -z "$FUNCTION_NAME" ]; then
     echo -e "${YELLOW}📦 Fazendo deploy de TODAS as Edge Functions...${NC}"
-    supabase functions deploy
+    supabase functions deploy --no-verify-jwt
 else
     echo -e "${YELLOW}📦 Fazendo deploy da função: ${FUNCTION_NAME}${NC}"
-    supabase functions deploy $FUNCTION_NAME
+    supabase functions deploy $FUNCTION_NAME --no-verify-jwt
 fi
 
 echo ""
