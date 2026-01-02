@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { 
-  CalendarIcon, 
+import {
+  CalendarIcon,
   Loader2,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -17,6 +17,9 @@ import { rankingAPI } from "@/lib/ranking-api";
 import FunilMarketing from "@/components/metricas/FunilMarketing";
 import FunilComercial from "@/components/metricas/FunilComercial";
 import FunisCadastrados from "@/components/metricas/FunisCadastrados";
+import TrafficSourcesTable from "@/components/metrics/TrafficSourcesTable";
+import AdvancedFunnel from "@/components/metrics/AdvancedFunnel";
+import { TrafficSourceMetrics } from "@/lib/edge-functions";
 
 export default function Metricas() {
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -24,6 +27,7 @@ export default function Metricas() {
   const [funnelData, setFunnelData] = useState<any>(null);
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
   const [productData, setProductData] = useState<any[]>([]);
+  const [trafficData, setTrafficData] = useState<TrafficSourceMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
@@ -40,14 +44,14 @@ export default function Metricas() {
   useEffect(() => {
     async function loadCommercialMetrics() {
       if (!selectedRole || !selectedPeriod) return
-      
+
       try {
         setCommercialLoading(true)
-        
+
         // Calcular mês baseado no período selecionado
         const now = new Date()
         let targetMonth: string
-        
+
         if (selectedPeriod === 'mes_atual') {
           targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
         } else if (selectedPeriod === 'mes_anterior') {
@@ -56,7 +60,7 @@ export default function Metricas() {
         } else {
           targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
         }
-        
+
         // Buscar métricas da API
         const [metrics, evolution] = await Promise.all([
           rankingAPI.getMetrics({
@@ -68,7 +72,7 @@ export default function Metricas() {
             month: targetMonth
           })
         ])
-        
+
         setCommercialMetrics(metrics)
         setEvolutionData(evolution || [])
       } catch (err) {
@@ -77,7 +81,7 @@ export default function Metricas() {
         setCommercialLoading(false)
       }
     }
-    
+
     loadCommercialMetrics()
   }, [selectedRole, selectedSeller, selectedPeriod])
 
@@ -92,15 +96,17 @@ export default function Metricas() {
         const end = format(endDate, 'yyyy-MM-dd');
 
         // Buscar dados em paralelo
-        const [funnel, evolution, products] = await Promise.all([
+        const [funnel, evolution, products, traffic] = await Promise.all([
           gtmAnalyticsAPI.getFunnelMetrics(start, end),
           gtmAnalyticsAPI.getEvolutionChart(start, end, selectedEvent, groupBy),
           gtmAnalyticsAPI.getProductMetrics(start, end),
+          gtmAnalyticsAPI.getTrafficSources(start, end),
         ]);
 
         setFunnelData(funnel);
         setEvolutionData(evolution);
         setProductData(products);
+        setTrafficData(traffic);
       } catch (err) {
         console.error('Erro ao carregar métricas:', err);
         setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
@@ -201,31 +207,23 @@ export default function Metricas() {
               <TabsTrigger value="funis">Funis</TabsTrigger>
             </TabsList>
 
-            {/* Marketing - Funil de Conversão */}
+            {/* Marketing - Funil de Conversão e Tráfego */}
             <TabsContent value="marketing" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Funil de Conversão</CardTitle>
-                  <CardDescription>
-                    Visualização do funil completo de marketing e vendas
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={funnelChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="etapa" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="valor" radius={[8, 8, 0, 0]}>
-                        {funnelChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.cor} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Novo Funil Avançado */}
+                <AdvancedFunnel
+                  data={{
+                    pageViews: funnelData?.etapas?.pageViews || 0,
+                    viewItem: funnelData?.etapas?.viewItem || 0,
+                    addToCart: funnelData?.etapas?.addToCart || 0,
+                    checkouts: funnelData?.etapas?.beginCheckout || funnelData?.etapas?.checkouts || 0,
+                    purchases: funnelData?.etapas?.purchases || 0
+                  }}
+                />
+
+                {/* Nova Tabela de Tráfego */}
+                <TrafficSourcesTable data={trafficData} />
+              </div>
 
               {/* Cards de Métricas */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -249,7 +247,7 @@ export default function Metricas() {
                   <CardContent>
                     <div className="text-3xl font-bold">{funnelData?.etapas.leads || 0}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {funnelData?.conversao.viewsParaLeads.toFixed(1)}% conversão
+                      {(funnelData?.conversao?.viewsParaLeads || 0).toFixed(1)}% conversão
                     </p>
                   </CardContent>
                 </Card>
@@ -261,9 +259,9 @@ export default function Metricas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.checkouts || 0}</div>
+                    <div className="text-3xl font-bold">{funnelData?.etapas?.checkouts || 0}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {funnelData?.conversao.leadsParaCheckout.toFixed(1)}% conversão
+                      {(funnelData?.conversao?.leadsParaCheckout || 0).toFixed(1)}% conversão
                     </p>
                   </CardContent>
                 </Card>
@@ -275,9 +273,9 @@ export default function Metricas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.purchases || 0}</div>
+                    <div className="text-3xl font-bold">{funnelData?.etapas?.purchases || 0}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {funnelData?.conversao.checkoutParaVenda.toFixed(1)}% conversão
+                      {(funnelData?.conversao?.checkoutParaVenda || 0).toFixed(1)}% conversão
                     </p>
                   </CardContent>
                 </Card>
@@ -378,7 +376,7 @@ export default function Metricas() {
                     {/* Filtro de Função */}
                     <div>
                       <label htmlFor="role-filter" className="text-sm font-medium mb-2 block">Função</label>
-                      <select 
+                      <select
                         id="role-filter"
                         className="w-full border rounded px-3 py-2"
                         value={selectedRole}
@@ -393,7 +391,7 @@ export default function Metricas() {
                     {/* Filtro de Vendedor */}
                     <div>
                       <label htmlFor="seller-filter" className="text-sm font-medium mb-2 block">Vendedor</label>
-                      <select 
+                      <select
                         id="seller-filter"
                         className="w-full border rounded px-3 py-2"
                         value={selectedSeller}
@@ -407,7 +405,7 @@ export default function Metricas() {
                     {/* Filtro de Período */}
                     <div>
                       <label htmlFor="period-filter" className="text-sm font-medium mb-2 block">Período</label>
-                      <select 
+                      <select
                         id="period-filter"
                         className="w-full border rounded px-3 py-2"
                         value={selectedPeriod}
@@ -575,7 +573,7 @@ export default function Metricas() {
 
             {/* Funis */}
             <TabsContent value="funis" className="space-y-6">
-              <FunisCadastrados 
+              <FunisCadastrados
                 startDate={startDate}
                 endDate={endDate}
               />
