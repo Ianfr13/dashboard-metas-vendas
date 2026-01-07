@@ -22,6 +22,8 @@ export async function aggregateSales(
   const startDate = new Date(year, month - 1, 1).toISOString();
   const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
 
+  console.log('[aggregateSales] Fetching for:', { month, year, startDate, endDate });
+
   // Fetch purchase events
   const { data: salesEvents, error } = await supabase
     .from('gtm_events')
@@ -30,8 +32,14 @@ export async function aggregateSales(
     .gte('created_at', startDate)
     .lte('created_at', endDate);
 
+  console.log('[aggregateSales] Query result:', {
+    error: error?.message,
+    count: salesEvents?.length || 0,
+    events: salesEvents
+  });
+
   if (error) {
-    console.error('Error fetching sales:', error);
+    console.error('[aggregateSales] Error fetching sales:', error);
     return {
       sales: 0,
       revenue: 0,
@@ -45,7 +53,16 @@ export async function aggregateSales(
   const salesByDay: SalesByDay = {};
 
   (salesEvents || []).forEach((event) => {
-    const eventData = event.event_data as any;
+    // Parse event_data - can be stored as JSON string or object
+    let eventData: any = {};
+    try {
+      eventData = typeof event.event_data === 'string'
+        ? JSON.parse(event.event_data)
+        : event.event_data || {};
+    } catch (e) {
+      console.warn('Error parsing event_data:', e);
+    }
+
     const value = parseFloat(eventData?.value || 0);
     const date = new Date(event.created_at).toISOString().split('T')[0];
 
