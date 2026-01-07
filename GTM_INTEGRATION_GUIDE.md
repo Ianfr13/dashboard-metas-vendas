@@ -1,15 +1,10 @@
-# Guia GTM God Mode 🚀 (Versão Full Analytics)
+# Guia GTM God Mode 🚀 (Versão Full Analytics + Gateway)
 
-Este guia descreve como configurar o "Modo Deus" no Google Tag Manager para capturar **eventos críticos de e-commerce** e metadados completos (UTMs, dispositivo, etc).
+Este guia descreve como configurar o "Modo Deus" no Google Tag Manager para capturar **eventos críticos de e-commerce**, metadados completos e o **Título do Checkout** do seu gateway de pagamento.
 
 ## 1. Eventos Monitorados
-O script abaixo está preparado para capturar e enviar automaticamente estes eventos:
--   `page_view`: Visualização de qualquer página.
--   `generate_lead`: Cadastro de lead / formulário.
--   `view_item`: Visualização de produto.
--   `add_to_cart`: Adição ao carrinho.
--   `begin_checkout`: Início do pagamento.
--   `purchase`: Compra finalizada.
+O script abaixo captura e envia automaticamente:
+-   `page_view`, `generate_lead`, `view_item`, `add_to_cart`, `begin_checkout`, `purchase`.
 
 ---
 
@@ -21,8 +16,8 @@ Crie estas variáveis no GTM (**Variáveis > Definidas pelo Usuário > Constante
 
 ---
 
-## 3. O Script God Mode Full
-Crie uma nova tag do tipo **HTML Personalizado** e utilize o código abaixo. Ele foi otimizado para o padrão GA4 (DataLayer).
+## 3. O Script God Mode Full (Com Checkout Title)
+Crie uma nova tag do tipo **HTML Personalizado**. Este script captura o **Título do Checkout/Link de Pagamento** do gateway (se disponível no DataLayer ou URL) e todos os dados de produtos.
 
 ```html
 <script>
@@ -37,7 +32,7 @@ Crie uma nova tag do tipo **HTML Personalizado** e utilize o código abaixo. Ele
   var payload = {
     event_name: eventName,
     page_url: window.location.href,
-    page_title: document.title,
+    page_title: document.title, // Título da aba do navegador
     referrer: document.referrer,
     utm_source: urlParams.get('utm_source'),
     utm_medium: urlParams.get('utm_medium'),
@@ -56,10 +51,9 @@ Crie uma nova tag do tipo **HTML Personalizado** e utilize o código abaixo. Ele
     screen_resolution: window.screen.width + 'x' + window.screen.height
   };
 
-  // 3. Captura Detalhada de E-commerce (Produtos, Preço, Moeda)
+  // 3. Captura Detalhada de E-commerce e Checkout Title
   var eventData = {};
   try {
-    // Tenta ler do padrão GA4 (dataLayer.ecommerce)
     var ecommerce = window.google_tag_manager[{{Container ID}}].dataLayer.get('ecommerce');
     
     if (ecommerce) {
@@ -67,30 +61,34 @@ Crie uma nova tag do tipo **HTML Personalizado** e utilize o código abaixo. Ele
       eventData.value = ecommerce.value || 0;
       eventData.transaction_id = ecommerce.transaction_id || '';
       
-      // Captura a lista de produtos (produtos / name / price)
+      // Captura o Título do Link de Pagamento / Checkout Title do Gateway
+      // Se o seu gateway envia o nome da oferta ou link, mapeie aqui:
+      eventData.checkout_title = ecommerce.checkout_title || ecommerce.payment_link_title || '';
+      
       if (ecommerce.items && ecommerce.items.length > 0) {
         eventData.produtos = ecommerce.items.map(function(item) {
           return {
             name: item.item_name || item.name,
             price: item.price,
-            id: item.item_id || item.id,
-            quantity: item.quantity || 1
+            id: item.item_id || item.id
           };
         });
-        // Atalho para o nome do primeiro produto (facilita filtros rápidos)
         eventData.product_name = eventData.produtos[0].name;
         eventData.price = eventData.produtos[0].price;
       }
     }
 
-    // Se for um evento de checkout, salva a URL de checkout especificamente
+    // Se o checkout_title estiver vazio, tenta pegar de uma variável personalizada do GTM
+    if (!eventData.checkout_title) {
+      // Exemplo: se você criou uma variável {{Checkout Title}} no GTM
+      // eventData.checkout_title = {{Checkout Title}} || '';
+    }
+
     if (eventName === 'begin_checkout' || eventName === 'add_to_cart') {
       eventData.checkout_url = window.location.href;
     }
     
-  } catch(e) {
-    console.warn('Metas Vendas: Erro ao mapear DataLayer', e);
-  }
+  } catch(e) { console.warn('Metas Vendas: Erro DataLayer', e); }
 
   payload.event_data = eventData;
 
@@ -98,35 +96,26 @@ Crie uma nova tag do tipo **HTML Personalizado** e utilize o código abaixo. Ele
   fetch(endpoint, {
     method: 'POST',
     mode: 'cors',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-GTM-Secret': secret
-    },
+    headers: { 'Content-Type': 'application/json', 'X-GTM-Secret': secret },
     body: JSON.stringify(payload)
-  })
-  .then(function(res) { /* Sucesso */ })
-  .catch(function(err) { console.error('Metas Vendas Error:', err); });
+  });
 })();
 </script>
 ```
 
 ---
 
-## 4. O que está sendo enviado (Resumo para o Usuário)
+## 4. O que está sendo enviado (Resumo)
 
-| Campo | Fonte | Descrição |
-| :--- | :--- | :--- |
-| **UTMs** | URL | Source, Medium, Campaign, etc. (Mantido conforme solicitado) |
-| **Páginas** | Browser | `page_url`, `page_title` (Title), `referrer` |
-| **Produtos** | DataLayer | Lista completa de `produtos` com `name` e `item_id` |
-| **Financeiro** | DataLayer | `price` (preço) e `currency` (moeda) |
-| **Fluxo** | DataLayer | `Checkout url` associada aos eventos de carrinho/checkout |
-| **Dispositivo** | Browser | Navegador, SO e Resolução |
+| Campo | Descrição |
+| :--- | :--- |
+| **UTMs** | Source, Medium, Campaign, etc. (Mantido) |
+| **Checkout Title** | **O título do link de pagamento/oferta criado no gateway.** |
+| **Páginas** | URL da página e URL do Checkout. |
+| **Produtos** | Lista de `produtos`, `name`, `id`, `price` e `currency`. |
+| **Metadata** | Navegador, SO e Resolução. |
 
 ---
 
 ## 5. Acionamento
-1.  Vá em **Acionadores > Novo**.
-2.  Tipo: **Evento Personalizado**.
-3.  Nome do Evento: `.*` (Marque "Usar correspondência de expressão regular").
-4.  Isso fará com que o script "escute" todos os eventos e envie os dados mapeados para o dashboard.
+Use um acionador de **Evento Personalizado** com o nome `.*` (marcando "Usar correspondência de expressão regular") para capturar todos os eventos automaticamente.

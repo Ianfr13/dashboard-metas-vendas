@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { BarChart3, Table2, GitBranch, LayoutGrid, Loader2 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { gtmAnalyticsAPI } from "@/lib/edge-functions";
 
 type ViewMode = 'cards' | 'tabela' | 'stage' | 'grafico';
 
@@ -49,23 +50,37 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
         setLoading(true);
         setError(null);
 
-        // Chamar Edge Function do Supabase (sem expor chaves)
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-funnel-metrics?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&funnel=marketing`,
-          {
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-            }
-          }
-        );
+        const startStr = startDate.toISOString().split('T')[0];
+        const endStr = endDate.toISOString().split('T')[0];
 
-        if (!response.ok) {
-          throw new Error('Erro ao carregar métricas');
-        }
+        // Usar gtmAnalyticsAPI que busca da tabela gtm_events
+        const funnelData = await gtmAnalyticsAPI.getFunnelMetrics(startStr, endStr);
 
-        const data = await response.json();
-        setMetrics(data.metrics);
-        setEvolutionData(data.evolutionData || []);
+        // Mapear resposta para o formato esperado
+        const leads = funnelData.etapas?.leads || funnelData.etapas?.pageViews || 0;
+        const vendas = funnelData.etapas?.purchases || 0;
+        const receita = funnelData.financeiro?.receitaTotal || 0;
+        const taxaConversao = funnelData.conversao?.endToEnd || 0;
+
+        setMetrics({
+          leads,
+          vendas,
+          receita,
+          custoTotal: 0, // Custo vem de outra fonte
+          cpl: 0,
+          cpa: 0,
+          taxaConversao: Math.round(taxaConversao * 100) / 100
+        });
+
+        // Buscar dados de evolução
+        const evolutionRaw = await gtmAnalyticsAPI.getEvolutionChart(startStr, endStr, 'purchase', 'day');
+        const evolutionMapped = evolutionRaw.map(item => ({
+          periodo: item.date,
+          leads: 0,
+          vendas: item.count,
+          receita: 0
+        }));
+        setEvolutionData(evolutionMapped);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar métricas';
         console.error('Erro ao carregar métricas:', errorMessage);

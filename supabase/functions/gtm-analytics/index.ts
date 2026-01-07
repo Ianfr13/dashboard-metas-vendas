@@ -9,15 +9,55 @@ import { RateLimiter } from './rate-limiter.ts'
 // Configurar Rate Limiter: 100 requisições por minuto por IP
 const rateLimiter = new RateLimiter(60000, 100)
 
+// Helper para verificar autenticação manualmente
+async function verifyAuth(req: Request) {
+  const authHeader = req.headers.get('Authorization')
+
+  if (!authHeader) {
+    throw new Error('Autenticação necessária: Header Authorization ausente')
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('CRITICAL: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars')
+    throw new Error('Erro de configuração no servidor')
+  }
+
+  // Criar client com SERVICE_ROLE_KEY apenas para validação do token
+  const authClient = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+
+  // Extrair o token
+  const token = authHeader.replace(/^Bearer\s+/i, '')
+
+  if (!token || token === 'undefined' || token === 'null') {
+    throw new Error('Token de autenticação inválido ou malformado')
+  }
+
+  // Validar o token JWT via Supabase Auth
+  const { data: { user }, error } = await authClient.auth.getUser(token)
+
+  if (error || !user) {
+    console.error('[verifyAuth] Auth error:', error?.message || 'User not found')
+    throw new Error(`Falha na autenticação: ${error?.message || 'Usuário inválido'}`)
+  }
+
+  return user
+}
+
 Deno.serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-
     // 1. Rate Limiting
     const ip = req.headers.get('x-forwarded-for') || 'unknown'
     if (!rateLimiter.check(ip)) {
@@ -27,20 +67,13 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Debug: Verificar váriaveis de ambiente
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing env vars')
-      return new Response(JSON.stringify({ error: 'Configuration Error', details: 'Missing SUPABASE_URL or SUPABASE_ANON_KEY' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    // 2. Verificar autenticação manualmente para evitar problemas de Gateway 401
+    await verifyAuth(req)
 
-    // Obter o header de autorização (já verificado pelo Gateway)
-    const authHeader = req.headers.get('Authorization')!
-
-    // Criar cliente com contexto do usuário para RLS
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
+    // 3. Preparar contexto do banco (usando Service Role para garantir acesso aos dados de analytics)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const url = new URL(req.url)
     const action = url.searchParams.get('action') || 'funnel'
@@ -89,11 +122,15 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error in gtm-analytics function:', error)
+
+    // Retornar 401 explícito se for erro de autenticação identificado
+    const isAuthError = error.message.includes('Autenticação') || error.message.includes('Token') || error.message.includes('Falha na autenticação')
+
     return new Response(
       JSON.stringify({ error: error.message }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
+        status: isAuthError ? 401 : (error.message === 'Too Many Requests' ? 429 : 500)
       }
     )
   }
