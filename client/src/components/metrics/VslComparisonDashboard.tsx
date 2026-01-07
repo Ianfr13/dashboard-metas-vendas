@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -88,7 +88,7 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
     const [vslSettings, setVslSettings] = useState<Record<string, VslSettings>>({});
 
     // useRef to track if initial data has loaded (prevents flicker)
-    const hasLoadedRef = useRef(false);
+
 
     // New: Group filter
     const [selectedGroup, setSelectedGroup] = useState<string>("all");
@@ -136,7 +136,6 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
     useEffect(() => {
         if (selectedVsls.size === 0) {
             setRetentionData([]);
-            hasLoadedRef.current = false;
             return;
         }
 
@@ -144,8 +143,8 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
         let intervalId: NodeJS.Timeout | null = null;
 
         const fetchRetentions = async () => {
-            // Only show loading on first fetch (hasLoadedRef is false)
-            if (!hasLoadedRef.current) {
+            // Only show full loading state if we don't have any data yet
+            if (retentionData.length === 0) {
                 setLoading(true);
             }
 
@@ -155,7 +154,7 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
 
                 const promises = Array.from(selectedVsls).map(async (vslId) => {
                     const vsl = vsls.find(v => v.id === vslId);
-                    const duration = vsl?.duration || 1800;
+                    const duration = vsl?.duration || 1800; // Default to 30 mins if missing
                     const data = await vturbAnalyticsAPI.getEngagement(vslId, start, end, duration);
                     return { vslId, data, duration };
                 });
@@ -177,7 +176,6 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                 }
 
                 setRetentionData(combined);
-                hasLoadedRef.current = true;
             } catch (err) {
                 console.error('Error fetching retentions:', err);
             } finally {
