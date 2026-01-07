@@ -1,14 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Image, Video, MonitorPlay, ExternalLink } from "lucide-react";
-import { CreativeMetrics } from "@/lib/edge-functions";
+import { MonitorSmartphone, LayoutGrid, Smartphone, Laptop } from "lucide-react";
+import { PlacementMetrics } from "@/lib/edge-functions";
 
-interface CreativeRankingTableProps {
-    data: CreativeMetrics[];
+interface PlacementRankingTableProps {
+    data: PlacementMetrics[];
 }
 
-export default function CreativeRankingTable({ data }: CreativeRankingTableProps) {
+export default function PlacementRankingTable({ data }: PlacementRankingTableProps) {
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat("pt-BR", {
             style: "currency",
@@ -21,22 +21,27 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
         return new Intl.NumberFormat("pt-BR").format(value);
     };
 
+    const getPlacementIcon = (placement: string) => {
+        const p = placement.toLowerCase();
+        if (p.includes('mobile') || p.includes('story') || p.includes('reels')) return <Smartphone className="h-4 w-4" />;
+        if (p.includes('desktop')) return <Laptop className="h-4 w-4" />;
+        return <LayoutGrid className="h-4 w-4" />;
+    };
+
     return (
         <Card className="col-span-1 lg:col-span-2">
             <CardHeader>
-                <CardTitle>Ranking de Criativos</CardTitle>
-                <CardDescription>Performance detalhada por criativo (utm_content)</CardDescription>
+                <CardTitle>Ranking de Posicionamento</CardTitle>
+                <CardDescription>Qual formato está vendendo mais?</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Criativo (ID)</TableHead>
+                                <TableHead>Posicionamento</TableHead>
+                                <TableHead>Fonte</TableHead>
                                 <TableHead className="text-right">Visitas</TableHead>
-                                <TableHead className="text-right">Add to Cart</TableHead>
-                                <TableHead className="text-right">Wishlist</TableHead>
-                                <TableHead className="text-right">Checkout (IC)</TableHead>
                                 <TableHead className="text-right">Vendas</TableHead>
                                 <TableHead className="text-right">Receita</TableHead>
                                 <TableHead className="text-right">Conv. Venda</TableHead>
@@ -48,31 +53,18 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                                     <TableCell className="font-medium">
                                         <div className="flex items-center gap-2">
                                             <div className="p-2 bg-muted rounded-full text-indigo-500">
-                                                <Image className="h-4 w-4" />
+                                                {getPlacementIcon(item.placement)}
                                             </div>
-                                            <span className="font-mono text-xs truncate max-w-[150px]" title={item.creativeId}>
-                                                {item.creativeId}
+                                            <span className="font-mono text-sm">
+                                                {item.placement}
                                             </span>
                                         </div>
                                     </TableCell>
+                                    <TableCell>
+                                        <span className="text-sm text-muted-foreground">{item.source || '-'}</span>
+                                    </TableCell>
                                     <TableCell className="text-right font-mono text-sm">
                                         {formatNumber(item.pageViews)}
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-sm">
-                                        {formatNumber(item.addToCart)}
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-sm">
-                                        {formatNumber(item.addToWishlist)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex flex-col items-end">
-                                            <span className="font-mono text-sm">{formatNumber(item.checkouts)}</span>
-                                            {item.pageViews > 0 && (
-                                                <span className="text-[10px] text-muted-foreground">
-                                                    {(((item.checkouts || 0) / (item.pageViews || 1)) * 100).toFixed(1)}%
-                                                </span>
-                                            )}
-                                        </div>
                                     </TableCell>
                                     <TableCell className="text-right font-mono text-sm">
                                         {formatNumber(item.sales)}
@@ -90,8 +82,8 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
 
                             {data.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                                        Nenhum dado de criativo registrado no período.
+                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                        Nenhum dado de posicionamento registrado no período.
                                     </TableCell>
                                 </TableRow>
                             )}

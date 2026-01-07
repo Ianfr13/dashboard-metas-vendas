@@ -18,10 +18,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import FunilMarketing from "@/components/metricas/FunilMarketing";
 import FunilComercial from "@/components/metricas/FunilComercial";
 import FunisCadastrados from "@/components/metricas/FunisCadastrados";
-import TrafficSourcesTable from "@/components/metrics/TrafficSourcesTable";
-import AdvancedFunnel from "@/components/metrics/AdvancedFunnel";
 import CreativeRankingTable from "@/components/metrics/CreativeRankingTable";
-import { TrafficSourceMetrics, CreativeMetrics } from "@/lib/edge-functions";
+import PlacementRankingTable from "@/components/metrics/PlacementRankingTable";
+import { TrafficSourceMetrics, CreativeMetrics, PlacementMetrics } from "@/lib/edge-functions";
 
 export default function Metricas() {
   const { user, loading: authLoading } = useAuth();
@@ -32,6 +31,7 @@ export default function Metricas() {
   const [productData, setProductData] = useState<any[]>([]);
   const [trafficData, setTrafficData] = useState<TrafficSourceMetrics[]>([]);
   const [creativeData, setCreativeData] = useState<CreativeMetrics[]>([]);
+  const [placementData, setPlacementData] = useState<PlacementMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
@@ -102,12 +102,13 @@ export default function Metricas() {
         const end = format(endDate, 'yyyy-MM-dd');
 
         // Buscar dados em paralelo
-        const [funnel, evolution, products, traffic, creatives] = await Promise.all([
+        const [funnel, evolution, products, traffic, creatives, placements] = await Promise.all([
           gtmAnalyticsAPI.getFunnelMetrics(start, end),
           gtmAnalyticsAPI.getEvolutionChart(start, end, selectedEvent, groupBy),
           gtmAnalyticsAPI.getProductMetrics(start, end),
           gtmAnalyticsAPI.getTrafficSources(start, end),
           gtmAnalyticsAPI.getCreativeRanking(start, end),
+          gtmAnalyticsAPI.getPlacementRanking(start, end),
         ]);
 
         setFunnelData(funnel);
@@ -115,6 +116,7 @@ export default function Metricas() {
         setProductData(products);
         setTrafficData(traffic);
         setCreativeData(creatives);
+        setPlacementData(placements);
       } catch (err) {
         console.error('Erro ao carregar métricas:', err);
         setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
@@ -585,6 +587,7 @@ export default function Metricas() {
             {/* Aba Criativos */}
             <TabsContent value="creative" className="space-y-6">
               <CreativeRankingTable data={creativeData} />
+              <PlacementRankingTable data={placementData} />
             </TabsContent>
 
             <TabsContent value="funis" className="space-y-6">

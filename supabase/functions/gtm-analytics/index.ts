@@ -5,6 +5,7 @@ import { getEvolutionChart } from './handlers/evolution.ts'
 import { getProductMetrics } from './handlers/products.ts'
 import { getTrafficSources } from './handlers/traffic_sources.ts'
 import { getCreativeRanking } from './handlers/creatives.ts'
+import { getPlacementRanking } from './handlers/placements.ts'
 import { RateLimiter } from './rate-limiter.ts'
 
 // Configurar Rate Limiter: 100 requisições por minuto por IP
@@ -111,6 +112,10 @@ Deno.serve(async (req) => {
 
       case 'creatives':
         result = await getCreativeRanking(supabase, startDate, endDate)
+        break
+
+      case 'placements':
+        result = await getPlacementRanking(supabase, startDate, endDate)
         break
 
       default:

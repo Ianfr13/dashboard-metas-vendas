@@ -351,7 +351,18 @@ export interface CreativeMetrics {
   medium: string;
   pageViews: number;
   leads: number;
+  addToWishlist: number;
+  addToCart: number;
   checkouts: number;
+  sales: number;
+  revenue: number;
+  conversionRate: number;
+}
+
+export interface PlacementMetrics {
+  placement: string;
+  source: string;
+  pageViews: number;
   sales: number;
   revenue: number;
   conversionRate: number;
@@ -443,6 +454,23 @@ export const gtmAnalyticsAPI = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch creative ranking');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Obtém ranking de posicionamentos
+   */
+  getPlacementRanking: async (startDate: string, endDate: string): Promise<PlacementMetrics[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/gtm-analytics?action=placements&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch placement ranking');
     }
 
     return response.json();
