@@ -1,5 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 Deno.serve(async (req: Request) => {
     // Handle CORS preflight
@@ -33,10 +33,11 @@ Deno.serve(async (req: Request) => {
                     throw new Error(`Metrics error: ${metricsError.message}`)
                 }
 
-                // Fetch players for name lookup
+                // Fetch players for name lookup (Active only)
                 const { data: playersData, error: playersError } = await supabase
                     .from('vturb_players')
-                    .select('id, name, duration, pitch_time, lead_time')
+                    .select('id, name, duration, pitch_time, lead_time, active')
+                    .eq('active', true)
 
                 if (playersError) {
                     throw new Error(`Players error: ${playersError.message}`)
@@ -60,13 +61,16 @@ Deno.serve(async (req: Request) => {
                     const playerId = row.player_id
                     const playerInfo = playerNames[playerId]
 
+                    // STRICT FILTER: If player is not in our active list, skip it.
+                    if (!playerInfo) return
+
                     if (!playerMap[playerId]) {
                         playerMap[playerId] = {
                             id: playerId,
-                            name: playerInfo?.name || `VSL ${playerId.slice(-6)}`,
-                            duration: playerInfo?.duration || 0,
-                            pitch_time: playerInfo?.pitch_time || 0,
-                            lead_time: playerInfo?.lead_time || 0,
+                            name: playerInfo.name,
+                            duration: playerInfo.duration,
+                            pitch_time: playerInfo.pitch_time,
+                            lead_time: playerInfo.lead_time,
                             views: 0,
                             plays: 0,
                             finishes: 0,
@@ -90,6 +94,7 @@ Deno.serve(async (req: Request) => {
                 const { data, error } = await supabase
                     .from('vturb_players')
                     .select('*')
+                    .eq('active', true)
                     .order('name')
 
                 if (error) {

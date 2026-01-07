@@ -1,4 +1,4 @@
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
 export interface MetricsCalculation {
   valorMeta: number;

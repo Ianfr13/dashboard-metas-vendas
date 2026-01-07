@@ -139,7 +139,6 @@ export default function Metricas() {
           // Filter out inactive players (no views in selected period)
           const validStats = vturbStats.filter((item: any) => {
             const v = item.views || item.viewed || 0;
-            // User requested to show only videos with views on the selected day
             return v > 0;
           });
 

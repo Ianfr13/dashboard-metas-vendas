@@ -1,5 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const VTURB_API_BASE = 'https://analytics.vturb.net'
 
@@ -103,18 +103,38 @@ Deno.serve(async (req: Request) => {
         }))
 
         // 2 (Revised). Upsert players to database with fetched lead_time
-        if (Array.isArray(players) && players.length > 0) {
-            const playerRecords = playersWithMetrics.map((p: any) => ({
-                id: p.id,
-                name: p.name || p.title || `VSL ${p.id.slice(-6)}`,
-                duration: p.duration || undefined,
-                pitch_time: p.pitch_time || undefined,
-                // If fetched lead time exists, use it. Else use provided (which is usually 0/null).
-                // If both missing, undefined to keep DB value.
-                lead_time: p.lead_time_fetched !== undefined ? p.lead_time_fetched : (p.lead_time || undefined),
-                updated_at: new Date().toISOString()
-            }))
+        // Also handle "inactive" (deleted) players.
+        // First, get ALL current players from DB to identify deletions.
+        const { data: currentDbPlayers } = await supabase
+            .from('vturb_players')
+            .select('id')
 
+        const currentDbIds = new Set(currentDbPlayers?.map((p: any) => p.id) || [])
+        const fetchedIds = new Set(players.map((p: any) => p.id))
+
+        // Any ID in DB but NOT in fetched list should be marked active=false
+        const idsToDelete = [...currentDbIds].filter(id => !fetchedIds.has(id))
+
+        const playerRecords = playersWithMetrics.map((p: any) => ({
+            id: p.id,
+            name: p.name || p.title || `VSL ${p.id.slice(-6)}`,
+            duration: p.duration || undefined,
+            pitch_time: p.pitch_time || undefined,
+            lead_time: p.lead_time_fetched !== undefined ? p.lead_time_fetched : (p.lead_time || undefined),
+            active: true, // Marked as active since they came from API
+            updated_at: new Date().toISOString()
+        }))
+
+        // Add records for "deleted" players to mark them inactive
+        idsToDelete.forEach(id => {
+            playerRecords.push({
+                id: id,
+                active: false,
+                updated_at: new Date().toISOString()
+            })
+        })
+
+        if (playerRecords.length > 0) {
             const { error: playersError } = await supabase
                 .from('vturb_players')
                 .upsert(playerRecords, { onConflict: 'id' })
@@ -122,7 +142,7 @@ Deno.serve(async (req: Request) => {
             if (playersError) {
                 console.error('Error upserting players:', playersError)
             } else {
-                console.log(`Upserted ${playerRecords.length} players`)
+                console.log(`Upserted ${playerRecords.length} players (incl. ${idsToDelete.length} inactive)`)
             }
         }
 
@@ -153,6 +173,9 @@ Deno.serve(async (req: Request) => {
             stats.forEach((item: any) => {
                 const playerId = item.player_id
                 if (!playerId) return
+
+                // STRICT FILTER: Only process metrics for players we confirmed as active
+                if (!fetchedIds.has(playerId)) return
 
                 if (!playerStats[playerId]) {
                     playerStats[playerId] = { views: 0, plays: 0, finishes: 0, unique_views: 0, unique_plays: 0 }
