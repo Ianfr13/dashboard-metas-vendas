@@ -99,8 +99,14 @@ export default function Metricas() {
   const fetchMetrics = useCallback(async (isBackground = false) => {
     if (authLoading || !user) return;
 
+    // Apenas mostramos loading se:
+    // 1. Não é background refresh (realtime)
+    // 2. E ainda não temos nenhum dado carregado (primeira carga)
+    // Isso evita o efeito de "piscar" ou reload da página que incomoda o usuário
+    const shouldShowLoading = !isBackground && !funnelData;
+
     try {
-      if (!isBackground) setLoading(true);
+      if (shouldShowLoading) setLoading(true);
       setError(null);
 
       const start = format(startDate, 'yyyy-MM-dd');
@@ -122,11 +128,12 @@ export default function Metricas() {
       setCreativeData(creatives);
     } catch (err) {
       console.error('Erro ao carregar métricas:', err);
-      if (!isBackground) setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
+      // Erros em background não devem bloquear a UI
+      if (shouldShowLoading) setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
     } finally {
-      if (!isBackground) setLoading(false);
+      if (shouldShowLoading) setLoading(false);
     }
-  }, [startDate, endDate, selectedEvent, groupBy, user, authLoading]);
+  }, [startDate, endDate, selectedEvent, groupBy, user, authLoading, funnelData]); // funnelData added as dep to check if loaded
 
   // Carregar dados iniciais
   useEffect(() => {
