@@ -32,7 +32,7 @@ import { TrafficSourceMetrics, CreativeMetrics, vturbAnalyticsAPI } from "@/lib/
 
 export default function Metricas() {
   const { user, loading: authLoading } = useAuth();
-  const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [funnelData, setFunnelData] = useState<any>(null);
   const [evolutionData, setEvolutionData] = useState<any[]>([]);

@@ -67,29 +67,45 @@ Deno.serve(async (req: Request) => {
         console.log('Fetching custom metrics...')
         const playersWithMetrics = await Promise.all(players.map(async (p: any) => {
             try {
-                const metricsRes = await fetch(`${VTURB_API_BASE}/custom_metrics/${p.id}/list`, {
-                    method: 'GET',
-                    headers: vturbHeaders
+                // VTurb API requires POST with player_id, start_date, end_date in body
+                const metricsRes = await fetch(`${VTURB_API_BASE}/custom_metrics/list`, {
+                    method: 'POST',
+                    headers: vturbHeaders,
+                    body: JSON.stringify({
+                        player_id: p.id,
+                        start_date: startDateFull,
+                        end_date: endDateFull,
+                        timezone
+                    })
                 })
 
                 let leadTime = undefined
 
                 if (metricsRes.ok) {
                     const metrics = await metricsRes.json()
-                    if (Array.isArray(metrics)) {
-                        // Look for a metric named "Lead" (case insensitive) or similar
+                    console.log(`Player ${p.id} (${p.name || 'unnamed'}) custom metrics:`, JSON.stringify(metrics))
+                    if (Array.isArray(metrics) && metrics.length > 0) {
+                        // Look for a metric named "Lead", "Retenção Lead", etc
                         const leadMetric = metrics.find((m: any) =>
                             m.name && (
                                 m.name.toLowerCase().includes('lead') ||
-                                m.name.toLowerCase() === 'sem lead' // sometimes people name it 'sem lead' for exclusion? no.
-                                // User said "Lead Time" or "Lead"
+                                m.name.toLowerCase().includes('retencao') ||
+                                m.name.toLowerCase().includes('retenção')
                             )
                         )
 
-                        if (leadMetric && leadMetric.time) {
-                            leadTime = leadMetric.time
+                        if (leadMetric) {
+                            console.log(`Found lead metric for ${p.id}:`, JSON.stringify(leadMetric))
+                            if (leadMetric.time !== undefined) {
+                                leadTime = leadMetric.time
+                            }
                         }
+                    } else {
+                        console.log(`Player ${p.id} has no custom metrics or empty array`)
                     }
+                } else {
+                    const errorText = await metricsRes.text()
+                    console.log(`Player ${p.id} custom metrics fetch failed: ${metricsRes.status} - ${errorText}`)
                 }
 
                 return {
