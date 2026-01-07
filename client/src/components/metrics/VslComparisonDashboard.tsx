@@ -50,11 +50,13 @@ const parseTime = (input: string): number => {
 const TimeInput = ({
     value,
     onChange,
-    placeholder
+    placeholder,
+    disabled
 }: {
     value: number,
     onChange: (val: number) => void,
-    placeholder?: string
+    placeholder?: string,
+    disabled?: boolean
 }) => {
     const [display, setDisplay] = useState(formatTime(value));
 
@@ -68,11 +70,13 @@ const TimeInput = ({
     }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (disabled) return;
         // Allow free typing
         setDisplay(e.target.value);
     };
 
     const handleBlur = () => {
+        if (disabled) return;
         let seconds = 0;
         const input = display;
 
@@ -94,6 +98,7 @@ const TimeInput = ({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (disabled) return;
         if (e.key === 'Enter') {
             e.currentTarget.blur();
         }
@@ -106,8 +111,9 @@ const TimeInput = ({
             onChange={handleChange}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="h-8 w-20 text-center"
+            className={`h-8 w-16 text-center ${disabled ? 'bg-muted text-muted-foreground opacity-70 cursor-not-allowed' : ''}`}
             placeholder={placeholder || "MM:SS"}
+            disabled={disabled}
         />
     );
 };
@@ -465,6 +471,7 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                                                 value={vsl.settings.pitchTime}
                                                 onChange={(val) => updateVslSetting(vsl.id, 'pitchTime', val)}
                                                 placeholder="MM:SS"
+                                                disabled={true}
                                             />
                                         </div>
                                         <div className="flex justify-between items-center bg-muted/20 p-1 rounded">

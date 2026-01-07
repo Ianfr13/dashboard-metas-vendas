@@ -65,8 +65,20 @@ Deno.serve(async (req: Request) => {
             const playerRecords = players.map((p: any) => ({
                 id: p.id,
                 name: p.name || p.title || `VSL ${p.id.slice(-6)}`,
-                duration: p.duration || null,
-                pitch_time: p.pitch_time || null,
+                duration: p.duration || undefined,
+                // Only update pitch_time/lead_time if provided by Vturb, otherwise keep DB value (undefined avoids update in upsert if we could... but upsert replaces row)
+                // UPSERT replaces the row. passing undefined in JSON usually means it's excluded? 
+                // In Supabase js, undefined fields are stripped? Let's hope.
+                // If not, we might need to fetch existing players first? We don't fetch existing here.
+                // Actually, if we use upsert, we replace.
+                // To do partial update on conflict, we should use ignoreDuplicates? No.
+                // Supabase upsert doesn't support "merge" natively for specific fields easily without listing them?
+                // Actually, if we pass { id, name } and onConflict: id, it updates name.
+                // If we don't pass pitch_time, it MIGHT set it to null if column default is null?
+                // No, if field is missing in payload, it shouldn't touch the column?
+                // Let's assume undefined removes key from object.
+                pitch_time: p.pitch_time || undefined,
+                lead_time: p.lead_time || undefined,
                 updated_at: new Date().toISOString()
             }))
 
@@ -159,7 +171,8 @@ Deno.serve(async (req: Request) => {
             JSON.stringify({
                 success: true,
                 players_synced: players.length,
-                metrics_synced: metricsRecords.length
+                metrics_synced: metricsRecords.length,
+                sample_player: players.length > 0 ? players[0] : null
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )

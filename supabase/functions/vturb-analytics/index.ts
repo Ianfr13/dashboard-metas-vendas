@@ -118,6 +118,24 @@ Deno.serve(async (req: Request) => {
                 break
             }
 
+            case 'debug-vturb-api': {
+                const VTURB_API_TOKEN = Deno.env.get('VTURB_API_TOKEN')!
+                const response = await fetch('https://analytics.vturb.net/api/v1/players/list', {
+                    headers: {
+                        'x-access-token': VTURB_API_TOKEN,
+                        'Content-Type': 'application/json'
+                    }
+                })
+
+                if (!response.ok) {
+                    const text = await response.text()
+                    throw new Error(`Vturb API error: ${response.status} ${text}`)
+                }
+
+                result = await response.json()
+                break
+            }
+
             case 'daily-metrics': {
                 const playerId = url.searchParams.get('player_id')
 
