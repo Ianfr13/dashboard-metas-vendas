@@ -7,7 +7,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   CalendarIcon,
   Loader2,
+  Wifi,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/lib/supabase";
 import DashboardLayout from "@/components/DashboardLayout";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -18,6 +21,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import FunilMarketing from "@/components/metricas/FunilMarketing";
 import FunilComercial from "@/components/metricas/FunilComercial";
 import FunisCadastrados from "@/components/metricas/FunisCadastrados";
+import { useRef, useCallback } from "react";
 import TrafficSourcesTable from "@/components/metrics/TrafficSourcesTable";
 import AdvancedFunnel from "@/components/metrics/AdvancedFunnel";
 import CreativeRankingTable from "@/components/metrics/CreativeRankingTable";
@@ -36,6 +40,8 @@ export default function Metricas() {
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
   const [groupBy, setGroupBy] = useState<'hour' | 'day' | 'week'>('day');
+  const [isLive, setIsLive] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout>(null);
 
   // Estados para aba Comercial
   const [selectedRole, setSelectedRole] = useState<string>('todos');
@@ -89,42 +95,65 @@ export default function Metricas() {
     loadCommercialMetrics()
   }, [selectedRole, selectedSeller, selectedPeriod, user, authLoading])
 
-  // Carregar dados do GTM
-  useEffect(() => {
-    async function loadMetrics() {
-      if (authLoading || !user) return;
+  // Função buscar métricas
+  const fetchMetrics = useCallback(async (isBackground = false) => {
+    if (authLoading || !user) return;
 
-      try {
-        setLoading(true);
-        setError(null);
+    try {
+      if (!isBackground) setLoading(true);
+      setError(null);
 
-        const start = format(startDate, 'yyyy-MM-dd');
-        const end = format(endDate, 'yyyy-MM-dd');
+      const start = format(startDate, 'yyyy-MM-dd');
+      const end = format(endDate, 'yyyy-MM-dd');
 
-        // Buscar dados em paralelo
-        const [funnel, evolution, products, traffic, creatives] = await Promise.all([
-          gtmAnalyticsAPI.getFunnelMetrics(start, end),
-          gtmAnalyticsAPI.getEvolutionChart(start, end, selectedEvent, groupBy),
-          gtmAnalyticsAPI.getProductMetrics(start, end),
-          gtmAnalyticsAPI.getTrafficSources(start, end),
-          gtmAnalyticsAPI.getCreativeRanking(start, end),
-        ]);
+      // Buscar dados em paralelo
+      const [funnel, evolution, products, traffic, creatives] = await Promise.all([
+        gtmAnalyticsAPI.getFunnelMetrics(start, end),
+        gtmAnalyticsAPI.getEvolutionChart(start, end, selectedEvent, groupBy),
+        gtmAnalyticsAPI.getProductMetrics(start, end),
+        gtmAnalyticsAPI.getTrafficSources(start, end),
+        gtmAnalyticsAPI.getCreativeRanking(start, end),
+      ]);
 
-        setFunnelData(funnel);
-        setEvolutionData(evolution);
-        setProductData(products);
-        setTrafficData(traffic);
-        setCreativeData(creatives);
-      } catch (err) {
-        console.error('Erro ao carregar métricas:', err);
-        setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
-      } finally {
-        setLoading(false);
-      }
+      setFunnelData(funnel);
+      setEvolutionData(evolution);
+      setProductData(products);
+      setTrafficData(traffic);
+      setCreativeData(creatives);
+    } catch (err) {
+      console.error('Erro ao carregar métricas:', err);
+      if (!isBackground) setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
+    } finally {
+      if (!isBackground) setLoading(false);
     }
-
-    loadMetrics();
   }, [startDate, endDate, selectedEvent, groupBy, user, authLoading]);
+
+  // Carregar dados iniciais
+  useEffect(() => {
+    fetchMetrics();
+  }, [fetchMetrics]);
+
+  // Realtime Subscription
+  useEffect(() => {
+    const channel = supabase.channel('realtime-metrics')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gtm_events' }, () => {
+        setIsLive(true);
+        // Debounce refresh
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+          console.log('Refreshing metrics (Realtime)...');
+          fetchMetrics(true);
+        }, 3000);
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setIsLive(true);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [fetchMetrics]);
 
   // Preparar dados para gráfico de funil
   const funnelChartData = funnelData ? [
@@ -140,7 +169,15 @@ export default function Metricas() {
         {/* Filtros de Data */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Período de Análise</CardTitle>
+            <CardTitle className="flex items-center gap-3">
+              Período de Análise
+              {isLive && (
+                <Badge variant="outline" className="text-green-600 border-green-600 animate-pulse gap-1.5 font-normal">
+                  <Wifi className="h-3 w-3" />
+                  Ao Vivo
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4">
