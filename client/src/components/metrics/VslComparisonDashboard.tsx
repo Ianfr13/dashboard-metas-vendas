@@ -33,6 +33,11 @@ interface VslComparisonDashboardProps {
     endDate: Date;
 }
 
+interface VslSettings {
+    pitchTime: number;
+    leadTime: number;
+}
+
 const CHART_COLORS = [
     '#f97316', '#3b82f6', '#22c55e', '#a855f7', '#ef4444',
     '#06b6d4', '#eab308', '#ec4899', '#14b8a6', '#8b5cf6'
@@ -77,14 +82,13 @@ const groupVslsByBaseName = (vsls: VslData[]): Record<string, VslData[]> => {
 export default function VslComparisonDashboard({ vsls, startDate, endDate }: VslComparisonDashboardProps) {
     const [selectedVsls, setSelectedVsls] = useState<Set<string>>(new Set());
     const [retentionData, setRetentionData] = useState<RetentionData[]>([]);
-    const [pitchRetentions, setPitchRetentions] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(false);
+
+    // Individual settings for each VSL
+    const [vslSettings, setVslSettings] = useState<Record<string, VslSettings>>({});
 
     // useRef to track if initial data has loaded (prevents flicker)
     const hasLoadedRef = useRef(false);
-
-    // New: Customizable pitch time (in minutes)
-    const [customPitchMinute, setCustomPitchMinute] = useState<number>(18);
 
     // New: Group filter
     const [selectedGroup, setSelectedGroup] = useState<string>("all");
@@ -119,10 +123,19 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
         }
     };
 
+    const updateVslSetting = (id: string, field: keyof VslSettings, value: number) => {
+        setVslSettings(prev => ({
+            ...prev,
+            [id]: {
+                ...prev[id],
+                [field]: value
+            }
+        }));
+    };
+
     useEffect(() => {
         if (selectedVsls.size === 0) {
             setRetentionData([]);
-            setPitchRetentions({});
             hasLoadedRef.current = false;
             return;
         }
@@ -153,25 +166,18 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
 
                 const maxMinutes = Math.max(...results.map(r => r.data.length), 30);
                 const combined: RetentionData[] = [];
-                const pitchRets: Record<string, number> = {};
 
                 for (let min = 0; min < maxMinutes; min++) {
                     const row: RetentionData = { minute: min };
                     results.forEach(({ vslId, data }) => {
                         const point = data.find(d => d.minute === min);
                         row[vslId] = point?.retention || 0;
-
-                        // Use custom pitch minute for retention calculation
-                        if (min === customPitchMinute) {
-                            pitchRets[vslId] = point?.retention || 0;
-                        }
                     });
                     combined.push(row);
                 }
 
                 setRetentionData(combined);
-                setPitchRetentions(pitchRets);
-                hasLoadedRef.current = true; // Mark as loaded to prevent future loading spinners
+                hasLoadedRef.current = true;
             } catch (err) {
                 console.error('Error fetching retentions:', err);
             } finally {
@@ -193,7 +199,34 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                 clearInterval(intervalId);
             }
         };
-    }, [selectedVsls, startDate, endDate, vsls, customPitchMinute]);
+    }, [selectedVsls, startDate, endDate, vsls]);
+
+    // Initialize settings from localStorage or defaults
+    useEffect(() => {
+        const savedSettings = localStorage.getItem('vsl_dashboard_settings');
+        const parsedSettings = savedSettings ? JSON.parse(savedSettings) : {};
+
+        setVslSettings(prev => {
+            const next = { ...parsedSettings, ...prev };
+            let changed = false;
+
+            selectedVsls.forEach(id => {
+                if (!next[id]) {
+                    next[id] = { pitchTime: 18, leadTime: 5 }; // Defaults
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
+    }, [selectedVsls]);
+
+    // Save settings to localStorage whenever they change
+    useEffect(() => {
+        if (Object.keys(vslSettings).length > 0) {
+            localStorage.setItem('vsl_dashboard_settings', JSON.stringify(vslSettings));
+        }
+    }, [vslSettings]);
 
     const formatPercent = (value: number) => `${(value || 0).toFixed(1)}%`;
     const formatNumber = (value: number) => new Intl.NumberFormat("pt-BR").format(value || 0);
@@ -207,20 +240,28 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
     const summaryMetrics = useMemo(() => {
         const selected = filteredVsls.filter(v => selectedVsls.has(v.id));
         return selected.map(vsl => {
-            const playRate = vsl.viewed > 0 ? (vsl.started / vsl.viewed) * 100 : 0;
-            const completionRate = vsl.started > 0 ? (vsl.finished / vsl.started) * 100 : 0;
-            const engagementRate = vsl.viewed > 0 ? (vsl.finished / vsl.viewed) * 100 : 0;
+            const settings = vslSettings[vsl.id] || { pitchTime: 18, leadTime: 5 };
+
+            // Find retention at specific minutes
+            const pitchData = retentionData.find(d => d.minute === settings.pitchTime);
+            const leadData = retentionData.find(d => d.minute === settings.leadTime);
+
+            const pitchRetention = pitchData ? (pitchData[vsl.id] || 0) : 0;
+            const leadRetention = leadData ? (leadData[vsl.id] || 0) : 0;
+
+            // Placeholder conversion (requires sales data)
+            const conversion = 0;
 
             return {
                 ...vsl,
                 leadLabel: getLeadLabel(vsl.name),
-                playRate,
-                completionRate,
-                engagementRate,
-                pitchRetention: pitchRetentions[vsl.id] || 0
+                pitchRetention,
+                leadRetention,
+                conversion,
+                settings
             };
         });
-    }, [filteredVsls, selectedVsls, pitchRetentions]);
+    }, [filteredVsls, selectedVsls, vslSettings, retentionData]);
 
     return (
         <Card className="col-span-1 lg:col-span-2">
@@ -258,51 +299,59 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                                 </SelectContent>
                             </Select>
                         </div>
-
-                        {/* Pitch Time Input */}
-                        <div className="flex items-center gap-2">
-                            <Label htmlFor="pitch-time" className="text-sm whitespace-nowrap">
-                                <Clock className="h-4 w-4 inline mr-1" />
-                                Pitch (min):
-                            </Label>
-                            <Input
-                                id="pitch-time"
-                                type="number"
-                                min={1}
-                                max={60}
-                                value={customPitchMinute}
-                                onChange={(e) => setCustomPitchMinute(parseInt(e.target.value) || 18)}
-                                className="w-20"
-                            />
-                        </div>
                     </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">
                 {/* Summary Cards for Selected VSLs */}
                 {summaryMetrics.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
                         {summaryMetrics.map((vsl, idx) => (
                             <div
                                 key={vsl.id}
-                                className="p-3 rounded-lg border"
+                                className="p-3 rounded-lg border flex flex-col gap-3"
                                 style={{ borderColor: CHART_COLORS[idx], borderWidth: 2 }}
                             >
-                                <p className="font-semibold text-sm mb-2" style={{ color: CHART_COLORS[idx] }}>
+                                <p className="font-semibold text-sm" style={{ color: CHART_COLORS[idx] }}>
                                     {vsl.leadLabel}
                                 </p>
-                                <div className="space-y-1 text-xs">
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Play Rate:</span>
-                                        <span className="font-mono">{formatPercent(vsl.playRate)}</span>
+
+                                <div className="space-y-2">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-xs text-muted-foreground">Tempo Pitch (min)</Label>
+                                            <Input
+                                                type="number"
+                                                className="w-12 h-6 text-xs px-1 text-right"
+                                                value={vsl.settings.pitchTime}
+                                                onChange={(e) => updateVslSetting(vsl.id, 'pitchTime', parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                        <div className="flex justify-between items-center bg-muted/20 p-1 rounded">
+                                            <span className="text-xs">Retenção Pitch</span>
+                                            <span className="text-sm font-bold">{formatPercent(vsl.pitchRetention)}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Conclusão:</span>
-                                        <span className="font-mono">{formatPercent(vsl.completionRate)}</span>
+
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-xs text-muted-foreground">Tempo Lead (min)</Label>
+                                            <Input
+                                                type="number"
+                                                className="w-12 h-6 text-xs px-1 text-right"
+                                                value={vsl.settings.leadTime}
+                                                onChange={(e) => updateVslSetting(vsl.id, 'leadTime', parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                        <div className="flex justify-between items-center bg-muted/20 p-1 rounded">
+                                            <span className="text-xs">Retenção Lead</span>
+                                            <span className="text-sm font-bold">{formatPercent(vsl.leadRetention)}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Ret. Pitch:</span>
-                                        <span className="font-mono font-bold">{formatPercent(vsl.pitchRetention)}</span>
+
+                                    <div className="flex justify-between items-center pt-1 border-t">
+                                        <span className="text-xs text-muted-foreground">Conversão</span>
+                                        <span className="text-sm font-bold">-</span>
                                     </div>
                                 </div>
                             </div>
@@ -351,13 +400,6 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                                         return getLeadLabel(vsl?.name || value);
                                     }}
                                 />
-                                {/* Pitch Reference Line */}
-                                <ReferenceLine
-                                    x={customPitchMinute}
-                                    stroke="#ef4444"
-                                    strokeDasharray="5 5"
-                                    label={{ value: 'Pitch', position: 'top', fill: '#ef4444', fontSize: 11 }}
-                                />
                                 {Array.from(selectedVsls).map((vslId, index) => (
                                     <Area
                                         key={vslId}
@@ -389,19 +431,22 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                                 <TableHead className="text-right">Visualizações</TableHead>
                                 <TableHead className="text-right">Plays</TableHead>
                                 <TableHead className="text-right">Play Rate</TableHead>
-                                <TableHead className="text-right">Finalizações</TableHead>
-                                <TableHead className="text-right">Conclusão</TableHead>
-                                <TableHead className="text-right">Ret. Pitch ({customPitchMinute}min)</TableHead>
+                                <TableHead className="text-right">Ret. Pitch</TableHead>
+                                <TableHead className="text-right">Ret. Lead</TableHead>
+                                <TableHead className="text-right">Conversão</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredVsls.map((vsl) => {
                                 const isSelected = selectedVsls.has(vsl.id);
                                 const playRate = vsl.viewed > 0 ? (vsl.started / vsl.viewed) * 100 : 0;
-                                const completionRate = vsl.started > 0 ? (vsl.finished / vsl.started) * 100 : 0;
-                                const pitchRet = pitchRetentions[vsl.id];
                                 const colorIndex = Array.from(selectedVsls).indexOf(vsl.id);
                                 const leadLabel = getLeadLabel(vsl.name);
+
+                                // Get calculated metrics from summaryMetrics if selected, otherwise defaults/0
+                                const summary = summaryMetrics.find(s => s.id === vsl.id);
+                                const pitchRet = summary?.pitchRetention;
+                                const leadRet = summary?.leadRetention;
 
                                 return (
                                     <TableRow
@@ -443,27 +488,22 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                                                 {formatPercent(playRate)}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right font-mono text-sm">
-                                            {formatNumber(vsl.finished)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Badge variant={completionRate > 10 ? "default" : "outline"}
-                                                className={completionRate > 10 ? "bg-green-600" : ""}>
-                                                {formatPercent(completionRate)}
-                                            </Badge>
-                                        </TableCell>
                                         <TableCell className="text-right">
                                             {isSelected && pitchRet !== undefined ? (
-                                                <Badge
-                                                    variant={pitchRet > 20 ? "default" : "outline"}
-                                                    className={pitchRet > 20 ? "bg-orange-600" : ""}
-                                                >
-                                                    <Target className="h-3 w-3 mr-1" />
-                                                    {formatPercent(pitchRet)}
-                                                </Badge>
+                                                <span className="font-mono font-medium">{formatPercent(pitchRet)}</span>
                                             ) : (
                                                 <span className="text-muted-foreground text-sm">-</span>
                                             )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {isSelected && leadRet !== undefined ? (
+                                                <span className="font-mono font-medium">{formatPercent(leadRet)}</span>
+                                            ) : (
+                                                <span className="text-muted-foreground text-sm">-</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <span className="text-muted-foreground text-sm">-</span>
                                         </TableCell>
                                     </TableRow>
                                 );
