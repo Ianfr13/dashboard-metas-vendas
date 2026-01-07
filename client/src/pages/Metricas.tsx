@@ -26,6 +26,7 @@ import TrafficSourcesTable from "@/components/metrics/TrafficSourcesTable";
 import AdvancedFunnel from "@/components/metrics/AdvancedFunnel";
 import CreativeRankingTable from "@/components/metrics/CreativeRankingTable";
 import VslRankingTable from "@/components/metrics/VslRankingTable";
+import VslRetentionChart from "@/components/metrics/VslRetentionChart";
 import { TrafficSourceMetrics, CreativeMetrics, vturbAnalyticsAPI } from "@/lib/edge-functions";
 
 export default function Metricas() {
@@ -139,7 +140,10 @@ export default function Metricas() {
             name: item.name || item.player_name || 'VSL',
             started: item.plays || item.started || 0,
             finished: item.finishes || item.finished || 0,
-            viewed: item.views || item.viewed || 0
+            viewed: item.views || item.viewed || 0,
+            unique_views: item.unique_views || 0,
+            unique_plays: item.unique_plays || 0,
+            duration: item.duration || 0
           }));
           setVturbData(formattedData);
         }
@@ -653,6 +657,7 @@ export default function Metricas() {
             {/* Aba Vturb */}
             <TabsContent value="vturb" className="space-y-6">
               <VslRankingTable data={vturbData} />
+              <VslRetentionChart vsls={vturbData} startDate={startDate} endDate={endDate} />
             </TabsContent>
 
             <TabsContent value="funis" className="space-y-6">

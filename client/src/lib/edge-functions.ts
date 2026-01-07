@@ -644,5 +644,23 @@ export const vturbAnalyticsAPI = {
 
     return response.json();
   },
+
+  /**
+   * Obtém dados de retenção/engajamento por minuto de um player
+   */
+  getEngagement: async (playerId: string, startDate: string, endDate: string, duration?: number): Promise<{ minute: number; retention: number; viewers: number }[]> => {
+    const durationParam = duration || 1800; // Default 30 min
+    const response = await fetch(
+      `${FUNCTIONS_URL}/vturb-analytics?action=engagement&player_id=${playerId}&start_date=${startDate}&end_date=${endDate}&duration=${durationParam}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch Vturb engagement data');
+    }
+
+    return response.json();
+  },
 };
 

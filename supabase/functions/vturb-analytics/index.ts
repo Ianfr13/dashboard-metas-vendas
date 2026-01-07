@@ -117,9 +117,76 @@ Deno.serve(async (req: Request) => {
                 break
             }
 
+            case 'engagement': {
+                // Fetch engagement/retention data directly from Vturb API
+                const playerId = url.searchParams.get('player_id')
+                const duration = url.searchParams.get('duration') || '1800' // Default 30 min
+
+                if (!playerId) {
+                    return new Response(
+                        JSON.stringify({ error: 'player_id is required for engagement' }),
+                        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    )
+                }
+
+                const vturbToken = Deno.env.get('VTURB_API_TOKEN')
+                if (!vturbToken) {
+                    throw new Error('VTURB_API_TOKEN not configured')
+                }
+
+                const startDateFull = `${startDate} 00:00:00`
+                const endDateFull = `${endDate} 23:59:59`
+
+                const response = await fetch('https://analytics.vturb.net/times/user_engagement', {
+                    method: 'POST',
+                    headers: {
+                        'X-Api-Token': vturbToken,
+                        'X-Api-Version': 'v1',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        player_id: playerId,
+                        duration: parseInt(duration),
+                        start_date: startDateFull,
+                        end_date: endDateFull,
+                        timezone: 'America/Sao_Paulo'
+                    })
+                })
+
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    throw new Error(`Vturb API error: ${response.status} - ${errorText}`)
+                }
+
+                const engagementData = await response.json()
+
+                // Transform to minute-by-minute retention
+                // API returns object with second -> count
+                const retentionByMinute: { minute: number; retention: number; viewers: number }[] = []
+
+                if (engagementData && typeof engagementData === 'object') {
+                    const seconds = Object.keys(engagementData).map(Number).sort((a, b) => a - b)
+                    const maxViewers = engagementData['0'] || engagementData[seconds[0]] || 1
+
+                    // Group by minute
+                    for (let min = 0; min <= Math.ceil(parseInt(duration) / 60); min++) {
+                        const sec = min * 60
+                        const viewers = engagementData[String(sec)] || 0
+                        retentionByMinute.push({
+                            minute: min,
+                            viewers: viewers,
+                            retention: maxViewers > 0 ? (viewers / maxViewers) * 100 : 0
+                        })
+                    }
+                }
+
+                result = retentionByMinute
+                break
+            }
+
             default:
                 return new Response(
-                    JSON.stringify({ error: 'Invalid action. Use: player-stats, list-players, daily-metrics' }),
+                    JSON.stringify({ error: 'Invalid action. Use: player-stats, list-players, daily-metrics, engagement' }),
                     { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                 )
         }
