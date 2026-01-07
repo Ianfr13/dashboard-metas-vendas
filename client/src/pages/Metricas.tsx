@@ -18,6 +18,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import FunilMarketing from "@/components/metricas/FunilMarketing";
 import FunilComercial from "@/components/metricas/FunilComercial";
 import FunisCadastrados from "@/components/metricas/FunisCadastrados";
+import TrafficSourcesTable from "@/components/metrics/TrafficSourcesTable";
+import AdvancedFunnel from "@/components/metrics/AdvancedFunnel";
 import CreativeRankingTable from "@/components/metrics/CreativeRankingTable";
 import PlacementRankingTable from "@/components/metrics/PlacementRankingTable";
 import { TrafficSourceMetrics, CreativeMetrics, PlacementMetrics } from "@/lib/edge-functions";
