@@ -4,6 +4,7 @@ export interface FunnelMetrics {
   etapas: {
     pageViews: number
     viewItem: number
+    addToWishlist: number
     addToCart: number
     viewCart: number
     beginCheckout: number
@@ -48,6 +49,7 @@ export async function getFunnelMetrics(
   // Contar eventos por tipo
   let pageViews = 0
   let viewItem = 0
+  let addToWishlist = 0
   let addToCart = 0
   let viewCart = 0
   let beginCheckout = 0
@@ -66,6 +68,9 @@ export async function getFunnelMetrics(
         break
       case 'view_item':
         viewItem++
+        break
+      case 'add_to_wishlist':
+        addToWishlist++
         break
       case 'add_to_cart':
         addToCart++
@@ -106,6 +111,7 @@ export async function getFunnelMetrics(
     etapas: {
       pageViews,
       viewItem,
+      addToWishlist,
       addToCart,
       viewCart,
       beginCheckout,

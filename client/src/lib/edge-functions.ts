@@ -302,6 +302,7 @@ export interface FunnelMetrics {
   etapas: {
     pageViews: number;
     viewItem: number;
+    addToWishlist: number;
     addToCart: number;
     viewCart: number;
     beginCheckout: number;
