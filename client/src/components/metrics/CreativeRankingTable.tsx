@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Image, Video, MonitorPlay, ExternalLink } from "lucide-react";
+import { Image, Video, MonitorPlay, ExternalLink, MonitorSmartphone, LayoutGrid, Smartphone, Laptop } from "lucide-react";
 import { CreativeMetrics } from "@/lib/edge-functions";
 
 interface CreativeRankingTableProps {
@@ -21,6 +21,13 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
         return new Intl.NumberFormat("pt-BR").format(value);
     };
 
+    const getPlacementIcon = (placement: string) => {
+        const p = (placement || '').toLowerCase();
+        if (p.includes('mobile') || p.includes('story') || p.includes('reels') || p.includes('app')) return <Smartphone className="h-4 w-4" />;
+        if (p.includes('desktop') || p.includes('web')) return <Laptop className="h-4 w-4" />;
+        return <LayoutGrid className="h-4 w-4" />;
+    };
+
     return (
         <Card className="col-span-1 lg:col-span-2">
             <CardHeader>
@@ -33,6 +40,7 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Criativo (ID)</TableHead>
+                                <TableHead>Melhor Formato</TableHead>
                                 <TableHead className="text-right">Visitas</TableHead>
                                 <TableHead className="text-right">Add to Cart</TableHead>
                                 <TableHead className="text-right">Wishlist</TableHead>
@@ -53,6 +61,14 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                                             <span className="font-mono text-xs truncate max-w-[150px]" title={item.creativeId}>
                                                 {item.creativeId}
                                             </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-1 bg-muted rounded-full text-indigo-500">
+                                                {getPlacementIcon(item.bestPlacement)}
+                                            </div>
+                                            <span className="text-sm font-medium">{item.bestPlacement || '-'}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right font-mono text-sm">
@@ -90,7 +106,7 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
 
                             {data.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                                         Nenhum dado de criativo registrado no período.
                                     </TableCell>
                                 </TableRow>

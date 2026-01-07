@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "supermemory": {
+      "command": "npx",
+      "args": ["-y", "@supermemory/tools"],
+      "env": {
+        "SUPERMEMORY_API_KEY": "sm_cepb9GvKWRNJmQv2sFfVpH_luWoBnwLRfoKlQmRRFqdQSnwPvOoDOTqodkEqgGYzCNyBfUQfdmnZYdYUQJlmlry"
+      }
+    }
+  },
+  "executors": {
+    "GLM_4_7": {
+      "DEFAULT": {
+        "GLM_4_7": {
+          "api_key": "sk-uqs3ZfJbkcozrGAJlpyT0inZcfNCIVYjhWS5aoqaye3Wf9ugSWw0HzJDeCKvT8m",
+          "model": "glm-4.7",
+          "mcpServers": ["supermemory"]
+        }
+      }
+    }
+  }
+}
