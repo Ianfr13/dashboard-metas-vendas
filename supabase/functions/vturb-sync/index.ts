@@ -60,25 +60,58 @@ Deno.serve(async (req: Request) => {
         const players = await playersRes.json()
         console.log(`Found ${players.length} players`)
 
-        // 2. Upsert players to database
+        // 3. Fetch custom metrics for each player to get Lead Time
+        // This must be done per player, which might be slow if many players.
+        // We can optimize by doing it in parallel or only for active players?
+        // For now, let's map over players.
+        console.log('Fetching custom metrics...')
+        const playersWithMetrics = await Promise.all(players.map(async (p: any) => {
+            try {
+                const metricsRes = await fetch(`${VTURB_API_BASE}/custom_metrics/${p.id}/list`, {
+                    method: 'GET',
+                    headers: vturbHeaders
+                })
+
+                let leadTime = undefined
+
+                if (metricsRes.ok) {
+                    const metrics = await metricsRes.json()
+                    if (Array.isArray(metrics)) {
+                        // Look for a metric named "Lead" (case insensitive) or similar
+                        const leadMetric = metrics.find((m: any) =>
+                            m.name && (
+                                m.name.toLowerCase().includes('lead') ||
+                                m.name.toLowerCase() === 'sem lead' // sometimes people name it 'sem lead' for exclusion? no.
+                                // User said "Lead Time" or "Lead"
+                            )
+                        )
+
+                        if (leadMetric && leadMetric.time) {
+                            leadTime = leadMetric.time
+                        }
+                    }
+                }
+
+                return {
+                    ...p,
+                    lead_time_fetched: leadTime
+                }
+            } catch (err) {
+                console.error(`Error fetching metrics for ${p.id}:`, err)
+                return p
+            }
+        }))
+
+        // 2 (Revised). Upsert players to database with fetched lead_time
         if (Array.isArray(players) && players.length > 0) {
-            const playerRecords = players.map((p: any) => ({
+            const playerRecords = playersWithMetrics.map((p: any) => ({
                 id: p.id,
                 name: p.name || p.title || `VSL ${p.id.slice(-6)}`,
                 duration: p.duration || undefined,
-                // Only update pitch_time/lead_time if provided by Vturb, otherwise keep DB value (undefined avoids update in upsert if we could... but upsert replaces row)
-                // UPSERT replaces the row. passing undefined in JSON usually means it's excluded? 
-                // In Supabase js, undefined fields are stripped? Let's hope.
-                // If not, we might need to fetch existing players first? We don't fetch existing here.
-                // Actually, if we use upsert, we replace.
-                // To do partial update on conflict, we should use ignoreDuplicates? No.
-                // Supabase upsert doesn't support "merge" natively for specific fields easily without listing them?
-                // Actually, if we pass { id, name } and onConflict: id, it updates name.
-                // If we don't pass pitch_time, it MIGHT set it to null if column default is null?
-                // No, if field is missing in payload, it shouldn't touch the column?
-                // Let's assume undefined removes key from object.
                 pitch_time: p.pitch_time || undefined,
-                lead_time: p.lead_time || undefined,
+                // If fetched lead time exists, use it. Else use provided (which is usually 0/null).
+                // If both missing, undefined to keep DB value.
+                lead_time: p.lead_time_fetched !== undefined ? p.lead_time_fetched : (p.lead_time || undefined),
                 updated_at: new Date().toISOString()
             }))
 

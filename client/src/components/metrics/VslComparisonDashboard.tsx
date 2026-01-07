@@ -487,6 +487,7 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                                                 value={vsl.settings.leadTime}
                                                 onChange={(val) => updateVslSetting(vsl.id, 'leadTime', val)}
                                                 placeholder="MM:SS"
+                                                disabled={true}
                                             />
                                         </div>
                                         <div className="flex justify-between items-center bg-muted/20 p-1 rounded">
