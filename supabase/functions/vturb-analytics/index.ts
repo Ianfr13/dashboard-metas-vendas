@@ -22,42 +22,43 @@ Deno.serve(async (req: Request) => {
 
         switch (action) {
             case 'player-stats': {
-                // Read from database - JOIN players with metrics
-                const { data, error } = await supabase
+                // Fetch metrics
+                const { data: metricsData, error: metricsError } = await supabase
                     .from('vturb_metrics')
-                    .select(`
-            player_id,
-            date,
-            views,
-            plays,
-            finishes,
-            unique_views,
-            unique_plays,
-            vturb_players!inner (
-              id,
-              name,
-              duration
-            )
-          `)
+                    .select('player_id, date, views, plays, finishes, unique_views, unique_plays')
                     .gte('date', startDate)
                     .lte('date', endDate)
-                    .order('views', { ascending: false })
 
-                if (error) {
-                    throw new Error(`Database error: ${error.message}`)
+                if (metricsError) {
+                    throw new Error(`Metrics error: ${metricsError.message}`)
                 }
 
-                // Aggregate by player (in case of multiple days)
+                // Fetch players for name lookup
+                const { data: playersData, error: playersError } = await supabase
+                    .from('vturb_players')
+                    .select('id, name, duration')
+
+                if (playersError) {
+                    throw new Error(`Players error: ${playersError.message}`)
+                }
+
+                // Create player name lookup map
+                const playerNames: Record<string, { name: string; duration: number }> = {}
+                playersData?.forEach((p: any) => {
+                    playerNames[p.id] = { name: p.name, duration: p.duration || 0 }
+                })
+
+                // Aggregate metrics by player
                 const playerMap: Record<string, any> = {}
 
-                data?.forEach((row: any) => {
+                metricsData?.forEach((row: any) => {
                     const playerId = row.player_id
-                    const playerInfo = row.vturb_players
+                    const playerInfo = playerNames[playerId]
 
                     if (!playerMap[playerId]) {
                         playerMap[playerId] = {
                             id: playerId,
-                            name: playerInfo?.name || playerId,
+                            name: playerInfo?.name || `VSL ${playerId.slice(-6)}`,
                             duration: playerInfo?.duration || 0,
                             views: 0,
                             plays: 0,
