@@ -4,6 +4,7 @@ import { getFunnelMetrics } from './handlers/funnel.ts'
 import { getEvolutionChart } from './handlers/evolution.ts'
 import { getProductMetrics } from './handlers/products.ts'
 import { getTrafficSources } from './handlers/traffic_sources.ts'
+import { getCreativeRanking } from './handlers/creatives.ts'
 import { RateLimiter } from './rate-limiter.ts'
 
 // Configurar Rate Limiter: 100 requisições por minuto por IP
@@ -106,6 +107,10 @@ Deno.serve(async (req) => {
 
       case 'traffic_sources':
         result = await getTrafficSources(supabase, startDate, endDate)
+        break
+
+      case 'creatives':
+        result = await getCreativeRanking(supabase, startDate, endDate)
         break
 
       default:

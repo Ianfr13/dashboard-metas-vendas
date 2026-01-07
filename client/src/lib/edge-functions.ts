@@ -344,6 +344,19 @@ export interface TrafficSourceMetrics {
   conversionRate: number;
 }
 
+export interface CreativeMetrics {
+  creativeId: string;
+  adName: string;
+  source: string;
+  medium: string;
+  pageViews: number;
+  leads: number;
+  checkouts: number;
+  sales: number;
+  revenue: number;
+  conversionRate: number;
+}
+
 export const gtmAnalyticsAPI = {
   /**
    * Obtém métricas do funil de conversão
@@ -413,6 +426,23 @@ export const gtmAnalyticsAPI = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch traffic sources');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Obtém ranking de criativos
+   */
+  getCreativeRanking: async (startDate: string, endDate: string): Promise<CreativeMetrics[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/gtm-analytics?action=creatives&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch creative ranking');
     }
 
     return response.json();

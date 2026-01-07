@@ -20,7 +20,8 @@ import FunilComercial from "@/components/metricas/FunilComercial";
 import FunisCadastrados from "@/components/metricas/FunisCadastrados";
 import TrafficSourcesTable from "@/components/metrics/TrafficSourcesTable";
 import AdvancedFunnel from "@/components/metrics/AdvancedFunnel";
-import { TrafficSourceMetrics } from "@/lib/edge-functions";
+import CreativeRankingTable from "@/components/metrics/CreativeRankingTable";
+import { TrafficSourceMetrics, CreativeMetrics } from "@/lib/edge-functions";
 
 export default function Metricas() {
   const { user, loading: authLoading } = useAuth();
@@ -30,6 +31,7 @@ export default function Metricas() {
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
   const [productData, setProductData] = useState<any[]>([]);
   const [trafficData, setTrafficData] = useState<TrafficSourceMetrics[]>([]);
+  const [creativeData, setCreativeData] = useState<CreativeMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
@@ -100,17 +102,19 @@ export default function Metricas() {
         const end = format(endDate, 'yyyy-MM-dd');
 
         // Buscar dados em paralelo
-        const [funnel, evolution, products, traffic] = await Promise.all([
+        const [funnel, evolution, products, traffic, creatives] = await Promise.all([
           gtmAnalyticsAPI.getFunnelMetrics(start, end),
           gtmAnalyticsAPI.getEvolutionChart(start, end, selectedEvent, groupBy),
           gtmAnalyticsAPI.getProductMetrics(start, end),
           gtmAnalyticsAPI.getTrafficSources(start, end),
+          gtmAnalyticsAPI.getCreativeRanking(start, end),
         ]);
 
         setFunnelData(funnel);
         setEvolutionData(evolution);
         setProductData(products);
         setTrafficData(traffic);
+        setCreativeData(creatives);
       } catch (err) {
         console.error('Erro ao carregar métricas:', err);
         setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
@@ -204,10 +208,11 @@ export default function Metricas() {
           </Card>
         ) : (
           <Tabs defaultValue="marketing" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="marketing">Marketing</TabsTrigger>
               <TabsTrigger value="produtos">Produtos</TabsTrigger>
               <TabsTrigger value="comercial">Comercial</TabsTrigger>
+              <TabsTrigger value="creative">Criativos</TabsTrigger>
               <TabsTrigger value="funis">Funis</TabsTrigger>
             </TabsList>
 
@@ -577,6 +582,11 @@ export default function Metricas() {
             </TabsContent>
 
             {/* Funis */}
+            {/* Aba Criativos */}
+            <TabsContent value="creative" className="space-y-6">
+              <CreativeRankingTable data={creativeData} />
+            </TabsContent>
+
             <TabsContent value="funis" className="space-y-6">
               <FunisCadastrados
                 startDate={startDate}
