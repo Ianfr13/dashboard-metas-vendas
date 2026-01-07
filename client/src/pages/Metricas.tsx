@@ -25,7 +25,8 @@ import { useRef, useCallback } from "react";
 import TrafficSourcesTable from "@/components/metrics/TrafficSourcesTable";
 import AdvancedFunnel from "@/components/metrics/AdvancedFunnel";
 import CreativeRankingTable from "@/components/metrics/CreativeRankingTable";
-import { TrafficSourceMetrics, CreativeMetrics } from "@/lib/edge-functions";
+import VslRankingTable from "@/components/metrics/VslRankingTable";
+import { TrafficSourceMetrics, CreativeMetrics, vturbAnalyticsAPI } from "@/lib/edge-functions";
 
 export default function Metricas() {
   const { user, loading: authLoading } = useAuth();
@@ -41,6 +42,7 @@ export default function Metricas() {
   const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
   const [groupBy, setGroupBy] = useState<'hour' | 'day' | 'week'>('day');
   const [isLive, setIsLive] = useState(false);
+  const [vturbData, setVturbData] = useState<any[]>([]);
   const debounceRef = useRef<NodeJS.Timeout>(null);
 
   // Estados para aba Comercial
@@ -126,6 +128,24 @@ export default function Metricas() {
       setProductData(products);
       setTrafficData(traffic);
       setCreativeData(creatives);
+
+      // Buscar Vturb separadamente (não bloqueia se falhar)
+      try {
+        const vturbStats = await vturbAnalyticsAPI.getPlayerStats(start, end);
+        // Transform API response to match table format
+        if (Array.isArray(vturbStats)) {
+          const formattedData = vturbStats.map((item: any) => ({
+            id: item.player_id || item.id || '',
+            name: item.player_name || item.name || 'VSL',
+            started: item.started || 0,
+            finished: item.finished || 0,
+            viewed: item.viewed || 0
+          }));
+          setVturbData(formattedData);
+        }
+      } catch (vturbErr) {
+        console.warn('Vturb data fetch failed (non-critical):', vturbErr);
+      }
     } catch (err) {
       console.error('Erro ao carregar métricas:', err);
       // Erros em background não devem bloquear a UI
@@ -252,11 +272,12 @@ export default function Metricas() {
           </Card>
         ) : (
           <Tabs defaultValue="marketing" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="marketing">Marketing</TabsTrigger>
               <TabsTrigger value="produtos">Produtos</TabsTrigger>
               <TabsTrigger value="comercial">Comercial</TabsTrigger>
               <TabsTrigger value="creative">Criativos</TabsTrigger>
+              <TabsTrigger value="vturb">Vturb</TabsTrigger>
               <TabsTrigger value="funis">Funis</TabsTrigger>
             </TabsList>
 
@@ -627,6 +648,11 @@ export default function Metricas() {
             {/* Aba Criativos */}
             <TabsContent value="creative" className="space-y-6">
               <CreativeRankingTable data={creativeData} />
+            </TabsContent>
+
+            {/* Aba Vturb */}
+            <TabsContent value="vturb" className="space-y-6">
+              <VslRankingTable data={vturbData} />
             </TabsContent>
 
             <TabsContent value="funis" className="space-y-6">

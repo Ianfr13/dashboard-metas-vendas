@@ -570,3 +570,79 @@ console.log('Produtos:', products);
 const events = await dashboardAPI.getGtmEvents({ limit: 100 });
 console.log('Eventos:', events);
 */
+
+// ============================================
+// API de Vturb Analytics (Edge Function)
+// ============================================
+
+export interface VturbPlayer {
+  id: string;
+  name: string;
+  started: number;
+  finished: number;
+  viewed: number;
+  playRate: number;
+  completionRate: number;
+}
+
+export interface VturbPlayerStats {
+  player_id: string;
+  player_name: string;
+  started: number;
+  finished: number;
+  viewed: number;
+}
+
+export const vturbAnalyticsAPI = {
+  /**
+   * Lista todos os players (VSLs) da conta
+   */
+  listPlayers: async (startDate: string, endDate: string): Promise<any[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/vturb-analytics?action=list-players&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch Vturb players');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Obtém estatísticas de eventos por player
+   */
+  getPlayerStats: async (startDate: string, endDate: string): Promise<VturbPlayerStats[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/vturb-analytics?action=player-stats&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch Vturb player stats');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Obtém estatísticas de sessão de um player específico
+   */
+  getSessionStats: async (playerId: string, startDate: string, endDate: string): Promise<any> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/vturb-analytics?action=session-stats&player_id=${playerId}&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch Vturb session stats');
+    }
+
+    return response.json();
+  },
+};
+
