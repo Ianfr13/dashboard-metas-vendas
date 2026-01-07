@@ -136,7 +136,15 @@ export default function Metricas() {
         const vturbStats = await vturbAnalyticsAPI.getPlayerStats(start, end);
         // API now returns aggregated data from database with player names
         if (Array.isArray(vturbStats)) {
-          const formattedData = vturbStats.map((item: any) => ({
+          // Filter out inactive players (no views/plays/finishes in selected period)
+          const validStats = vturbStats.filter((item: any) => {
+            const v = item.views || item.viewed || 0;
+            const p = item.plays || item.started || 0;
+            const f = item.finishes || item.finished || 0;
+            return v > 0 || p > 0 || f > 0;
+          });
+
+          const formattedData = validStats.map((item: any) => ({
             id: item.id || item.player_id || '',
             name: item.name || item.player_name || 'VSL',
             started: item.plays || item.started || 0,
