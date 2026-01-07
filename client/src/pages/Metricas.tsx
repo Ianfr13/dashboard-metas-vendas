@@ -28,6 +28,7 @@ import CreativeRankingTable from "@/components/metrics/CreativeRankingTable";
 import VslRankingTable from "@/components/metrics/VslRankingTable";
 import VslRetentionChart from "@/components/metrics/VslRetentionChart";
 import VslComparisonDashboard from "@/components/metrics/VslComparisonDashboard";
+import FacebookAdsDashboard from "@/components/metrics/FacebookAdsDashboard";
 import { TrafficSourceMetrics, CreativeMetrics, vturbAnalyticsAPI } from "@/lib/edge-functions";
 
 export default function Metricas() {
@@ -286,8 +287,9 @@ export default function Metricas() {
           </Card>
         ) : (
           <Tabs defaultValue="marketing" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="marketing">Marketing</TabsTrigger>
+              <TabsTrigger value="facebook">Facebook Ads</TabsTrigger>
               <TabsTrigger value="produtos">Produtos</TabsTrigger>
               <TabsTrigger value="comercial">Comercial</TabsTrigger>
               <TabsTrigger value="creative">Criativos</TabsTrigger>
@@ -392,6 +394,11 @@ export default function Metricas() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* Facebook Ads */}
+            <TabsContent value="facebook" className="space-y-6">
+              <FacebookAdsDashboard startDate={startDate} endDate={endDate} />
             </TabsContent>
 
             {/* Produtos */}

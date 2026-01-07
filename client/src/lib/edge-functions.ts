@@ -682,3 +682,259 @@ export const vturbAnalyticsAPI = {
   },
 };
 
+// ============================================
+// API de Facebook Ads (Edge Functions)
+// ============================================
+
+export interface FacebookAccountMetrics {
+  id: string;
+  name: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  leads: number;
+  purchases: number;
+  purchaseValue: number;
+  cpc: number;
+  cpm: number;
+  ctr: number;
+  costPerLead: number;
+  costPerPurchase: number;
+  roas: number;
+}
+
+export interface FacebookCampaignMetrics {
+  id: string;
+  accountId: string;
+  name: string;
+  status: string;
+  objective: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  leads: number;
+  purchases: number;
+  purchaseValue: number;
+  cpc: number;
+  cpm: number;
+  ctr: number;
+  costPerLead: number;
+  costPerPurchase: number;
+  roas: number;
+}
+
+export interface FacebookAdSetMetrics {
+  id: string;
+  campaignId: string;
+  name: string;
+  status: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  leads: number;
+  purchases: number;
+  cpc: number;
+  ctr: number;
+  costPerLead: number;
+}
+
+export interface FacebookAdMetrics {
+  id: string;
+  adsetId: string;
+  campaignId: string;
+  name: string;
+  status: string;
+  creativeThumbnail: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  leads: number;
+  purchases: number;
+  cpc: number;
+  ctr: number;
+  costPerLead: number;
+}
+
+export interface FacebookDailyMetrics {
+  date: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  leads: number;
+  purchases: number;
+  purchaseValue: number;
+}
+
+export interface FacebookMetricsResponse {
+  summary: {
+    totalSpend: number;
+    totalImpressions: number;
+    totalClicks: number;
+    totalReach: number;
+    totalLeads: number;
+    totalPurchases: number;
+    totalPurchaseValue: number;
+    avgCpc: number;
+    avgCpm: number;
+    avgCtr: number;
+    avgCostPerLead: number;
+    avgCostPerPurchase: number;
+    roas: number;
+  };
+  byAccount: FacebookAccountMetrics[];
+  byCampaign: FacebookCampaignMetrics[];
+  byAdSet: FacebookAdSetMetrics[];
+  byAd: FacebookAdMetrics[];
+  evolution: FacebookDailyMetrics[];
+}
+
+export interface FacebookSyncResult {
+  success: boolean;
+  synced: {
+    accounts: number;
+    campaigns: number;
+    adsets: number;
+    ads: number;
+    insights: number;
+  };
+  period: {
+    start_date: string;
+    end_date: string;
+  };
+}
+
+export const facebookAdsAPI = {
+  /**
+   * Obtém métricas agregadas do Facebook Ads
+   */
+  getMetrics: async (
+    startDate: string,
+    endDate: string,
+    accountId?: string,
+    campaignId?: string
+  ): Promise<FacebookMetricsResponse> => {
+    let url = `${FUNCTIONS_URL}/gtm-analytics?action=facebook&start_date=${startDate}&end_date=${endDate}`;
+    if (accountId) url += `&account_id=${accountId}`;
+    if (campaignId) url += `&campaign_id=${campaignId}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: await getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch Facebook metrics');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Sincroniza dados do Facebook Ads API para o banco de dados
+   */
+  syncData: async (
+    startDate: string,
+    endDate: string,
+    accountId?: string
+  ): Promise<FacebookSyncResult> => {
+    let url = `${FUNCTIONS_URL}/facebook-sync?action=sync&start_date=${startDate}&end_date=${endDate}`;
+    if (accountId) url += `&account_id=${accountId}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: await getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to sync Facebook data');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Lista todas as contas de anúncio conectadas
+   */
+  listAccounts: async (): Promise<{ id: string; name: string; currency: string; active: boolean }[]> => {
+    const response = await fetch(`${FUNCTIONS_URL}/facebook-sync?action=accounts`, {
+      method: 'GET',
+      headers: await getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch Facebook accounts');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Lista todas as campanhas de uma conta
+   */
+  listCampaigns: async (accountId: string): Promise<{
+    id: string;
+    name: string;
+    status: string;
+    objective: string;
+  }[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/facebook-sync?action=campaigns&account_id=${accountId}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch Facebook campaigns');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Lista todos os conjuntos de anúncios de uma conta
+   */
+  listAdSets: async (accountId: string): Promise<{
+    id: string;
+    campaign_id: string;
+    name: string;
+    status: string;
+  }[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/facebook-sync?action=adsets&account_id=${accountId}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch Facebook ad sets');
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Lista todos os anúncios de uma conta
+   */
+  listAds: async (accountId: string): Promise<{
+    id: string;
+    adset_id: string;
+    campaign_id: string;
+    name: string;
+    status: string;
+  }[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/facebook-sync?action=ads&account_id=${accountId}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch Facebook ads');
+    }
+
+    return response.json();
+  },
+};

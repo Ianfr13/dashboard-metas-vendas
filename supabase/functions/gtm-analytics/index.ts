@@ -6,6 +6,7 @@ import { getProductMetrics } from './handlers/products.ts'
 import { getTrafficSources } from './handlers/traffic_sources.ts'
 import { getCreativeRanking } from './handlers/creatives.ts'
 import { getPlacementRanking } from './handlers/placements.ts'
+import { getFacebookMetrics } from './handlers/facebook.ts'
 import { RateLimiter } from './rate-limiter.ts'
 
 // Configurar Rate Limiter: 100 requisições por minuto por IP
@@ -118,9 +119,15 @@ Deno.serve(async (req) => {
         result = await getPlacementRanking(supabase, startDate, endDate)
         break
 
+      case 'facebook':
+        const fbAccountId = url.searchParams.get('account_id') || undefined
+        const fbCampaignId = url.searchParams.get('campaign_id') || undefined
+        result = await getFacebookMetrics(supabase, startDate, endDate, fbAccountId, fbCampaignId)
+        break
+
       default:
         return new Response(
-          JSON.stringify({ error: 'Invalid action. Use: funnel, evolution, products or traffic_sources' }),
+          JSON.stringify({ error: 'Invalid action. Use: funnel, evolution, products, traffic_sources, creatives, placements, facebook' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
     }
