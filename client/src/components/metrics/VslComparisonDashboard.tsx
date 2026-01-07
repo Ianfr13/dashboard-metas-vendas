@@ -68,8 +68,15 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
             return;
         }
 
-        const fetchRetentions = async () => {
-            setLoading(true);
+        let isMounted = true;
+        let intervalId: NodeJS.Timeout | null = null;
+
+        const fetchRetentions = async (showLoading = true) => {
+            // Only show loading spinner on first fetch (when no data exists)
+            if (showLoading && retentionData.length === 0) {
+                setLoading(true);
+            }
+
             try {
                 const start = format(startDate, 'yyyy-MM-dd');
                 const end = format(endDate, 'yyyy-MM-dd');
@@ -83,6 +90,8 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                 });
 
                 const results = await Promise.all(promises);
+
+                if (!isMounted) return;
 
                 // Combine into single dataset with columns for each VSL
                 const maxMinutes = Math.max(...results.map(r => r.data.length), 30);
@@ -109,11 +118,26 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
             } catch (err) {
                 console.error('Error fetching retentions:', err);
             } finally {
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         };
 
-        fetchRetentions();
+        // Initial fetch with loading
+        fetchRetentions(true);
+
+        // Silent refresh every 30 seconds
+        intervalId = setInterval(() => {
+            fetchRetentions(false); // Silent refresh - no loading spinner
+        }, 30000);
+
+        return () => {
+            isMounted = false;
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        };
     }, [selectedVsls, startDate, endDate, vsls]);
 
     const formatPercent = (value: number) => `${(value || 0).toFixed(1)}%`;
