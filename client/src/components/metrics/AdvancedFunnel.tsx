@@ -13,7 +13,6 @@ interface FunnelStep {
 interface AdvancedFunnelProps {
     data: {
         pageViews: number;
-        addToWishlist: number;
         addToCart: number; // We need to ensure we have this data
         checkouts: number;
         purchases: number;
@@ -30,14 +29,7 @@ export default function AdvancedFunnel({ data }: AdvancedFunnelProps) {
             value: data.pageViews,
             icon: Eye,
             color: "bg-blue-500",
-            dropOff: data.pageViews > 0 ? ((data.pageViews - data.addToWishlist) / data.pageViews) * 100 : 0
-        },
-        {
-            label: "Lista de Desejos",
-            value: data.addToWishlist,
-            icon: Heart,
-            color: "bg-pink-500",
-            dropOff: data.addToWishlist > 0 ? ((data.addToWishlist - data.addToCart) / data.addToWishlist) * 100 : 0
+            dropOff: data.pageViews > 0 ? ((data.pageViews - data.addToCart) / data.pageViews) * 100 : 0
         },
         {
             label: "Adicionou ao Carrinho",
