@@ -267,7 +267,6 @@ export default function Metricas() {
                 <AdvancedFunnel
                   data={{
                     pageViews: funnelData?.etapas?.pageViews || 0,
-                    viewItem: funnelData?.etapas?.viewItem || 0,
                     addToWishlist: funnelData?.etapas?.addToWishlist || 0,
                     addToCart: funnelData?.etapas?.addToCart || 0,
                     checkouts: funnelData?.etapas?.beginCheckout || funnelData?.etapas?.checkouts || 0,
