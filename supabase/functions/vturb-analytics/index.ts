@@ -120,7 +120,7 @@ Deno.serve(async (req: Request) => {
             case 'engagement': {
                 // Fetch engagement/retention data directly from Vturb API
                 const playerId = url.searchParams.get('player_id')
-                const duration = url.searchParams.get('duration') || '1800' // Default 30 min
+                let duration = url.searchParams.get('duration')
 
                 if (!playerId) {
                     return new Response(
@@ -128,6 +128,21 @@ Deno.serve(async (req: Request) => {
                         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                     )
                 }
+
+                // If duration not provided, get it from database
+                if (!duration) {
+                    const { data: playerData, error: dbError } = await supabase
+                        .from('vturb_players')
+                        .select('duration')
+                        .eq('id', playerId)
+                        .single()
+
+                    console.log('Player duration lookup:', { playerId, playerData, dbError })
+                    duration = String(playerData?.duration || 1800)
+                }
+
+                // Ensure duration is a positive integer (min 60 seconds)
+                const durationInt = Math.max(60, parseInt(duration) || 1800)
 
                 const vturbToken = Deno.env.get('VTURB_API_TOKEN')
                 if (!vturbToken) {
@@ -146,7 +161,7 @@ Deno.serve(async (req: Request) => {
                     },
                     body: JSON.stringify({
                         player_id: playerId,
-                        duration: parseInt(duration),
+                        video_duration: durationInt,
                         start_date: startDateFull,
                         end_date: endDateFull,
                         timezone: 'America/Sao_Paulo'
@@ -161,21 +176,27 @@ Deno.serve(async (req: Request) => {
                 const engagementData = await response.json()
 
                 // Transform to minute-by-minute retention
-                // API returns object with second -> count
+                // API returns { grouped_timed: [{total_users, timed}], average_watched_time, engagement_rate }
                 const retentionByMinute: { minute: number; retention: number; viewers: number }[] = []
 
-                if (engagementData && typeof engagementData === 'object') {
-                    const seconds = Object.keys(engagementData).map(Number).sort((a, b) => a - b)
-                    const maxViewers = engagementData['0'] || engagementData[seconds[0]] || 1
+                if (engagementData?.grouped_timed && Array.isArray(engagementData.grouped_timed)) {
+                    const groupedTimed = engagementData.grouped_timed.sort((a: any, b: any) => a.timed - b.timed)
 
-                    // Group by minute
-                    for (let min = 0; min <= Math.ceil(parseInt(duration) / 60); min++) {
+                    // Total viewers = sum of all users (those who watched at all)
+                    const totalViewers = groupedTimed.reduce((sum: number, d: any) => sum + (d.total_users || 0), 0)
+
+                    // Group by minute - count viewers who watched UP TO that minute
+                    for (let min = 0; min <= Math.ceil(durationInt / 60); min++) {
                         const sec = min * 60
-                        const viewers = engagementData[String(sec)] || 0
+                        // Count viewers who reached at least this second
+                        const viewersStillWatching = groupedTimed
+                            .filter((d: any) => d.timed >= sec)
+                            .reduce((sum: number, d: any) => sum + (d.total_users || 0), 0)
+
                         retentionByMinute.push({
                             minute: min,
-                            viewers: viewers,
-                            retention: maxViewers > 0 ? (viewers / maxViewers) * 100 : 0
+                            viewers: viewersStillWatching,
+                            retention: totalViewers > 0 ? (viewersStillWatching / totalViewers) * 100 : 0
                         })
                     }
                 }
