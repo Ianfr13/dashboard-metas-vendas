@@ -11,6 +11,107 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { vturbAnalyticsAPI } from "@/lib/edge-functions";
 import { format } from "date-fns";
 
+// Helper to format seconds as MM:SS
+const formatTime = (seconds: number): string => {
+    if (!seconds && seconds !== 0) return "";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+// Helper to parse MM:SS or integer seconds string to total seconds
+const parseTime = (input: string): number => {
+    // Remove non-digit/colon chars
+    const clean = input.replace(/[^\d:]/g, '');
+
+    if (clean.includes(':')) {
+        const [m, s] = clean.split(':').map(part => parseInt(part || '0', 10));
+        return (m * 60) + (s || 0);
+    }
+
+    // If just number, treat as minutes if it's small? No, treat as raw input, 
+    // but user asked for 17:34 style. If they type "10", maybe they mean 10m?
+    // Let's assume standard MM:SS. If no colon, treat as minutes? 
+    // Or if > 60 treat as seconds? 
+    // Let's stick to MM:SS parsing. If no colon, maybe just minutes?
+    // User example: "17:34". 
+    // If they type "17", it's probably 17 min.
+
+    const val = parseInt(clean, 10);
+    if (isNaN(val)) return 0;
+
+    // Heuristic: if < 100, treat as minutes? No, dangerous.
+    // Let's assume default input without colon is minutes if < 60?
+    // Let's enforce colon for seconds. If just number, treat as minutes.
+    return val * 60;
+};
+
+// Component for Time Input
+const TimeInput = ({
+    value,
+    onChange,
+    placeholder
+}: {
+    value: number,
+    onChange: (val: number) => void,
+    placeholder?: string
+}) => {
+    const [display, setDisplay] = useState(formatTime(value));
+
+    useEffect(() => {
+        // Only update display from prop if it's not being focused/edited? 
+        // Or just update it. If we update while typing, it forces format.
+        // Better: Update on blur or when prop changes externally (e.g. load).
+        // But if user is typing, we shouldn't overwrite.
+        // We'll use a key or simple prop sync.
+        setDisplay(formatTime(value));
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Allow free typing
+        setDisplay(e.target.value);
+    };
+
+    const handleBlur = () => {
+        let seconds = 0;
+        const input = display;
+
+        if (input.includes(':')) {
+            const parts = input.split(':');
+            const m = parseInt(parts[0] || '0', 10);
+            const s = parseInt(parts[1] || '0', 10);
+            seconds = (m * 60) + s;
+        } else {
+            // Treat as minutes if plain number
+            const val = parseInt(input, 10);
+            if (!isNaN(val)) {
+                seconds = val * 60;
+            }
+        }
+
+        onChange(seconds);
+        setDisplay(formatTime(seconds));
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        }
+    };
+
+    return (
+        <Input
+            type="text"
+            value={display}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            className="h-8 w-20 text-center"
+            placeholder={placeholder || "MM:SS"}
+        />
+    );
+};
+
 interface VslData {
     id: string;
     name: string;
@@ -147,11 +248,11 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                 // DB values take precedence over "defaults" but we respect current state edits if needed?
                 // Actually, if DB updates, we might want to refresh? For now, initialize once.
 
-                if (!next[vsl.id] || (vsl.pitch_time && next[vsl.id].pitchTime !== vsl.pitch_time && next[vsl.id].pitchTime === 18)) {
+                if (!next[vsl.id] || (vsl.pitch_time && next[vsl.id].pitchTime !== vsl.pitch_time && next[vsl.id].pitchTime === 1080)) {
                     // Initialize or update if we was using default
                     next[vsl.id] = {
-                        pitchTime: vsl.pitch_time || 18,
-                        leadTime: vsl.lead_time || 5
+                        pitchTime: vsl.pitch_time || 1080, // Default 18m = 1080s
+                        leadTime: vsl.lead_time || 300     // Default 5m = 300s
                     };
                     changed = true;
                 }
@@ -165,7 +266,7 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
     const updateVslSetting = useCallback((id: string, field: keyof VslSettings, value: number) => {
         // Update local state immediately
         setVslSettings(prev => {
-            const current = prev[id] || { pitchTime: 18, leadTime: 5 };
+            const current = prev[id] || { pitchTime: 1080, leadTime: 300 };
             return {
                 ...prev,
                 [id]: {
@@ -182,7 +283,7 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
 
         debounceTimeoutRef.current = setTimeout(async () => {
             // Use ref to get latest state inside timeout closure
-            const currentRec = latestVslSettings.current[id] || { pitchTime: 18, leadTime: 5 };
+            const currentRec = latestVslSettings.current[id] || { pitchTime: 0, leadTime: 0 }; // Default to 0 seconds
 
             // Note: The state update above (setVslSettings) might not have reflected in latestVslSettings yet 
             // if strict mode/batching delays effect. 
@@ -280,11 +381,11 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
     const summaryMetrics = useMemo(() => {
         const selected = filteredVsls.filter(v => selectedVsls.has(v.id));
         return selected.map(vsl => {
-            const settings = vslSettings[vsl.id] || { pitchTime: 18, leadTime: 5 };
+            const settings = vslSettings[vsl.id] || { pitchTime: 0, leadTime: 0 }; // Default to 0 seconds
 
             // Find retention at specific minutes
-            const pitchData = retentionData.find(d => d.minute === settings.pitchTime);
-            const leadData = retentionData.find(d => d.minute === settings.leadTime);
+            const pitchData = retentionData.find(d => d.minute === Math.floor(settings.pitchTime / 60));
+            const leadData = retentionData.find(d => d.minute === Math.floor(settings.leadTime / 60));
 
             const pitchRetention = pitchData ? (pitchData[vsl.id] || 0) : 0;
             const leadRetention = leadData ? (leadData[vsl.id] || 0) : 0;
@@ -359,12 +460,11 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                                 <div className="space-y-2">
                                     <div className="space-y-1">
                                         <div className="flex items-center justify-between">
-                                            <Label className="text-xs text-muted-foreground">Tempo Pitch (min)</Label>
-                                            <Input
-                                                type="number"
-                                                className="w-12 h-6 text-xs px-1 text-right"
+                                            <Label className="text-xs text-muted-foreground">Tempo Pitch</Label>
+                                            <TimeInput
                                                 value={vsl.settings.pitchTime}
-                                                onChange={(e) => updateVslSetting(vsl.id, 'pitchTime', parseInt(e.target.value) || 0)}
+                                                onChange={(val) => updateVslSetting(vsl.id, 'pitchTime', val)}
+                                                placeholder="MM:SS"
                                             />
                                         </div>
                                         <div className="flex justify-between items-center bg-muted/20 p-1 rounded">
@@ -375,12 +475,11 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
 
                                     <div className="space-y-1">
                                         <div className="flex items-center justify-between">
-                                            <Label className="text-xs text-muted-foreground">Tempo Lead (min)</Label>
-                                            <Input
-                                                type="number"
-                                                className="w-12 h-6 text-xs px-1 text-right"
+                                            <Label className="text-xs text-muted-foreground">Tempo Lead</Label>
+                                            <TimeInput
                                                 value={vsl.settings.leadTime}
-                                                onChange={(e) => updateVslSetting(vsl.id, 'leadTime', parseInt(e.target.value) || 0)}
+                                                onChange={(val) => updateVslSetting(vsl.id, 'leadTime', val)}
+                                                placeholder="MM:SS"
                                             />
                                         </div>
                                         <div className="flex justify-between items-center bg-muted/20 p-1 rounded">
