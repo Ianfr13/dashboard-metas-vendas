@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, ShoppingCart, CreditCard, CheckCircle, Eye, MousePointerClick } from "lucide-react";
+import { ArrowRight, ShoppingCart, CreditCard, CheckCircle, Eye, MousePointerClick, Heart } from "lucide-react";
 
 interface FunnelStep {
     label: string;
@@ -14,6 +14,7 @@ interface AdvancedFunnelProps {
     data: {
         pageViews: number;
         viewItem: number; // New metric if available, otherwise reuse views
+        addToWishlist: number;
         addToCart: number; // We need to ensure we have this data
         checkouts: number;
         purchases: number;
@@ -37,7 +38,14 @@ export default function AdvancedFunnel({ data }: AdvancedFunnelProps) {
             value: data.viewItem,
             icon: MousePointerClick,
             color: "bg-indigo-500",
-            dropOff: data.viewItem > 0 ? ((data.viewItem - data.addToCart) / data.viewItem) * 100 : 0
+            dropOff: data.viewItem > 0 ? ((data.viewItem - data.addToWishlist) / data.viewItem) * 100 : 0
+        },
+        {
+            label: "Lista de Desejos",
+            value: data.addToWishlist,
+            icon: Heart,
+            color: "bg-pink-500",
+            dropOff: data.addToWishlist > 0 ? ((data.addToWishlist - data.addToCart) / data.addToWishlist) * 100 : 0
         },
         {
             label: "Adicionou ao Carrinho",
