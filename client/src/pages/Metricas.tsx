@@ -132,36 +132,15 @@ export default function Metricas() {
       // Buscar Vturb separadamente (não bloqueia se falhar)
       try {
         const vturbStats = await vturbAnalyticsAPI.getPlayerStats(start, end);
-        // API returns flat array with one row per player_id + event type
-        // Need to aggregate into single row per player
+        // API now returns aggregated data from database with player names
         if (Array.isArray(vturbStats)) {
-          const playerMap: Record<string, { id: string; name: string; started: number; finished: number; viewed: number }> = {};
-
-          vturbStats.forEach((item: any) => {
-            const playerId = item.player_id || item.id;
-            if (!playerId) return;
-
-            if (!playerMap[playerId]) {
-              playerMap[playerId] = {
-                id: playerId,
-                name: item.player_name || playerId,
-                started: 0,
-                finished: 0,
-                viewed: 0
-              };
-            }
-
-            // Aggregate by event type
-            const eventType = item.event;
-            const total = item.total || 0;
-
-            if (eventType === 'started') playerMap[playerId].started = total;
-            if (eventType === 'finished') playerMap[playerId].finished = total;
-            if (eventType === 'viewed') playerMap[playerId].viewed = total;
-          });
-
-          // Convert map to array and sort by views
-          const formattedData = Object.values(playerMap).sort((a, b) => b.viewed - a.viewed);
+          const formattedData = vturbStats.map((item: any) => ({
+            id: item.id || item.player_id || '',
+            name: item.name || item.player_name || 'VSL',
+            started: item.plays || item.started || 0,
+            finished: item.finishes || item.finished || 0,
+            viewed: item.views || item.viewed || 0
+          }));
           setVturbData(formattedData);
         }
       } catch (vturbErr) {

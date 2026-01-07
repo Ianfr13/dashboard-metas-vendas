@@ -1,6 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts'
-
-const VTURB_API_BASE = 'https://analytics.vturb.net'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 Deno.serve(async (req: Request) => {
     // Handle CORS preflight
@@ -13,247 +12,113 @@ Deno.serve(async (req: Request) => {
         const action = url.searchParams.get('action')
         const startDate = url.searchParams.get('start_date')
         const endDate = url.searchParams.get('end_date')
-        const timezone = url.searchParams.get('timezone') || 'America/Sao_Paulo'
 
-        // Get Vturb API token from environment
-        const vturbToken = Deno.env.get('VTURB_API_TOKEN')
-        if (!vturbToken) {
-            return new Response(
-                JSON.stringify({ error: 'VTURB_API_TOKEN not configured' }),
-                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            )
-        }
-
-        const headers = {
-            'X-Api-Token': vturbToken,
-            'X-Api-Version': 'v1',
-            'Content-Type': 'application/json'
-        }
+        // Create Supabase client
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        const supabase = createClient(supabaseUrl, supabaseKey)
 
         let result: unknown = null
 
         switch (action) {
-            case 'list-players': {
-                // GET /players/list
-                const params = new URLSearchParams()
-                if (startDate) params.append('start_date', startDate)
-                if (endDate) params.append('end_date', endDate)
-                params.append('timezone', timezone)
-
-                const response = await fetch(`${VTURB_API_BASE}/players/list?${params}`, {
-                    method: 'GET',
-                    headers
-                })
-
-                if (!response.ok) {
-                    const errorText = await response.text()
-                    throw new Error(`Vturb API error: ${response.status} - ${errorText}`)
-                }
-
-                result = await response.json()
-                break
-            }
-
             case 'player-stats': {
-                // POST /events/total_by_company_players
-                const body = {
-                    events: ['started', 'finished', 'viewed'],
-                    start_date: startDate,
-                    end_date: endDate
+                // Read from database - JOIN players with metrics
+                const { data, error } = await supabase
+                    .from('vturb_metrics')
+                    .select(`
+            player_id,
+            date,
+            views,
+            plays,
+            finishes,
+            unique_views,
+            unique_plays,
+            vturb_players!inner (
+              id,
+              name,
+              duration
+            )
+          `)
+                    .gte('date', startDate)
+                    .lte('date', endDate)
+                    .order('views', { ascending: false })
+
+                if (error) {
+                    throw new Error(`Database error: ${error.message}`)
                 }
 
-                const response = await fetch(`${VTURB_API_BASE}/events/total_by_company_players`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(body)
-                })
+                // Aggregate by player (in case of multiple days)
+                const playerMap: Record<string, any> = {}
 
-                if (!response.ok) {
-                    const errorText = await response.text()
-                    throw new Error(`Vturb API error: ${response.status} - ${errorText}`)
-                }
+                data?.forEach((row: any) => {
+                    const playerId = row.player_id
+                    const playerInfo = row.vturb_players
 
-                result = await response.json()
-                break
-            }
-
-            case 'session-stats': {
-                // POST /sessions/stats - requires player_id
-                const playerId = url.searchParams.get('player_id')
-                if (!playerId) {
-                    return new Response(
-                        JSON.stringify({ error: 'player_id is required for session-stats' }),
-                        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                    )
-                }
-
-                const body = {
-                    player_id: playerId,
-                    start_date: startDate,
-                    end_date: endDate,
-                    timezone
-                }
-
-                const response = await fetch(`${VTURB_API_BASE}/sessions/stats`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(body)
-                })
-
-                if (!response.ok) {
-                    const errorText = await response.text()
-                    throw new Error(`Vturb API error: ${response.status} - ${errorText}`)
-                }
-
-                result = await response.json()
-                break
-            }
-
-            case 'full-stats': {
-                // Get both players list and their stats combined
-                const playersParams = new URLSearchParams()
-                if (startDate) playersParams.append('start_date', startDate)
-                if (endDate) playersParams.append('end_date', endDate)
-                playersParams.append('timezone', timezone)
-
-                // 1. Get players list
-                const playersRes = await fetch(`${VTURB_API_BASE}/players/list?${playersParams}`, {
-                    method: 'GET',
-                    headers
-                })
-
-                if (!playersRes.ok) {
-                    const errorText = await playersRes.text()
-                    throw new Error(`Vturb players error: ${playersRes.status} - ${errorText}`)
-                }
-
-                const players = await playersRes.json()
-
-                // 2. Get events stats
-                const statsBody = {
-                    events: ['started', 'finished', 'viewed'],
-                    start_date: startDate,
-                    end_date: endDate
-                }
-
-                const statsRes = await fetch(`${VTURB_API_BASE}/events/total_by_company_players`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(statsBody)
-                })
-
-                if (!statsRes.ok) {
-                    const errorText = await statsRes.text()
-                    throw new Error(`Vturb stats error: ${statsRes.status} - ${errorText}`)
-                }
-
-                const stats = await statsRes.json()
-
-                // 3. Try to get session stats for each player (with rate limiting consideration)
-                const playerSessions: Record<string, unknown> = {}
-
-                // Limit to first 5 players to avoid rate limiting
-                const topPlayers = Array.isArray(players) ? players.slice(0, 5) : []
-
-                for (const player of topPlayers) {
-                    try {
-                        const sessionBody = {
-                            player_id: player.id,
-                            start_date: startDate,
-                            end_date: endDate,
-                            timezone
+                    if (!playerMap[playerId]) {
+                        playerMap[playerId] = {
+                            id: playerId,
+                            name: playerInfo?.name || playerId,
+                            duration: playerInfo?.duration || 0,
+                            views: 0,
+                            plays: 0,
+                            finishes: 0,
+                            unique_views: 0,
+                            unique_plays: 0
                         }
-
-                        const sessionRes = await fetch(`${VTURB_API_BASE}/sessions/stats`, {
-                            method: 'POST',
-                            headers,
-                            body: JSON.stringify(sessionBody)
-                        })
-
-                        if (sessionRes.ok) {
-                            playerSessions[player.id] = await sessionRes.json()
-                        }
-                    } catch (e) {
-                        console.error(`Error fetching session for player ${player.id}:`, e)
                     }
-                }
 
-                // Combine all data
-                result = {
-                    players: players,
-                    eventStats: stats,
-                    sessionStats: playerSessions
-                }
+                    playerMap[playerId].views += row.views || 0
+                    playerMap[playerId].plays += row.plays || 0
+                    playerMap[playerId].finishes += row.finishes || 0
+                    playerMap[playerId].unique_views += row.unique_views || 0
+                    playerMap[playerId].unique_plays += row.unique_plays || 0
+                })
+
+                result = Object.values(playerMap).sort((a: any, b: any) => b.views - a.views)
                 break
             }
 
-            case 'conversions': {
-                // POST /conversions/stats_by_day
+            case 'list-players': {
+                const { data, error } = await supabase
+                    .from('vturb_players')
+                    .select('*')
+                    .order('name')
+
+                if (error) {
+                    throw new Error(`Database error: ${error.message}`)
+                }
+
+                result = data
+                break
+            }
+
+            case 'daily-metrics': {
                 const playerId = url.searchParams.get('player_id')
 
-                const body: Record<string, unknown> = {
-                    start_date: startDate,
-                    end_date: endDate,
-                    timezone
-                }
+                let query = supabase
+                    .from('vturb_metrics')
+                    .select('*')
+                    .gte('date', startDate)
+                    .lte('date', endDate)
+                    .order('date', { ascending: true })
 
                 if (playerId) {
-                    body.player_id = playerId
+                    query = query.eq('player_id', playerId)
                 }
 
-                const response = await fetch(`${VTURB_API_BASE}/conversions/stats_by_day`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(body)
-                })
+                const { data, error } = await query
 
-                if (!response.ok) {
-                    const errorText = await response.text()
-                    throw new Error(`Vturb API error: ${response.status} - ${errorText}`)
+                if (error) {
+                    throw new Error(`Database error: ${error.message}`)
                 }
 
-                result = await response.json()
-                break
-            }
-
-            case 'engagement': {
-                // POST /times/user_engagement
-                const playerId = url.searchParams.get('player_id')
-                const duration = url.searchParams.get('duration') || '600' // Default 10 min
-
-                if (!playerId) {
-                    return new Response(
-                        JSON.stringify({ error: 'player_id is required for engagement' }),
-                        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                    )
-                }
-
-                const body = {
-                    player_id: playerId,
-                    duration: parseInt(duration),
-                    start_date: startDate,
-                    end_date: endDate,
-                    timezone
-                }
-
-                const response = await fetch(`${VTURB_API_BASE}/times/user_engagement`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(body)
-                })
-
-                if (!response.ok) {
-                    const errorText = await response.text()
-                    throw new Error(`Vturb API error: ${response.status} - ${errorText}`)
-                }
-
-                result = await response.json()
+                result = data
                 break
             }
 
             default:
                 return new Response(
-                    JSON.stringify({ error: 'Invalid action. Use: list-players, player-stats, session-stats, full-stats, conversions, engagement' }),
+                    JSON.stringify({ error: 'Invalid action. Use: player-stats, list-players, daily-metrics' }),
                     { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                 )
         }
