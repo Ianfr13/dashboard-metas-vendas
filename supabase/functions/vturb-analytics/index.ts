@@ -36,16 +36,21 @@ Deno.serve(async (req: Request) => {
                 // Fetch players for name lookup
                 const { data: playersData, error: playersError } = await supabase
                     .from('vturb_players')
-                    .select('id, name, duration')
+                    .select('id, name, duration, pitch_time, lead_time')
 
                 if (playersError) {
                     throw new Error(`Players error: ${playersError.message}`)
                 }
 
                 // Create player name lookup map
-                const playerNames: Record<string, { name: string; duration: number }> = {}
+                const playerNames: Record<string, { name: string; duration: number; pitch_time: number; lead_time: number }> = {}
                 playersData?.forEach((p: any) => {
-                    playerNames[p.id] = { name: p.name, duration: p.duration || 0 }
+                    playerNames[p.id] = {
+                        name: p.name,
+                        duration: p.duration || 0,
+                        pitch_time: p.pitch_time || 0,
+                        lead_time: p.lead_time || 0
+                    }
                 })
 
                 // Aggregate metrics by player
@@ -60,6 +65,8 @@ Deno.serve(async (req: Request) => {
                             id: playerId,
                             name: playerInfo?.name || `VSL ${playerId.slice(-6)}`,
                             duration: playerInfo?.duration || 0,
+                            pitch_time: playerInfo?.pitch_time || 0,
+                            lead_time: playerInfo?.lead_time || 0,
                             views: 0,
                             plays: 0,
                             finishes: 0,
@@ -90,6 +97,24 @@ Deno.serve(async (req: Request) => {
                 }
 
                 result = data
+                break
+            }
+
+            case 'update-settings': {
+                if (req.method !== 'POST') {
+                    throw new Error('Method not allowed')
+                }
+                const body = await req.json()
+                const { id, pitch_time, lead_time } = body
+
+                const { error } = await supabase
+                    .from('vturb_players')
+                    .update({ pitch_time, lead_time })
+                    .eq('id', id)
+
+                if (error) throw new Error(`Update error: ${error.message}`)
+
+                result = { success: true }
                 break
             }
 

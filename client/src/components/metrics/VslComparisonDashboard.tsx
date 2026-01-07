@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +20,8 @@ interface VslData {
     unique_views?: number;
     unique_plays?: number;
     duration?: number;
+    pitch_time?: number;
+    lead_time?: number;
 }
 
 interface RetentionData {
@@ -87,6 +89,17 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
     // Individual settings for each VSL
     const [vslSettings, setVslSettings] = useState<Record<string, VslSettings>>({});
 
+    // Debounce reference for settings updates
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Ref to hold latest settings for async access
+    const latestVslSettings = useRef(vslSettings);
+
+    // Update ref when state changes
+    useEffect(() => {
+        latestVslSettings.current = vslSettings;
+    }, [vslSettings]);
+
     // useRef to track if initial data has loaded (prevents flicker)
 
 
@@ -123,15 +136,70 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
         }
     };
 
-    const updateVslSetting = (id: string, field: keyof VslSettings, value: number) => {
-        setVslSettings(prev => ({
-            ...prev,
-            [id]: {
-                ...prev[id],
-                [field]: value
+    // Initialize settings from props (DB data) or defaults
+    useEffect(() => {
+        setVslSettings(prev => {
+            const next = { ...prev };
+            let changed = false;
+
+            vsls.forEach(vsl => {
+                // If not yet set in state, initialize from DB (prop)
+                // DB values take precedence over "defaults" but we respect current state edits if needed?
+                // Actually, if DB updates, we might want to refresh? For now, initialize once.
+
+                if (!next[vsl.id] || (vsl.pitch_time && next[vsl.id].pitchTime !== vsl.pitch_time && next[vsl.id].pitchTime === 18)) {
+                    // Initialize or update if we was using default
+                    next[vsl.id] = {
+                        pitchTime: vsl.pitch_time || 18,
+                        leadTime: vsl.lead_time || 5
+                    };
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
+    }, [vsls]);
+
+    // Function to update settings in state and DB
+    const updateVslSetting = useCallback((id: string, field: keyof VslSettings, value: number) => {
+        // Update local state immediately
+        setVslSettings(prev => {
+            const current = prev[id] || { pitchTime: 18, leadTime: 5 };
+            return {
+                ...prev,
+                [id]: {
+                    ...current,
+                    [field]: value
+                }
+            };
+        });
+
+        // Debounce API call
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
+        debounceTimeoutRef.current = setTimeout(async () => {
+            // Use ref to get latest state inside timeout closure
+            const currentRec = latestVslSettings.current[id] || { pitchTime: 18, leadTime: 5 };
+
+            // Note: The state update above (setVslSettings) might not have reflected in latestVslSettings yet 
+            // if strict mode/batching delays effect. 
+            // BUT, since we are in a timeout (1000ms), the effect definitely ran.
+            // However, to be extra safe, we can manually merge the change we know about.
+            const newSettings = { ...currentRec, [field]: value };
+
+            try {
+                await vturbAnalyticsAPI.updatePlayerSettings(id, {
+                    pitch_time: newSettings.pitchTime,
+                    lead_time: newSettings.leadTime
+                });
+            } catch (error) {
+                console.error("Failed to persist settings:", error);
             }
-        }));
-    };
+        }, 1000);
+    }, []);
 
     useEffect(() => {
         if (selectedVsls.size === 0) {
@@ -199,32 +267,6 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
         };
     }, [selectedVsls, startDate, endDate, vsls]);
 
-    // Initialize settings from localStorage or defaults
-    useEffect(() => {
-        const savedSettings = localStorage.getItem('vsl_dashboard_settings');
-        const parsedSettings = savedSettings ? JSON.parse(savedSettings) : {};
-
-        setVslSettings(prev => {
-            const next = { ...parsedSettings, ...prev };
-            let changed = false;
-
-            selectedVsls.forEach(id => {
-                if (!next[id]) {
-                    next[id] = { pitchTime: 18, leadTime: 5 }; // Defaults
-                    changed = true;
-                }
-            });
-
-            return changed ? next : prev;
-        });
-    }, [selectedVsls]);
-
-    // Save settings to localStorage whenever they change
-    useEffect(() => {
-        if (Object.keys(vslSettings).length > 0) {
-            localStorage.setItem('vsl_dashboard_settings', JSON.stringify(vslSettings));
-        }
-    }, [vslSettings]);
 
     const formatPercent = (value: number) => `${(value || 0).toFixed(1)}%`;
     const formatNumber = (value: number) => new Intl.NumberFormat("pt-BR").format(value || 0);

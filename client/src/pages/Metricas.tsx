@@ -144,8 +144,11 @@ export default function Metricas() {
             viewed: item.views || item.viewed || 0,
             unique_views: item.unique_views || 0,
             unique_plays: item.unique_plays || 0,
-            duration: item.duration || 0
+            duration: item.duration || 0,
+            pitch_time: item.pitch_time || 0,
+            lead_time: item.lead_time || 0
           }));
+
           setVturbData(formattedData);
         }
       } catch (vturbErr) {

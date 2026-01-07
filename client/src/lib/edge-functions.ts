@@ -591,6 +591,8 @@ export interface VturbPlayerStats {
   started: number;
   finished: number;
   viewed: number;
+  pitch_time?: number;
+  lead_time?: number;
 }
 
 export const vturbAnalyticsAPI = {
@@ -661,6 +663,22 @@ export const vturbAnalyticsAPI = {
     }
 
     return response.json();
+  },
+
+  /**
+   * Atualiza configurações de um player (pitch e lead time)
+   */
+  updatePlayerSettings: async (id: string, settings: { pitch_time: number; lead_time: number }): Promise<void> => {
+    const response = await fetch(`${FUNCTIONS_URL}/vturb-analytics?action=update-settings`, {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ id, ...settings }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update player settings');
+    }
   },
 };
 
