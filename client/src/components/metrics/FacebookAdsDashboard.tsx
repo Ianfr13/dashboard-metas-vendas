@@ -3,14 +3,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, RefreshCw, TrendingUp, TrendingDown, DollarSign, Eye, MousePointer, Users, ShoppingCart } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { facebookAdsAPI, FacebookMetricsResponse, FacebookCampaignMetrics } from "@/lib/edge-functions";
+import MetricSelector from "./MetricSelector";
+import FacebookAdsTable from "./FacebookAdsTable";
+import { DEFAULT_METRICS } from "@/lib/facebook-metrics";
 
 interface FacebookAdsDashboardProps {
     startDate: Date;
     endDate: Date;
 }
+
+const STORAGE_KEY = 'fb-metrics-preferences';
 
 export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAdsDashboardProps) {
     const [loading, setLoading] = useState(true);
@@ -19,6 +25,33 @@ export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAds
     const [metrics, setMetrics] = useState<FacebookMetricsResponse | null>(null);
     const [selectedAccount, setSelectedAccount] = useState<string>("all");
     const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
+    const [selectedMetrics, setSelectedMetrics] = useState<string[]>(DEFAULT_METRICS);
+    const [activeTab, setActiveTab] = useState<'campaigns' | 'adsets' | 'ads'>('campaigns');
+
+    // Load metric preferences from localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                const { selectedMetrics: savedMetrics } = JSON.parse(saved);
+                if (Array.isArray(savedMetrics) && savedMetrics.length > 0) {
+                    setSelectedMetrics(savedMetrics);
+                }
+            } catch (e) {
+                console.error('Failed to load metric preferences:', e);
+            }
+        }
+    }, []);
+
+    // Save metric preferences to localStorage
+    useEffect(() => {
+        if (selectedMetrics.length > 0) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                selectedMetrics,
+                lastUpdated: new Date().toISOString()
+            }));
+        }
+    }, [selectedMetrics]);
 
     const loadData = async () => {
         try {
@@ -420,6 +453,58 @@ export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAds
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Tabbed Performance Tables */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Performance Detalhada</CardTitle>
+                            <CardDescription>Métricas por campanha, conjunto de anúncios e anúncios</CardDescription>
+                        </div>
+                        <MetricSelector selectedMetrics={selectedMetrics} onChange={setSelectedMetrics} />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+                        <TabsList className="grid w-full grid-cols-3 mb-4">
+                            <TabsTrigger value="campaigns">
+                                Campanhas ({metrics?.byCampaign?.length || 0})
+                            </TabsTrigger>
+                            <TabsTrigger value="adsets">
+                                Conjuntos ({metrics?.byAdSet?.length || 0})
+                            </TabsTrigger>
+                            <TabsTrigger value="ads">
+                                Anúncios ({metrics?.byAd?.length || 0})
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="campaigns" className="mt-0">
+                            <FacebookAdsTable
+                                data={metrics?.byCampaign || []}
+                                selectedMetrics={selectedMetrics}
+                                level="campaign"
+                            />
+                        </TabsContent>
+
+                        <TabsContent value="adsets" className="mt-0">
+                            <FacebookAdsTable
+                                data={metrics?.byAdSet || []}
+                                selectedMetrics={selectedMetrics}
+                                level="adset"
+                            />
+                        </TabsContent>
+
+                        <TabsContent value="ads" className="mt-0">
+                            <FacebookAdsTable
+                                data={metrics?.byAd || []}
+                                selectedMetrics={selectedMetrics}
+                                level="ad"
+                            />
+                        </TabsContent>
+                    </Tabs>
+                </CardContent>
+            </Card>
         </div>
     );
 }

@@ -54,15 +54,56 @@ interface AccountMetrics {
 interface CampaignMetrics {
     id: string
     accountId: string
+    accountName: string
     name: string
     status: string
     objective: string
     spend: number
     impressions: number
+    reach: number
+    frequency: number
+    clicks: number
+    uniqueClicks: number
+    ctr: number
+    uniqueCtr: number
+    cpc: number
+    cpm: number
+    cpp: number
+    leads: number
+    purchases: number
+    purchaseValue: number
+    addToCart: number
+    initiateCheckout: number
+    landingPageViews: number
+    linkClicks: number
+    leadValue: number
+    costPerLead: number
+    costPerPurchase: number
+    roas: number
+    videoViews: number
+    videoP25Watched: number
+    videoP50Watched: number
+    videoP75Watched: number
+    videoP100Watched: number
+}
+
+interface AdSetMetrics {
+    id: string
+    campaignId: string
+    campaignName: string
+    name: string
+    status: string
+    spend: number
+    impressions: number
+    reach: number
     clicks: number
     leads: number
     purchases: number
     purchaseValue: number
+    addToCart: number
+    initiateCheckout: number
+    landingPageViews: number
+    linkClicks: number
     cpc: number
     cpm: number
     ctr: number
@@ -71,36 +112,32 @@ interface CampaignMetrics {
     roas: number
 }
 
-interface AdSetMetrics {
-    id: string
-    campaignId: string
-    name: string
-    status: string
-    spend: number
-    impressions: number
-    clicks: number
-    leads: number
-    purchases: number
-    cpc: number
-    ctr: number
-    costPerLead: number
-}
-
 interface AdMetrics {
     id: string
     adsetId: string
+    adsetName: string
     campaignId: string
+    campaignName: string
     name: string
     status: string
     creativeThumbnail: string | null
     spend: number
     impressions: number
+    reach: number
     clicks: number
     leads: number
     purchases: number
+    purchaseValue: number
+    addToCart: number
+    initiateCheckout: number
+    landingPageViews: number
+    linkClicks: number
     cpc: number
+    cpm: number
     ctr: number
     costPerLead: number
+    costPerPurchase: number
+    roas: number
 }
 
 interface DailyMetrics {
@@ -162,6 +199,8 @@ export async function getFacebookMetrics(
         .from('facebook_adsets')
         .select('id, campaign_id, name, status')
 
+    const adsetMap = new Map(adsets?.map(a => [a.id, a]) || [])
+
     // Fetch ads
     const { data: ads } = await supabase
         .from('facebook_ads')
@@ -174,13 +213,13 @@ export async function getFacebookMetrics(
     const byAccount = aggregateByAccount(insights || [], accountMap)
 
     // Aggregate by campaign
-    const byCampaign = aggregateByCampaign(insights || [], campaignMap)
+    const byCampaign = aggregateByCampaign(insights || [], campaignMap, accountMap)
 
     // Aggregate by adset
-    const byAdSet = aggregateByAdSet(insights || [], adsets || [])
+    const byAdSet = aggregateByAdSet(insights || [], adsets || [], campaignMap)
 
     // Aggregate by ad
-    const byAd = aggregateByAd(insights || [], ads || [])
+    const byAd = aggregateByAd(insights || [], ads || [], adsetMap, campaignMap)
 
     // Evolution by day
     const evolution = aggregateByDay(insights || [])
@@ -260,7 +299,7 @@ function aggregateByAccount(insights: any[], accountMap: Map<string, any>): Acco
     }))
 }
 
-function aggregateByCampaign(insights: any[], campaignMap: Map<string, any>): CampaignMetrics[] {
+function aggregateByCampaign(insights: any[], campaignMap: Map<string, any>, accountMap: Map<string, any>): CampaignMetrics[] {
     const byCampaign = new Map<string, any>()
 
     for (const i of insights) {
@@ -269,44 +308,77 @@ function aggregateByCampaign(insights: any[], campaignMap: Map<string, any>): Ca
         const existing = byCampaign.get(i.campaign_id) || {
             id: i.campaign_id,
             accountId: i.account_id,
-            spend: 0, impressions: 0, clicks: 0, leads: 0, purchases: 0, purchaseValue: 0
+            spend: 0, impressions: 0, reach: 0, clicks: 0, uniqueClicks: 0,
+            leads: 0, purchases: 0, purchaseValue: 0, leadValue: 0,
+            addToCart: 0, initiateCheckout: 0, landingPageViews: 0, linkClicks: 0,
+            videoViews: 0, videoP25Watched: 0, videoP50Watched: 0, videoP75Watched: 0, videoP100Watched: 0
         }
 
         existing.spend += Number(i.spend || 0)
         existing.impressions += Number(i.impressions || 0)
+        existing.reach += Number(i.reach || 0)
         existing.clicks += Number(i.clicks || 0)
+        existing.uniqueClicks += Number(i.unique_clicks || 0)
         existing.leads += Number(i.leads || 0)
         existing.purchases += Number(i.purchases || 0)
         existing.purchaseValue += Number(i.purchase_value || 0)
+        existing.leadValue += Number(i.lead_value || 0)
+        existing.addToCart += Number(i.add_to_cart || 0)
+        existing.initiateCheckout += Number(i.initiate_checkout || 0)
+        existing.landingPageViews += Number(i.landing_page_views || 0)
+        existing.linkClicks += Number(i.link_clicks || 0)
+        existing.videoViews += Number(i.video_views || 0)
+        existing.videoP25Watched += Number(i.video_p25_watched || 0)
+        existing.videoP50Watched += Number(i.video_p50_watched || 0)
+        existing.videoP75Watched += Number(i.video_p75_watched || 0)
+        existing.videoP100Watched += Number(i.video_p100_watched || 0)
 
         byCampaign.set(i.campaign_id, existing)
     }
 
     return Array.from(byCampaign.values()).map(camp => {
         const meta = campaignMap.get(camp.id)
+        const accountName = accountMap.get(camp.accountId)?.name || camp.accountId
+
         return {
             id: camp.id,
             accountId: camp.accountId,
+            accountName,
             name: meta?.name || camp.id,
             status: meta?.status || 'UNKNOWN',
             objective: meta?.objective || '',
             spend: camp.spend,
             impressions: camp.impressions,
+            reach: camp.reach,
+            frequency: camp.reach > 0 ? camp.impressions / camp.reach : 0,
             clicks: camp.clicks,
+            uniqueClicks: camp.uniqueClicks,
+            ctr: camp.impressions > 0 ? (camp.clicks / camp.impressions) * 100 : 0,
+            uniqueCtr: camp.impressions > 0 ? (camp.uniqueClicks / camp.impressions) * 100 : 0,
+            cpc: camp.clicks > 0 ? camp.spend / camp.clicks : 0,
+            cpm: camp.impressions > 0 ? (camp.spend / camp.impressions) * 1000 : 0,
+            cpp: camp.reach > 0 ? (camp.spend / camp.reach) * 1000 : 0,
             leads: camp.leads,
             purchases: camp.purchases,
             purchaseValue: camp.purchaseValue,
-            cpc: camp.clicks > 0 ? camp.spend / camp.clicks : 0,
-            cpm: camp.impressions > 0 ? (camp.spend / camp.impressions) * 1000 : 0,
-            ctr: camp.impressions > 0 ? (camp.clicks / camp.impressions) * 100 : 0,
+            addToCart: camp.addToCart,
+            initiateCheckout: camp.initiateCheckout,
+            landingPageViews: camp.landingPageViews,
+            linkClicks: camp.linkClicks,
+            leadValue: camp.leadValue,
             costPerLead: camp.leads > 0 ? camp.spend / camp.leads : 0,
             costPerPurchase: camp.purchases > 0 ? camp.spend / camp.purchases : 0,
-            roas: camp.spend > 0 ? camp.purchaseValue / camp.spend : 0
+            roas: camp.spend > 0 ? camp.purchaseValue / camp.spend : 0,
+            videoViews: camp.videoViews,
+            videoP25Watched: camp.videoP25Watched,
+            videoP50Watched: camp.videoP50Watched,
+            videoP75Watched: camp.videoP75Watched,
+            videoP100Watched: camp.videoP100Watched
         }
     }).sort((a, b) => b.spend - a.spend)
 }
 
-function aggregateByAdSet(insights: any[], adsets: any[]): AdSetMetrics[] {
+function aggregateByAdSet(insights: any[], adsets: any[], campaignMap: Map<string, any>): AdSetMetrics[] {
     const adsetMap = new Map(adsets.map(a => [a.id, a]))
     const byAdSet = new Map<string, any>()
 
@@ -316,38 +388,57 @@ function aggregateByAdSet(insights: any[], adsets: any[]): AdSetMetrics[] {
         const existing = byAdSet.get(i.adset_id) || {
             id: i.adset_id,
             campaignId: i.campaign_id,
-            spend: 0, impressions: 0, clicks: 0, leads: 0, purchases: 0
+            spend: 0, impressions: 0, reach: 0, clicks: 0, leads: 0, purchases: 0,
+            purchaseValue: 0, addToCart: 0, initiateCheckout: 0, landingPageViews: 0, linkClicks: 0
         }
 
         existing.spend += Number(i.spend || 0)
         existing.impressions += Number(i.impressions || 0)
+        existing.reach += Number(i.reach || 0)
         existing.clicks += Number(i.clicks || 0)
         existing.leads += Number(i.leads || 0)
         existing.purchases += Number(i.purchases || 0)
+        existing.purchaseValue += Number(i.purchase_value || 0)
+        existing.addToCart += Number(i.add_to_cart || 0)
+        existing.initiateCheckout += Number(i.initiate_checkout || 0)
+        existing.landingPageViews += Number(i.landing_page_views || 0)
+        existing.linkClicks += Number(i.link_clicks || 0)
 
         byAdSet.set(i.adset_id, existing)
     }
 
     return Array.from(byAdSet.values()).map(adset => {
         const meta = adsetMap.get(adset.id)
+        const campaignName = campaignMap.get(adset.campaignId)?.name || adset.campaignId
+
         return {
             id: adset.id,
             campaignId: adset.campaignId,
+            campaignName,
             name: meta?.name || adset.id,
             status: meta?.status || 'UNKNOWN',
             spend: adset.spend,
             impressions: adset.impressions,
+            reach: adset.reach,
             clicks: adset.clicks,
             leads: adset.leads,
             purchases: adset.purchases,
+            purchaseValue: adset.purchaseValue,
+            addToCart: adset.addToCart,
+            initiateCheckout: adset.initiateCheckout,
+            landingPageViews: adset.landingPageViews,
+            linkClicks: adset.linkClicks,
             cpc: adset.clicks > 0 ? adset.spend / adset.clicks : 0,
+            cpm: adset.impressions > 0 ? (adset.spend / adset.impressions) * 1000 : 0,
             ctr: adset.impressions > 0 ? (adset.clicks / adset.impressions) * 100 : 0,
-            costPerLead: adset.leads > 0 ? adset.spend / adset.leads : 0
+            costPerLead: adset.leads > 0 ? adset.spend / adset.leads : 0,
+            costPerPurchase: adset.purchases > 0 ? adset.spend / adset.purchases : 0,
+            roas: adset.spend > 0 ? adset.purchaseValue / adset.spend : 0
         }
     }).sort((a, b) => b.spend - a.spend)
 }
 
-function aggregateByAd(insights: any[], ads: any[]): AdMetrics[] {
+function aggregateByAd(insights: any[], ads: any[], adsetMap: Map<string, any>, campaignMap: Map<string, any>): AdMetrics[] {
     const adMap = new Map(ads.map(a => [a.id, a]))
     const byAd = new Map<string, any>()
 
@@ -358,35 +449,56 @@ function aggregateByAd(insights: any[], ads: any[]): AdMetrics[] {
             id: i.ad_id,
             adsetId: i.adset_id,
             campaignId: i.campaign_id,
-            spend: 0, impressions: 0, clicks: 0, leads: 0, purchases: 0
+            spend: 0, impressions: 0, reach: 0, clicks: 0, leads: 0, purchases: 0,
+            purchaseValue: 0, addToCart: 0, initiateCheckout: 0, landingPageViews: 0, linkClicks: 0
         }
 
         existing.spend += Number(i.spend || 0)
         existing.impressions += Number(i.impressions || 0)
+        existing.reach += Number(i.reach || 0)
         existing.clicks += Number(i.clicks || 0)
         existing.leads += Number(i.leads || 0)
         existing.purchases += Number(i.purchases || 0)
+        existing.purchaseValue += Number(i.purchase_value || 0)
+        existing.addToCart += Number(i.add_to_cart || 0)
+        existing.initiateCheckout += Number(i.initiate_checkout || 0)
+        existing.landingPageViews += Number(i.landing_page_views || 0)
+        existing.linkClicks += Number(i.link_clicks || 0)
 
         byAd.set(i.ad_id, existing)
     }
 
     return Array.from(byAd.values()).map(ad => {
         const meta = adMap.get(ad.id)
+        const adsetName = adsetMap.get(ad.adsetId)?.name || ad.adsetId
+        const campaignName = campaignMap.get(ad.campaignId)?.name || ad.campaignId
+
         return {
             id: ad.id,
             adsetId: ad.adsetId,
+            adsetName,
             campaignId: ad.campaignId,
+            campaignName,
             name: meta?.name || ad.id,
             status: meta?.status || 'UNKNOWN',
             creativeThumbnail: meta?.creative_thumbnail_url || null,
             spend: ad.spend,
             impressions: ad.impressions,
+            reach: ad.reach,
             clicks: ad.clicks,
             leads: ad.leads,
             purchases: ad.purchases,
+            purchaseValue: ad.purchaseValue,
+            addToCart: ad.addToCart,
+            initiateCheckout: ad.initiateCheckout,
+            landingPageViews: ad.landingPageViews,
+            linkClicks: ad.linkClicks,
             cpc: ad.clicks > 0 ? ad.spend / ad.clicks : 0,
+            cpm: ad.impressions > 0 ? (ad.spend / ad.impressions) * 1000 : 0,
             ctr: ad.impressions > 0 ? (ad.clicks / ad.impressions) * 100 : 0,
-            costPerLead: ad.leads > 0 ? ad.spend / ad.leads : 0
+            costPerLead: ad.leads > 0 ? ad.spend / ad.leads : 0,
+            costPerPurchase: ad.purchases > 0 ? ad.spend / ad.purchases : 0,
+            roas: ad.spend > 0 ? ad.purchaseValue / ad.spend : 0
         }
     }).sort((a, b) => b.spend - a.spend)
 }
