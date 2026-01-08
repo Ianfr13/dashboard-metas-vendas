@@ -313,17 +313,24 @@ function aggregateByAccount(insights: any[], accountMap: Map<string, any>): Acco
 function aggregateByCampaign(insights: any[], campaignMap: Map<string, any>, accountMap: Map<string, any>): CampaignMetrics[] {
     const byCampaign = new Map<string, any>()
 
-    for (const i of insights) {
-        if (!i.campaign_id) continue
-
-        const existing = byCampaign.get(i.campaign_id) || {
-            id: i.campaign_id,
-            accountId: i.account_id,
+    // Initialize with all campaigns
+    for (const camp of campaignMap.values()) {
+        byCampaign.set(camp.id, {
+            id: camp.id,
+            accountId: camp.account_id,
             spend: 0, impressions: 0, reach: 0, clicks: 0, uniqueClicks: 0,
             leads: 0, purchases: 0, purchaseValue: 0, leadValue: 0,
             addToCart: 0, initiateCheckout: 0, landingPageViews: 0, linkClicks: 0,
             videoViews: 0, videoP25Watched: 0, videoP50Watched: 0, videoP75Watched: 0, videoP100Watched: 0
-        }
+        })
+    }
+
+    for (const i of insights) {
+        if (!i.campaign_id) continue
+
+        const existing = byCampaign.get(i.campaign_id)
+        // If campaign exists in map (or if we want to support campaigns not in our metadata table for some reason)
+        if (!existing) continue // Skip insights for unknown campaigns to be safe, or we could create them.
 
         existing.spend += Number(i.spend || 0)
         existing.impressions += Number(i.impressions || 0)
@@ -343,8 +350,6 @@ function aggregateByCampaign(insights: any[], campaignMap: Map<string, any>, acc
         existing.videoP50Watched += Number(i.video_p50_watched || 0)
         existing.videoP75Watched += Number(i.video_p75_watched || 0)
         existing.videoP100Watched += Number(i.video_p100_watched || 0)
-
-        byCampaign.set(i.campaign_id, existing)
     }
 
     return Array.from(byCampaign.values()).map(camp => {
@@ -393,15 +398,21 @@ function aggregateByAdSet(insights: any[], adsets: any[], campaignMap: Map<strin
     const adsetMap = new Map(adsets.map(a => [a.id, a]))
     const byAdSet = new Map<string, any>()
 
+    // Initialize with all adsets
+    for (const adset of adsets) {
+        byAdSet.set(adset.id, {
+            id: adset.id,
+            campaignId: adset.campaign_id,
+            spend: 0, impressions: 0, reach: 0, clicks: 0, leads: 0, purchases: 0,
+            purchaseValue: 0, addToCart: 0, initiateCheckout: 0, landingPageViews: 0, linkClicks: 0
+        })
+    }
+
     for (const i of insights) {
         if (!i.adset_id) continue
 
-        const existing = byAdSet.get(i.adset_id) || {
-            id: i.adset_id,
-            campaignId: i.campaign_id,
-            spend: 0, impressions: 0, reach: 0, clicks: 0, leads: 0, purchases: 0,
-            purchaseValue: 0, addToCart: 0, initiateCheckout: 0, landingPageViews: 0, linkClicks: 0
-        }
+        const existing = byAdSet.get(i.adset_id)
+        if (!existing) continue
 
         existing.spend += Number(i.spend || 0)
         existing.impressions += Number(i.impressions || 0)
@@ -414,8 +425,6 @@ function aggregateByAdSet(insights: any[], adsets: any[], campaignMap: Map<strin
         existing.initiateCheckout += Number(i.initiate_checkout || 0)
         existing.landingPageViews += Number(i.landing_page_views || 0)
         existing.linkClicks += Number(i.link_clicks || 0)
-
-        byAdSet.set(i.adset_id, existing)
     }
 
     return Array.from(byAdSet.values()).map(adset => {
@@ -453,16 +462,22 @@ function aggregateByAd(insights: any[], ads: any[], adsetMap: Map<string, any>, 
     const adMap = new Map(ads.map(a => [a.id, a]))
     const byAd = new Map<string, any>()
 
+    // Initialize with all ads
+    for (const ad of ads) {
+        byAd.set(ad.id, {
+            id: ad.id,
+            adsetId: ad.adset_id,
+            campaignId: ad.campaign_id,
+            spend: 0, impressions: 0, reach: 0, clicks: 0, leads: 0, purchases: 0,
+            purchaseValue: 0, addToCart: 0, initiateCheckout: 0, landingPageViews: 0, linkClicks: 0
+        })
+    }
+
     for (const i of insights) {
         if (!i.ad_id) continue
 
-        const existing = byAd.get(i.ad_id) || {
-            id: i.ad_id,
-            adsetId: i.adset_id,
-            campaignId: i.campaign_id,
-            spend: 0, impressions: 0, reach: 0, clicks: 0, leads: 0, purchases: 0,
-            purchaseValue: 0, addToCart: 0, initiateCheckout: 0, landingPageViews: 0, linkClicks: 0
-        }
+        const existing = byAd.get(i.ad_id)
+        if (!existing) continue
 
         existing.spend += Number(i.spend || 0)
         existing.impressions += Number(i.impressions || 0)
@@ -475,8 +490,6 @@ function aggregateByAd(insights: any[], ads: any[], adsetMap: Map<string, any>, 
         existing.initiateCheckout += Number(i.initiate_checkout || 0)
         existing.landingPageViews += Number(i.landing_page_views || 0)
         existing.linkClicks += Number(i.link_clicks || 0)
-
-        byAd.set(i.ad_id, existing)
     }
 
     return Array.from(byAd.values()).map(ad => {
