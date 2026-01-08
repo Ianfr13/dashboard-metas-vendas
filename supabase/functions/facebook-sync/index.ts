@@ -290,6 +290,33 @@ async function syncAllData(
 // API FETCH FUNCTIONS
 // ============================================
 
+async function fetchAllWithPagination<T>(initialUrl: string): Promise<T[]> {
+    let allData: T[] = [];
+    let nextUrl: string | null = initialUrl;
+    let pageCount = 0;
+
+    while (nextUrl) {
+        pageCount++;
+        // Log only every 5 pages to avoid spamming logs
+        if (pageCount % 5 === 0) console.log(`[facebook-sync] Fetching page ${pageCount}...`);
+
+        const res = await fetch(nextUrl);
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`Failed to fetch page ${pageCount}: ${errorText}`);
+        }
+
+        const data = await res.json();
+        if (data.data && Array.isArray(data.data)) {
+            allData = allData.concat(data.data);
+        }
+
+        nextUrl = data.paging?.next || null;
+    }
+
+    return allData;
+}
+
 async function fetchAdAccounts(token: string, specificId?: string | null): Promise<any[]> {
     if (specificId) {
         const res = await fetch(
@@ -299,49 +326,37 @@ async function fetchAdAccounts(token: string, specificId?: string | null): Promi
         return [await res.json()]
     }
 
-    // Fetch all accessible ad accounts
-    const res = await fetch(
+    // Fetch all accessible ad accounts using pagination
+    return fetchAllWithPagination<any>(
         `${FB_GRAPH_API}/me/adaccounts?fields=id,name,currency,timezone_name,account_status&limit=100&access_token=${token}`
-    )
-    if (!res.ok) throw new Error(`Failed to fetch accounts: ${await res.text()}`)
-    const data = await res.json()
-    return data.data || []
+    );
 }
 
 async function fetchCampaigns(token: string, accountId: string | null): Promise<FBCampaign[]> {
     if (!accountId) return []
 
     const fields = 'id,name,status,effective_status,objective,buying_type,daily_budget,lifetime_budget,budget_remaining,start_time,stop_time,created_time'
-    const res = await fetch(
+    return fetchAllWithPagination<FBCampaign>(
         `${FB_GRAPH_API}/${accountId}/campaigns?fields=${fields}&limit=500&access_token=${token}`
-    )
-    if (!res.ok) throw new Error(`Failed to fetch campaigns: ${await res.text()}`)
-    const data = await res.json()
-    return data.data || []
+    );
 }
 
 async function fetchAdSets(token: string, accountId: string | null): Promise<FBAdSet[]> {
     if (!accountId) return []
 
     const fields = 'id,campaign_id,name,status,effective_status,optimization_goal,billing_event,bid_amount,daily_budget,lifetime_budget,targeting,start_time,end_time,created_time'
-    const res = await fetch(
+    return fetchAllWithPagination<FBAdSet>(
         `${FB_GRAPH_API}/${accountId}/adsets?fields=${fields}&limit=500&access_token=${token}`
-    )
-    if (!res.ok) throw new Error(`Failed to fetch adsets: ${await res.text()}`)
-    const data = await res.json()
-    return data.data || []
+    );
 }
 
 async function fetchAds(token: string, accountId: string | null): Promise<FBAd[]> {
     if (!accountId) return []
 
     const fields = 'id,adset_id,campaign_id,name,status,effective_status,creative{id,thumbnail_url},preview_shareable_link,created_time'
-    const res = await fetch(
+    return fetchAllWithPagination<FBAd>(
         `${FB_GRAPH_API}/${accountId}/ads?fields=${fields}&limit=500&access_token=${token}`
-    )
-    if (!res.ok) throw new Error(`Failed to fetch ads: ${await res.text()}`)
-    const data = await res.json()
-    return data.data || []
+    );
 }
 
 async function fetchInsights(
@@ -360,20 +375,13 @@ async function fetchInsights(
         level,
         time_range: JSON.stringify({ since: startDate, until: endDate }),
         time_increment: '1', // Daily breakdown
-        limit: '1000',
+        limit: '500', // Reduced from 1000 to improve reliability with pagination
         access_token: token
     })
 
-    const res = await fetch(`${FB_GRAPH_API}/${accountId}/insights?${params}`)
-    if (!res.ok) {
-        const errorText = await res.text()
-        console.error(`[facebook-sync] Insights error: ${errorText}`)
-        // Don't throw, just return empty
-        return []
-    }
-
-    const data = await res.json()
-    return data.data || []
+    return fetchAllWithPagination<any>(
+        `${FB_GRAPH_API}/${accountId}/insights?${params}`
+    );
 }
 
 async function refreshToken(currentToken: string): Promise<{ success: boolean, new_token?: string, expires_in?: number }> {
