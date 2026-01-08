@@ -36,18 +36,16 @@ Deno.serve(async (req: Request) => {
         }
 
         // 1. Fetch players list from Vturb
+        // NOTE: Do NOT pass start_date/end_date to players/list - those params filter by player CREATION date,
+        // not by activity. We want ALL players, then fetch metrics for the specified date range.
         console.log('Fetching Vturb players...')
-        // Vturb requires datetime with hours/minutes/seconds
+
+        // Dates for metrics queries (not for player listing)
         const startDateFull = `${startDate} 00:00:00`
         const endDateFull = `${endDate} 23:59:59`
 
-        const playersParams = new URLSearchParams({
-            start_date: startDateFull,
-            end_date: endDateFull,
-            timezone
-        })
-
-        const playersRes = await fetch(`${VTURB_API_BASE}/players/list?${playersParams}`, {
+        // Fetch ALL players (no date filter)
+        const playersRes = await fetch(`${VTURB_API_BASE}/players/list`, {
             method: 'GET',
             headers: vturbHeaders
         })
@@ -59,6 +57,7 @@ Deno.serve(async (req: Request) => {
 
         const players = await playersRes.json()
         console.log(`Found ${players.length} players`)
+
 
         // 3. Fetch custom metrics for each player to get Lead Time
         // This must be done per player, which might be slow if many players.
