@@ -116,10 +116,10 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto">
+                <div className="overflow-auto max-h-[400px]">
                     <Table>
                         <TableHeader>
-                            <TableRow>
+                            <TableRow className="sticky top-0 bg-card hover:bg-card z-10 shadow-sm">
                                 <TableHead onClick={() => requestSort('source')} className="cursor-pointer hover:bg-muted/50 transition-colors">
                                     <div className="flex items-center">Canal {getSortIcon('source')}</div>
                                 </TableHead>
