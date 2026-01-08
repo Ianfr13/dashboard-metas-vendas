@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     const startDate = url.searchParams.get('start_date')
     const endDate = url.searchParams.get('end_date')
 
-    if (!startDate || !endDate) {
+    if ((!startDate || !endDate) && action !== 'fb-accounts' && action !== 'facebook-accounts') {
       return new Response(
         JSON.stringify({ error: 'Missing start_date or end_date parameters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

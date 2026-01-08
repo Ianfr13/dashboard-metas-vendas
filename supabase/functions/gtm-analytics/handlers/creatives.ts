@@ -29,7 +29,7 @@ export async function getCreativeRanking(
         .select('traffic_source, traffic_medium, utm_content, utm_term, event_name, value')
         .gte('timestamp', startDate)
         .lte('timestamp', end)
-        .neq('utm_content', null)
+        .not('utm_content', 'is', null)
 
     if (error) {
         throw new Error(`Error fetching creative metrics: ${error.message}`)

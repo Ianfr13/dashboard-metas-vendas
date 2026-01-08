@@ -197,13 +197,13 @@ export async function getFacebookMetrics(
 
 function calculateSummary(insights: any[]): FacebookMetricsResponse['summary'] {
     const totals = insights.reduce((acc, i) => ({
-        spend: acc.spend + (i.spend || 0),
-        impressions: acc.impressions + (i.impressions || 0),
-        clicks: acc.clicks + (i.clicks || 0),
-        reach: acc.reach + (i.reach || 0),
-        leads: acc.leads + (i.leads || 0),
-        purchases: acc.purchases + (i.purchases || 0),
-        purchaseValue: acc.purchaseValue + (i.purchase_value || 0)
+        spend: acc.spend + Number(i.spend || 0),
+        impressions: acc.impressions + Number(i.impressions || 0),
+        clicks: acc.clicks + Number(i.clicks || 0),
+        reach: acc.reach + Number(i.reach || 0),
+        leads: acc.leads + Number(i.leads || 0),
+        purchases: acc.purchases + Number(i.purchases || 0),
+        purchaseValue: acc.purchaseValue + Number(i.purchase_value || 0)
     }), { spend: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, purchases: 0, purchaseValue: 0 })
 
     return {
@@ -232,12 +232,12 @@ function aggregateByAccount(insights: any[], accountMap: Map<string, any>): Acco
             spend: 0, impressions: 0, clicks: 0, leads: 0, purchases: 0, purchaseValue: 0
         }
 
-        existing.spend += i.spend || 0
-        existing.impressions += i.impressions || 0
-        existing.clicks += i.clicks || 0
-        existing.leads += i.leads || 0
-        existing.purchases += i.purchases || 0
-        existing.purchaseValue += i.purchase_value || 0
+        existing.spend += Number(i.spend || 0)
+        existing.impressions += Number(i.impressions || 0)
+        existing.clicks += Number(i.clicks || 0)
+        existing.leads += Number(i.leads || 0)
+        existing.purchases += Number(i.purchases || 0)
+        existing.purchaseValue += Number(i.purchase_value || 0)
 
         byAccount.set(i.account_id, existing)
     }
@@ -272,12 +272,12 @@ function aggregateByCampaign(insights: any[], campaignMap: Map<string, any>): Ca
             spend: 0, impressions: 0, clicks: 0, leads: 0, purchases: 0, purchaseValue: 0
         }
 
-        existing.spend += i.spend || 0
-        existing.impressions += i.impressions || 0
-        existing.clicks += i.clicks || 0
-        existing.leads += i.leads || 0
-        existing.purchases += i.purchases || 0
-        existing.purchaseValue += i.purchase_value || 0
+        existing.spend += Number(i.spend || 0)
+        existing.impressions += Number(i.impressions || 0)
+        existing.clicks += Number(i.clicks || 0)
+        existing.leads += Number(i.leads || 0)
+        existing.purchases += Number(i.purchases || 0)
+        existing.purchaseValue += Number(i.purchase_value || 0)
 
         byCampaign.set(i.campaign_id, existing)
     }
@@ -319,11 +319,11 @@ function aggregateByAdSet(insights: any[], adsets: any[]): AdSetMetrics[] {
             spend: 0, impressions: 0, clicks: 0, leads: 0, purchases: 0
         }
 
-        existing.spend += i.spend || 0
-        existing.impressions += i.impressions || 0
-        existing.clicks += i.clicks || 0
-        existing.leads += i.leads || 0
-        existing.purchases += i.purchases || 0
+        existing.spend += Number(i.spend || 0)
+        existing.impressions += Number(i.impressions || 0)
+        existing.clicks += Number(i.clicks || 0)
+        existing.leads += Number(i.leads || 0)
+        existing.purchases += Number(i.purchases || 0)
 
         byAdSet.set(i.adset_id, existing)
     }
@@ -361,11 +361,11 @@ function aggregateByAd(insights: any[], ads: any[]): AdMetrics[] {
             spend: 0, impressions: 0, clicks: 0, leads: 0, purchases: 0
         }
 
-        existing.spend += i.spend || 0
-        existing.impressions += i.impressions || 0
-        existing.clicks += i.clicks || 0
-        existing.leads += i.leads || 0
-        existing.purchases += i.purchases || 0
+        existing.spend += Number(i.spend || 0)
+        existing.impressions += Number(i.impressions || 0)
+        existing.clicks += Number(i.clicks || 0)
+        existing.leads += Number(i.leads || 0)
+        existing.purchases += Number(i.purchases || 0)
 
         byAd.set(i.ad_id, existing)
     }
@@ -401,12 +401,12 @@ function aggregateByDay(insights: any[]): DailyMetrics[] {
             spend: 0, impressions: 0, clicks: 0, leads: 0, purchases: 0, purchaseValue: 0
         }
 
-        existing.spend += i.spend || 0
-        existing.impressions += i.impressions || 0
-        existing.clicks += i.clicks || 0
-        existing.leads += i.leads || 0
-        existing.purchases += i.purchases || 0
-        existing.purchaseValue += i.purchase_value || 0
+        existing.spend += Number(i.spend || 0)
+        existing.impressions += Number(i.impressions || 0)
+        existing.clicks += Number(i.clicks || 0)
+        existing.leads += Number(i.leads || 0)
+        existing.purchases += Number(i.purchases || 0)
+        existing.purchaseValue += Number(i.purchase_value || 0)
 
         byDay.set(date, existing)
     }

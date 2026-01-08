@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import DashboardLayout from "@/components/DashboardLayout";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { gtmAnalyticsAPI } from "@/lib/edge-functions";
@@ -114,11 +114,11 @@ export default function Metricas() {
       if (shouldShowLoading) setLoading(true);
       setError(null);
 
-      const start = format(startDate, 'yyyy-MM-dd');
-      const end = format(endDate, 'yyyy-MM-dd');
+      const start = startOfDay(startDate).toISOString();
+      const end = endOfDay(endDate).toISOString();
 
-      // Buscar dados em paralelo
-      const [funnel, evolution, products, traffic, creatives] = await Promise.all([
+      // Buscar dados em paralelo com tratamento individual de erros (Promise.allSettled)
+      const results = await Promise.allSettled([
         gtmAnalyticsAPI.getFunnelMetrics(start, end),
         gtmAnalyticsAPI.getEvolutionChart(start, end, selectedEvent, groupBy),
         gtmAnalyticsAPI.getProductMetrics(start, end),
@@ -126,11 +126,21 @@ export default function Metricas() {
         gtmAnalyticsAPI.getCreativeRanking(start, end),
       ]);
 
-      setFunnelData(funnel);
-      setEvolutionData(evolution);
-      setProductData(products);
-      setTrafficData(traffic);
-      setCreativeData(creatives);
+      // Processar cada resultado
+      if (results[0].status === 'fulfilled') setFunnelData(results[0].value);
+      else console.error('Erro ao carregar Funil:', results[0].reason);
+
+      if (results[1].status === 'fulfilled') setEvolutionData(results[1].value);
+      else console.error('Erro ao carregar Evolução:', results[1].reason);
+
+      if (results[2].status === 'fulfilled') setProductData(results[2].value);
+      else console.error('Erro ao carregar Produtos:', results[2].reason);
+
+      if (results[3].status === 'fulfilled') setTrafficData(results[3].value);
+      else console.error('Erro ao carregar Tráfego:', results[3].reason);
+
+      if (results[4].status === 'fulfilled') setCreativeData(results[4].value);
+      else console.warn('Erro ao carregar Criativos (não crítico):', results[4].reason);
 
       // Buscar Vturb separadamente (não bloqueia se falhar)
       try {
@@ -161,8 +171,14 @@ export default function Metricas() {
       } catch (vturbErr) {
         console.warn('Vturb data fetch failed (non-critical):', vturbErr);
       }
+
+      // Se falhar apenas funil (que é crítico), mostrar erro
+      if (results[0].status === 'rejected') {
+        throw new Error('Falha ao carregar dados do funil: ' + (results[0].reason?.message || 'Erro desconhecido'));
+      }
+
     } catch (err) {
-      console.error('Erro ao carregar métricas:', err);
+      console.error('Erro crítico ao carregar métricas:', err);
       // Erros em background não devem bloquear a UI
       if (shouldShowLoading) setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
     } finally {

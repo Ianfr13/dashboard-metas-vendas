@@ -74,8 +74,13 @@ Deno.serve(async (req: Request) => {
         const startDate = url.searchParams.get('start_date') || getDefaultStartDate()
         const endDate = url.searchParams.get('end_date') || getDefaultEndDate()
         const accountId = url.searchParams.get('account_id') // Optional: sync specific account
-        const level = url.searchParams.get('level') || 'campaign' // campaign, adset, ad
+        const level = url.searchParams.get('level') || 'ad' // Force 'ad' level for maximum granularity
         const customMetrics = url.searchParams.get('metrics')?.split(',') || DEFAULT_METRICS
+
+        // Ensure we always fetch IDs
+        if (!customMetrics.includes('campaign_id')) customMetrics.push('campaign_id')
+        if (!customMetrics.includes('adset_id')) customMetrics.push('adset_id')
+        if (!customMetrics.includes('ad_id')) customMetrics.push('ad_id')
 
         // Get Facebook token
         const fbToken = Deno.env.get('FACEBOOK_ACCESS_TOKEN')
