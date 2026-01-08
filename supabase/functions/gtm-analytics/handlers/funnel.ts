@@ -21,6 +21,12 @@ export interface FunnelMetrics {
     leadsParaCheckout: number // generate_lead -> begin_checkout
     checkoutParaVenda: number // begin_checkout -> purchase
   }
+  dropOff: {
+    pageViewToViewItem: number
+    viewItemToAddToCart: number
+    addToCartToCheckout: number
+    checkoutToPurchase: number
+  }
   financeiro: {
     receitaTotal: number
     ticketMedio: number
@@ -35,16 +41,45 @@ export async function getFunnelMetrics(
   // Garantir que endDate inclua o dia inteiro
   const endDateWithTime = endDate.includes('T') ? endDate : `${endDate}T23:59:59`
 
-  // Buscar eventos do GTM no período
-  const { data: events, error } = await supabase
-    .from('gtm_events')
-    .select('event_name, event_data, timestamp')
-    .gte('timestamp', startDate)
-    .lte('timestamp', endDateWithTime)
+  // Helper to fetch all rows using pagination
+  async function fetchAllRows<T>(
+    table: string,
+    select: string,
+    filters: (query: any) => any = q => q
+  ): Promise<T[]> {
+    let allData: T[] = [];
+    let page = 0;
+    const PAGE_SIZE = 1000;
 
-  if (error) {
-    throw new Error(`Error fetching GTM events: ${error.message}`)
+    while (true) {
+      let query = supabase
+        .from(table)
+        .select(select)
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      query = filters(query);
+
+      const { data, error } = await query;
+      if (error) {
+        console.error(`[funnel.ts] Error fetching ${table} (page ${page}):`, error);
+        throw new Error(`Failed to fetch ${table}`);
+      }
+
+      if (!data || data.length === 0) break;
+
+      allData = allData.concat(data);
+      if (data.length < PAGE_SIZE) break;
+
+      page++;
+    }
+
+    return allData;
   }
+
+  // Buscar eventos do GTM no período com paginação
+  const events = await fetchAllRows<any>('gtm_events', 'event_name, event_data, timestamp', (q) => {
+    return q.gte('timestamp', startDate).lte('timestamp', endDateWithTime);
+  });
 
   // Contar eventos por tipo
   let pageViews = 0
@@ -105,6 +140,19 @@ export async function getFunnelMetrics(
   const leadsParaCheckout = leads > 0 ? (beginCheckout / leads) * 100 : 0
   const checkoutParaVenda = beginCheckout > 0 ? (purchases / beginCheckout) * 100 : 0
 
+  // Calculate Drop-off Rates (Inverse of Conversion)
+  const calculateDropOff = (from: number, to: number) => {
+    if (from === 0) return 0;
+    return Math.max(0, ((from - to) / from) * 100);
+  }
+
+  const dropOff = {
+    pageViewToViewItem: calculateDropOff(pageViews, viewItem),
+    viewItemToAddToCart: calculateDropOff(viewItem, addToCart),
+    addToCartToCheckout: calculateDropOff(addToCart, beginCheckout),
+    checkoutToPurchase: calculateDropOff(beginCheckout, purchases)
+  }
+
   const ticketMedio = purchases > 0 ? receitaTotal / purchases : 0
 
   return {
@@ -127,6 +175,12 @@ export async function getFunnelMetrics(
       viewsParaLeads: Math.round(viewsParaLeads * 100) / 100,
       leadsParaCheckout: Math.round(leadsParaCheckout * 100) / 100,
       checkoutParaVenda: Math.round(checkoutParaVenda * 100) / 100
+    },
+    dropOff: {
+      pageViewToViewItem: Math.round(dropOff.pageViewToViewItem * 100) / 100,
+      viewItemToAddToCart: Math.round(dropOff.viewItemToAddToCart * 100) / 100,
+      addToCartToCheckout: Math.round(dropOff.addToCartToCheckout * 100) / 100,
+      checkoutToPurchase: Math.round(dropOff.checkoutToPurchase * 100) / 100
     },
     financeiro: {
       receitaTotal: Math.round(receitaTotal * 100) / 100,
