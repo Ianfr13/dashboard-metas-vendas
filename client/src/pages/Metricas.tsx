@@ -319,7 +319,7 @@ export default function Metricas() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-4xl font-bold">
-                      R$ {funnelData?.financeiro.receitaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                      R$ {(funnelData?.financeiro?.receitaTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
                   </CardContent>
                 </Card>
@@ -330,7 +330,7 @@ export default function Metricas() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-4xl font-bold">
-                      R$ {funnelData?.financeiro.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                      R$ {(funnelData?.financeiro?.ticketMedio ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
                   </CardContent>
                 </Card>
@@ -381,8 +381,8 @@ export default function Metricas() {
                               <tr key={index} className="border-b">
                                 <td className="py-2">{product.produto}</td>
                                 <td className="text-right">{product.vendas}</td>
-                                <td className="text-right">R$ {product.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="text-right">R$ {product.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="text-right">R$ {(product.receita ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="text-right">R$ {(product.ticketMedio ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                               </tr>
                             ))}
                           </tbody>
