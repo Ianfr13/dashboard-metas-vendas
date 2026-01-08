@@ -53,13 +53,15 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
 
         const handleMouseUp = (upEvent: MouseEvent) => {
             if (resizeData.current) {
+                // Captura valores locais para evitar erro no callback do setState (que roda depois)
+                const { column, headerLeft } = resizeData.current;
+
                 // Cálculo da largura: Posição visual do mouse - Posição visual esquerda da coluna
-                // Isso funciona independente do scroll
-                const newWidth = Math.max(MIN_COLUMN_WIDTH, upEvent.clientX - resizeData.current.headerLeft);
+                const newWidth = Math.max(MIN_COLUMN_WIDTH, upEvent.clientX - headerLeft);
 
                 setColumnWidths(prev => ({
                     ...prev,
-                    [resizeData.current!.column]: newWidth
+                    [column]: newWidth
                 }));
             }
 
