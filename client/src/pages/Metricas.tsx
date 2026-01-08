@@ -114,6 +114,9 @@ export default function Metricas() {
   // Combine loading states
   const loading = funnelLoading || evolutionLoading || productLoading || trafficLoading || creativeLoading || placementLoading || vturbLoading;
 
+  // Combine error states
+  const error = funnelError || null; // Only blocking error is funnel, others are partials usually
+
   // Realtime Subscription (Simplified to just invalidate queries if needed, or keep existing logic but manual refetch is now queryClient.invalidateQueries)
   // For now, let's disable the manual realtime debounce that called fetchMetrics.
   // Ideally we import queryClient and invalidate.
@@ -209,418 +212,419 @@ export default function Metricas() {
               <p className="text-muted-foreground">Carregando métricas...</p>
             </div>
           </div>
-        ) : error ? (
-          <Card className="border-destructive">
+          </div>
+      ) : error ? (
+      <Card className="border-destructive">
+        <CardHeader>
+          <CardTitle className="text-destructive">Erro ao carregar métricas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">{(error as Error)?.message || 'Erro desconhecido'}</p>
+          <Button onClick={() => window.location.reload()}>
+            Tentar novamente
+          </Button>
+        </CardContent>
+      </Card>
+      ) : (
+      <Tabs defaultValue="marketing" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="marketing">Marketing</TabsTrigger>
+          <TabsTrigger value="facebook">Facebook Ads</TabsTrigger>
+          <TabsTrigger value="produtos">Produtos</TabsTrigger>
+          <TabsTrigger value="comercial">Comercial</TabsTrigger>
+          <TabsTrigger value="creative">Criativos</TabsTrigger>
+          <TabsTrigger value="vturb">Vturb</TabsTrigger>
+          <TabsTrigger value="funis">Funis</TabsTrigger>
+        </TabsList>
+
+        {/* Marketing - Funil de Conversão e Tráfego */}
+        <TabsContent value="marketing" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Novo Funil Avançado */}
+            <AdvancedFunnel
+              data={{
+                pageViews: funnelData?.etapas?.pageViews || 0,
+                addToCart: funnelData?.etapas?.addToCart || 0,
+                checkouts: funnelData?.etapas?.beginCheckout || funnelData?.etapas?.checkouts || 0,
+                purchases: funnelData?.etapas?.purchases || 0
+              }}
+            />
+
+            {/* Nova Tabela de Tráfego */}
+            <TrafficSourcesTable data={trafficData} />
+          </div>
+
+          {/* Cards de Métricas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Visualizações
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{funnelData?.etapas.pageViews || 0}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Leads Gerados
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{funnelData?.etapas.leads || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {(funnelData?.conversao?.viewsParaLeads || 0).toFixed(1)}% conversão
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Checkouts Iniciados
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{funnelData?.etapas?.checkouts || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {(funnelData?.conversao?.leadsParaCheckout || 0).toFixed(1)}% conversão
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Vendas Concluídas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{funnelData?.etapas?.purchases || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {(funnelData?.conversao?.checkoutParaVenda || 0).toFixed(1)}% conversão
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Financeiro */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Receita Total</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">
+                  R$ {funnelData?.financeiro.receitaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Ticket Médio</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">
+                  R$ {funnelData?.financeiro.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Facebook Ads */}
+        <TabsContent value="facebook" className="space-y-6">
+          <FacebookAdsDashboard startDate={startDate} endDate={endDate} />
+        </TabsContent>
+
+        {/* Produtos */}
+        <TabsContent value="produtos" className="space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-destructive">Erro ao carregar métricas</CardTitle>
+              <CardTitle>Desempenho por Produto</CardTitle>
+              <CardDescription>
+                Análise de vendas e receita por produto
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">{error}</p>
-              <Button onClick={() => window.location.reload()}>
-                Tentar novamente
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Tabs defaultValue="marketing" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
-              <TabsTrigger value="marketing">Marketing</TabsTrigger>
-              <TabsTrigger value="facebook">Facebook Ads</TabsTrigger>
-              <TabsTrigger value="produtos">Produtos</TabsTrigger>
-              <TabsTrigger value="comercial">Comercial</TabsTrigger>
-              <TabsTrigger value="creative">Criativos</TabsTrigger>
-              <TabsTrigger value="vturb">Vturb</TabsTrigger>
-              <TabsTrigger value="funis">Funis</TabsTrigger>
-            </TabsList>
-
-            {/* Marketing - Funil de Conversão e Tráfego */}
-            <TabsContent value="marketing" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Novo Funil Avançado */}
-                <AdvancedFunnel
-                  data={{
-                    pageViews: funnelData?.etapas?.pageViews || 0,
-                    addToCart: funnelData?.etapas?.addToCart || 0,
-                    checkouts: funnelData?.etapas?.beginCheckout || funnelData?.etapas?.checkouts || 0,
-                    purchases: funnelData?.etapas?.purchases || 0
-                  }}
-                />
-
-                {/* Nova Tabela de Tráfego */}
-                <TrafficSourcesTable data={trafficData} />
-              </div>
-
-              {/* Cards de Métricas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Visualizações
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.pageViews || 0}</div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Leads Gerados
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.leads || 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {(funnelData?.conversao?.viewsParaLeads || 0).toFixed(1)}% conversão
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Checkouts Iniciados
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas?.checkouts || 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {(funnelData?.conversao?.leadsParaCheckout || 0).toFixed(1)}% conversão
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Vendas Concluídas
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas?.purchases || 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {(funnelData?.conversao?.checkoutParaVenda || 0).toFixed(1)}% conversão
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Financeiro */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Receita Total</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold">
-                      R$ {funnelData?.financeiro.receitaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Ticket Médio</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold">
-                      R$ {funnelData?.financeiro.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Facebook Ads */}
-            <TabsContent value="facebook" className="space-y-6">
-              <FacebookAdsDashboard startDate={startDate} endDate={endDate} />
-            </TabsContent>
-
-            {/* Produtos */}
-            <TabsContent value="produtos" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Desempenho por Produto</CardTitle>
-                  <CardDescription>
-                    Análise de vendas e receita por produto
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {productData.length > 0 ? (
-                    <>
-                      <ResponsiveContainer width="100%" height={400}>
-                        <BarChart data={productData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="produto" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="vendas" fill="#8884d8" name="Vendas" />
-                          <Bar dataKey="receita" fill="#82ca9d" name="Receita (R$)" />
-                        </BarChart>
-                      </ResponsiveContainer>
-
-                      <div className="mt-6">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-2">Produto</th>
-                              <th className="text-right py-2">Vendas</th>
-                              <th className="text-right py-2">Receita</th>
-                              <th className="text-right py-2">Ticket Médio</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {productData.map((product, index) => (
-                              <tr key={index} className="border-b">
-                                <td className="py-2">{product.produto}</td>
-                                <td className="text-right">{product.vendas}</td>
-                                <td className="text-right">R$ {product.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="text-right">R$ {product.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      Nenhum dado de produto encontrado para o período selecionado
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Comercial - Métricas de SDR e Closer */}
-            <TabsContent value="comercial" className="space-y-6">
-              {/* Filtros */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Métricas Comerciais</CardTitle>
-                  <CardDescription>Acompanhe o desempenho de SDRs e Closers</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4">
-                    {/* Filtro de Função */}
-                    <div>
-                      <label htmlFor="role-filter" className="text-sm font-medium mb-2 block">Função</label>
-                      <select
-                        id="role-filter"
-                        className="w-full border rounded px-3 py-2"
-                        value={selectedRole}
-                        onChange={(e) => setSelectedRole(e.target.value)}
-                      >
-                        <option value="todos">Todos</option>
-                        <option value="sdr">SDR</option>
-                        <option value="closer">Closer</option>
-                      </select>
-                    </div>
-
-                    {/* Filtro de Vendedor */}
-                    <div>
-                      <label htmlFor="seller-filter" className="text-sm font-medium mb-2 block">Vendedor</label>
-                      <select
-                        id="seller-filter"
-                        className="w-full border rounded px-3 py-2"
-                        value={selectedSeller}
-                        onChange={(e) => setSelectedSeller(e.target.value)}
-                      >
-                        <option value="todos">Todos</option>
-                        {/* TODO: Carregar lista de vendedores dinamicamente */}
-                      </select>
-                    </div>
-
-                    {/* Filtro de Período */}
-                    <div>
-                      <label htmlFor="period-filter" className="text-sm font-medium mb-2 block">Período</label>
-                      <select
-                        id="period-filter"
-                        className="w-full border rounded px-3 py-2"
-                        value={selectedPeriod}
-                        onChange={(e) => setSelectedPeriod(e.target.value)}
-                      >
-                        <option value="mes_atual">Mês Atual</option>
-                        <option value="mes_anterior">Mês Anterior</option>
-                        <option value="trimestre">Trimestre</option>
-                      </select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Métricas SDR */}
-              {(selectedRole === 'todos' || selectedRole === 'sdr') && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Métricas de SDR</CardTitle>
-                    <CardDescription>Performance de prospecção e agendamentos</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {commercialLoading ? (
-                      <p className="text-center text-muted-foreground py-8">Carregando métricas...</p>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Ligações Realizadas</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {commercialMetrics?.ligacoes_realizadas || 0}
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Agendamentos Feitos</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {commercialMetrics?.total_agendamentos || 0}
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {commercialMetrics?.taxa_conversao_agendamentos || 0}%
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Agendamentos Qualificados</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {commercialMetrics?.agendamentos_qualificados || 0}
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Tempo Médio Resposta</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {commercialMetrics?.tempo_medio_resposta || 0}min
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">No-shows</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {commercialMetrics?.no_shows || 0}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Métricas Closer */}
-              {(selectedRole === 'todos' || selectedRole === 'closer') && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Métricas de Closer</CardTitle>
-                    <CardDescription>Performance de fechamento e vendas</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {commercialLoading ? (
-                      <p className="text-center text-muted-foreground py-8">Carregando métricas...</p>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Vendas Fechadas</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {commercialMetrics?.total_vendas || 0}
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Receita Gerada</p>
-                          <p className="text-3xl font-bold mt-2">
-                            R$ {(commercialMetrics?.faturamento_total || 0).toLocaleString('pt-BR')}
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {commercialMetrics?.taxa_conversao_geral || 0}%
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Ticket Médio</p>
-                          <p className="text-3xl font-bold mt-2">
-                            R$ {(commercialMetrics?.ticket_medio || 0).toLocaleString('pt-BR')}
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Taxa de Presença</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {(100 - (commercialMetrics?.taxa_nao_comparecimento || 0)).toFixed(1)}%
-                          </p>
-                        </div>
-                        <div className="border rounded-lg p-4">
-                          <p className="text-sm text-muted-foreground">Follow-ups Realizados</p>
-                          <p className="text-3xl font-bold mt-2">
-                            {commercialMetrics?.follow_ups || 0}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Gráfico de Evolução */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Evolução Temporal</CardTitle>
-                  <CardDescription>Acompanhe a evolução das métricas ao longo do tempo</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={evolutionData}>
+              {productData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={productData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
+                      <XAxis dataKey="produto" />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      {selectedRole === 'sdr' && (
-                        <>
-                          <Line type="monotone" dataKey="ligacoes" stroke="#8884d8" name="Ligações" />
-                          <Line type="monotone" dataKey="agendamentos" stroke="#82ca9d" name="Agendamentos" />
-                        </>
-                      )}
-                      {selectedRole === 'closer' && (
-                        <>
-                          <Line type="monotone" dataKey="vendas" stroke="#8884d8" name="Vendas" />
-                          <Line type="monotone" dataKey="receita" stroke="#82ca9d" name="Receita" />
-                        </>
-                      )}
-                      {selectedRole === 'todos' && (
-                        <>
-                          <Line type="monotone" dataKey="agendamentos" stroke="#8884d8" name="Agendamentos" />
-                          <Line type="monotone" dataKey="vendas" stroke="#82ca9d" name="Vendas" />
-                        </>
-                      )}
-                    </LineChart>
+                      <Bar dataKey="vendas" fill="#8884d8" name="Vendas" />
+                      <Bar dataKey="receita" fill="#82ca9d" name="Receita (R$)" />
+                    </BarChart>
                   </ResponsiveContainer>
-                  {evolutionData.length === 0 && !commercialLoading && (
-                    <p className="text-center text-sm text-muted-foreground mt-4">
-                      Nenhum dado disponível para o período selecionado
-                    </p>
+
+                  <div className="mt-6">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2">Produto</th>
+                          <th className="text-right py-2">Vendas</th>
+                          <th className="text-right py-2">Receita</th>
+                          <th className="text-right py-2">Ticket Médio</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {productData.map((product, index) => (
+                          <tr key={index} className="border-b">
+                            <td className="py-2">{product.produto}</td>
+                            <td className="text-right">{product.vendas}</td>
+                            <td className="text-right">R$ {product.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                            <td className="text-right">R$ {product.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  Nenhum dado de produto encontrado para o período selecionado
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Comercial - Métricas de SDR e Closer */}
+        <TabsContent value="comercial" className="space-y-6">
+          {/* Filtros */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Métricas Comerciais</CardTitle>
+              <CardDescription>Acompanhe o desempenho de SDRs e Closers</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                {/* Filtro de Função */}
+                <div>
+                  <label htmlFor="role-filter" className="text-sm font-medium mb-2 block">Função</label>
+                  <select
+                    id="role-filter"
+                    className="w-full border rounded px-3 py-2"
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="sdr">SDR</option>
+                    <option value="closer">Closer</option>
+                  </select>
+                </div>
+
+                {/* Filtro de Vendedor */}
+                <div>
+                  <label htmlFor="seller-filter" className="text-sm font-medium mb-2 block">Vendedor</label>
+                  <select
+                    id="seller-filter"
+                    className="w-full border rounded px-3 py-2"
+                    value={selectedSeller}
+                    onChange={(e) => setSelectedSeller(e.target.value)}
+                  >
+                    <option value="todos">Todos</option>
+                    {/* TODO: Carregar lista de vendedores dinamicamente */}
+                  </select>
+                </div>
+
+                {/* Filtro de Período */}
+                <div>
+                  <label htmlFor="period-filter" className="text-sm font-medium mb-2 block">Período</label>
+                  <select
+                    id="period-filter"
+                    className="w-full border rounded px-3 py-2"
+                    value={selectedPeriod}
+                    onChange={(e) => setSelectedPeriod(e.target.value)}
+                  >
+                    <option value="mes_atual">Mês Atual</option>
+                    <option value="mes_anterior">Mês Anterior</option>
+                    <option value="trimestre">Trimestre</option>
+                  </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Métricas SDR */}
+          {(selectedRole === 'todos' || selectedRole === 'sdr') && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Métricas de SDR</CardTitle>
+                <CardDescription>Performance de prospecção e agendamentos</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {commercialLoading ? (
+                  <p className="text-center text-muted-foreground py-8">Carregando métricas...</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Ligações Realizadas</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {commercialMetrics?.ligacoes_realizadas || 0}
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Agendamentos Feitos</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {commercialMetrics?.total_agendamentos || 0}
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {commercialMetrics?.taxa_conversao_agendamentos || 0}%
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Agendamentos Qualificados</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {commercialMetrics?.agendamentos_qualificados || 0}
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Tempo Médio Resposta</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {commercialMetrics?.tempo_medio_resposta || 0}min
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">No-shows</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {commercialMetrics?.no_shows || 0}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Métricas Closer */}
+          {(selectedRole === 'todos' || selectedRole === 'closer') && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Métricas de Closer</CardTitle>
+                <CardDescription>Performance de fechamento e vendas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {commercialLoading ? (
+                  <p className="text-center text-muted-foreground py-8">Carregando métricas...</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Vendas Fechadas</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {commercialMetrics?.total_vendas || 0}
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Receita Gerada</p>
+                      <p className="text-3xl font-bold mt-2">
+                        R$ {(commercialMetrics?.faturamento_total || 0).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {commercialMetrics?.taxa_conversao_geral || 0}%
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                      <p className="text-3xl font-bold mt-2">
+                        R$ {(commercialMetrics?.ticket_medio || 0).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Taxa de Presença</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {(100 - (commercialMetrics?.taxa_nao_comparecimento || 0)).toFixed(1)}%
+                      </p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Follow-ups Realizados</p>
+                      <p className="text-3xl font-bold mt-2">
+                        {commercialMetrics?.follow_ups || 0}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Gráfico de Evolução */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Evolução Temporal</CardTitle>
+              <CardDescription>Acompanhe a evolução das métricas ao longo do tempo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={evolutionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  {selectedRole === 'sdr' && (
+                    <>
+                      <Line type="monotone" dataKey="ligacoes" stroke="#8884d8" name="Ligações" />
+                      <Line type="monotone" dataKey="agendamentos" stroke="#82ca9d" name="Agendamentos" />
+                    </>
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  {selectedRole === 'closer' && (
+                    <>
+                      <Line type="monotone" dataKey="vendas" stroke="#8884d8" name="Vendas" />
+                      <Line type="monotone" dataKey="receita" stroke="#82ca9d" name="Receita" />
+                    </>
+                  )}
+                  {selectedRole === 'todos' && (
+                    <>
+                      <Line type="monotone" dataKey="agendamentos" stroke="#8884d8" name="Agendamentos" />
+                      <Line type="monotone" dataKey="vendas" stroke="#82ca9d" name="Vendas" />
+                    </>
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+              {evolutionData.length === 0 && !commercialLoading && (
+                <p className="text-center text-sm text-muted-foreground mt-4">
+                  Nenhum dado disponível para o período selecionado
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {/* Funis */}
-            {/* Aba Criativos */}
-            <TabsContent value="creative" className="space-y-6">
-              <CreativeRankingTable data={creativeData} />
-            </TabsContent>
+        {/* Funis */}
+        {/* Aba Criativos */}
+        <TabsContent value="creative" className="space-y-6">
+          <CreativeRankingTable data={creativeData} />
+        </TabsContent>
 
-            {/* Aba Vturb */}
-            <TabsContent value="vturb" className="space-y-6">
-              <VslComparisonDashboard vsls={vturbData} startDate={startDate} endDate={endDate} />
-            </TabsContent>
+        {/* Aba Vturb */}
+        <TabsContent value="vturb" className="space-y-6">
+          <VslComparisonDashboard vsls={vturbData} startDate={startDate} endDate={endDate} />
+        </TabsContent>
 
-            <TabsContent value="funis" className="space-y-6">
-              <FunisCadastrados
-                startDate={startDate}
-                endDate={endDate}
-              />
-            </TabsContent>
-          </Tabs>
+        <TabsContent value="funis" className="space-y-6">
+          <FunisCadastrados
+            startDate={startDate}
+            endDate={endDate}
+          />
+        </TabsContent>
+      </Tabs>
         )}
-      </div>
-    </DashboardLayout>
+    </div>
+    </DashboardLayout >
   );
 }
