@@ -119,23 +119,23 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
                 <div className="overflow-auto max-h-[400px]">
                     <Table>
                         <TableHeader>
-                            <TableRow className="sticky top-0 bg-card hover:bg-card z-10 shadow-sm">
-                                <TableHead onClick={() => requestSort('source')} className="cursor-pointer hover:bg-muted/50 transition-colors">
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead onClick={() => requestSort('source')} className="sticky top-0 z-20 bg-card cursor-pointer hover:bg-muted/50 transition-colors shadow-sm">
                                     <div className="flex items-center">Canal {getSortIcon('source')}</div>
                                 </TableHead>
-                                <TableHead onClick={() => requestSort('sessions')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                <TableHead onClick={() => requestSort('sessions')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
                                     <div className="flex items-center justify-end">Sessões {getSortIcon('sessions')}</div>
                                 </TableHead>
-                                <TableHead onClick={() => requestSort('leads')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                <TableHead onClick={() => requestSort('leads')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
                                     <div className="flex items-center justify-end">Leads {getSortIcon('leads')}</div>
                                 </TableHead>
-                                <TableHead onClick={() => requestSort('sales')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                <TableHead onClick={() => requestSort('sales')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
                                     <div className="flex items-center justify-end">Vendas {getSortIcon('sales')}</div>
                                 </TableHead>
-                                <TableHead onClick={() => requestSort('revenue')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                <TableHead onClick={() => requestSort('revenue')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
                                     <div className="flex items-center justify-end">Receita {getSortIcon('revenue')}</div>
                                 </TableHead>
-                                <TableHead onClick={() => requestSort('conversionRate')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                <TableHead onClick={() => requestSort('conversionRate')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
                                     <div className="flex items-center justify-end">Conv. Venda {getSortIcon('conversionRate')}</div>
                                 </TableHead>
                             </TableRow>
