@@ -26,14 +26,17 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
         e.preventDefault();
         e.stopPropagation();
 
+        const tableContainer = headerElement.closest('.overflow-x-auto') as HTMLElement;
+        const containerRect = tableContainer.getBoundingClientRect();
         const startX = e.clientX;
         const headerRect = headerElement.getBoundingClientRect();
         const startWidth = columnWidths[column] || DEFAULT_COLUMN_WIDTH;
 
         const handleMouseMove = (moveEvent: MouseEvent) => {
             const diffX = moveEvent.clientX - startX;
-            const previewX = headerRect.right + diffX;
-            setResizePreview({ column, x: previewX });
+            // Calculate position relative to container, accounting for scroll
+            const newPreviewX = headerRect.right - containerRect.left + diffX + tableContainer.scrollLeft;
+            setResizePreview({ column, x: newPreviewX });
         };
 
         const handleMouseUp = (upEvent: MouseEvent) => {
