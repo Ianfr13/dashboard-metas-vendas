@@ -42,47 +42,6 @@ interface ProdutoMetrics {
   taxaConversao: number; // Em relação ao produto anterior
 }
 
-// Helper para verificar autenticação manualmente
-async function verifyAuth(req: Request) {
-  const authHeader = req.headers.get('Authorization')
-
-  if (!authHeader) {
-    throw new Error('Autenticação necessária: Header Authorization ausente')
-  }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('CRITICAL: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars')
-    throw new Error('Erro de configuração no servidor')
-  }
-
-  // Criar client com SERVICE_ROLE_KEY apenas para validação do token
-  const authClient = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  })
-
-  // Extrair o token
-  const token = authHeader.replace(/^Bearer\s+/i, '')
-
-  if (!token || token === 'undefined' || token === 'null') {
-    throw new Error('Token de autenticação inválido ou malformado')
-  }
-
-  // Validar o token JWT via Supabase Auth
-  const { data: { user }, error } = await authClient.auth.getUser(token)
-
-  if (error || !user) {
-    console.error('[verifyAuth] Auth error:', error?.message || 'User not found')
-    throw new Error(`Falha na autenticação: ${error?.message || 'Usuário inválido'}`)
-  }
-
-  return user
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -90,9 +49,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Verificar autenticação
-    await verifyAuth(req)
-
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
