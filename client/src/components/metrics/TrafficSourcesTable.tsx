@@ -12,6 +12,7 @@ interface TrafficSourcesTableProps {
 type SortKey = keyof TrafficSourceMetrics;
 
 export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) {
+    const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
     const [filterType, setFilterType] = useState<'all' | 'paid' | 'organic' | 'direct'>('all'); // State for filter
 
     const filteredData = data.filter(item => {
