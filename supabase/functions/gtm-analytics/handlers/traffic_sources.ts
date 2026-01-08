@@ -57,11 +57,20 @@ export async function getTrafficSources(
     });
 
     // Helper for normalization
-    const normalizeSource = (source: string | null, referrer: string | null): { source: string, medium: string } => {
+    const normalizeSource = (source: string | null, medium: string | null, referrer: string | null): { source: string, medium: string } => {
         let s = (source || '').toLowerCase().trim();
-        let m = 'unknown';
+        let m = (medium || '').toLowerCase().trim();
 
-        // 1. Try UTM Source
+        // 1. Special Case: Meta Ads
+        // User Request: Source becomes the positioning (medium), Medium becomes 'Ads'
+        if (s.includes('meta_ads') || s.includes('meta ads')) {
+            return {
+                source: m || 'unknown_placement',
+                medium: 'Ads'
+            };
+        }
+
+        // 2. Try UTM Source
         if (s) {
             if (s === 'ig' || s === 'instagram.com' || s === 'l.instagram.com') s = 'instagram';
             if (s === 'fb' || s === 'facebook.com' || s === 'l.facebook.com') s = 'facebook';
@@ -69,11 +78,10 @@ export async function getTrafficSources(
             if (s === 'yt' || s === 'youtube.com') s = 'youtube';
             if (s === 'tiktok.com') s = 'tiktok';
 
-            return { source: s, medium: 'cpc' }; // Default to cpc if utm exists but medium is missing? Or 'referral'? 
-            // Ideally we pass medium too, wait.
+            return { source: s, medium: m || 'cpc' };
         }
 
-        // 2. Try Referrer
+        // 3. Try Referrer
         if (referrer) {
             try {
                 const url = new URL(referrer);
@@ -92,7 +100,7 @@ export async function getTrafficSources(
             }
         }
 
-        // 3. Direct
+        // 4. Direct
         return { source: 'direct', medium: '(none)' };
     };
 
@@ -116,18 +124,11 @@ export async function getTrafficSources(
         }
 
         // Determine Attribution
-        // Note: UTMs might come from event columns (if you added them) or event_data.
-        // The query selects utm_source, utm_medium columns.
         let rawSource = event.utm_source;
         let rawMedium = event.utm_medium;
 
         // Normalize
-        const normalized = normalizeSource(rawSource, event.referrer);
-
-        // If UTM medium existed, keep it (unless we fell back to referrer)
-        if (rawSource) {
-            normalized.medium = (rawMedium || 'cpc').toLowerCase().trim(); // Assume cpc/paid if UTMs are present usually
-        }
+        const normalized = normalizeSource(rawSource, rawMedium, event.referrer);
 
         const key = `${normalized.source}|${normalized.medium}`;
 
