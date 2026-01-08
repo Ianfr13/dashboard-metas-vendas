@@ -28,23 +28,21 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
 
         const tableContainer = headerElement.closest('.overflow-x-auto') as HTMLElement;
         const containerRect = tableContainer.getBoundingClientRect();
-        const startX = e.clientX;
         const headerRect = headerElement.getBoundingClientRect();
-        const startWidth = columnWidths[column] || DEFAULT_COLUMN_WIDTH;
-        const headerLeft = headerRect.left - containerRect.left + tableContainer.scrollLeft;
+
+        // Posição inicial da coluna relativa ao container
+        const columnStart = headerRect.left - containerRect.left + tableContainer.scrollLeft;
 
         const handleMouseMove = (moveEvent: MouseEvent) => {
-            const diffX = moveEvent.clientX - startX;
-            // Calculate position relative to container, accounting for scroll
-            const newPreviewX = headerRect.right - containerRect.left + diffX + tableContainer.scrollLeft;
-            setResizePreview({ column, x: newPreviewX });
+            // Onde o mouse está agora, relativo ao container
+            const mouseX = moveEvent.clientX - containerRect.left + tableContainer.scrollLeft;
+            setResizePreview({ column, x: mouseX });
         };
 
         const handleMouseUp = (upEvent: MouseEvent) => {
-            const diffX = upEvent.clientX - startX;
-            // Calculate new width based on where the ghost line ended up
-            const ghostLineX = headerRect.right - containerRect.left + diffX + tableContainer.scrollLeft;
-            const newWidth = Math.max(MIN_COLUMN_WIDTH, ghostLineX - headerLeft);
+            // Largura = onde soltou - onde a coluna começa
+            const mouseX = upEvent.clientX - containerRect.left + tableContainer.scrollLeft;
+            const newWidth = Math.max(MIN_COLUMN_WIDTH, mouseX - columnStart);
 
             setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
             setResizePreview(null);
