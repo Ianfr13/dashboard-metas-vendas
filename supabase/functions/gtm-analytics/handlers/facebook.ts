@@ -158,53 +158,64 @@ export async function getFacebookMetrics(
     campaignId?: string
 ): Promise<FacebookMetricsResponse> {
 
-    // Build base query for insights
-    let insightsQuery = supabase
-        .from('facebook_insights')
-        .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate)
+    // Helper to fetch all rows using pagination
+    async function fetchAllRows<T>(
+        table: string,
+        select: string,
+        filters: (query: any) => any = q => q
+    ): Promise<T[]> {
+        let allData: T[] = [];
+        let page = 0;
+        const PAGE_SIZE = 1000;
 
-    if (accountId) {
-        insightsQuery = insightsQuery.eq('account_id', accountId)
+        while (true) {
+            let query = supabase
+                .from(table)
+                .select(select)
+                .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+            query = filters(query);
+
+            const { data, error } = await query;
+            if (error) {
+                console.error(`[facebook.ts] Error fetching ${table} (page ${page}):`, error);
+                throw new Error(`Failed to fetch ${table}`);
+            }
+
+            if (!data || data.length === 0) break;
+
+            allData = allData.concat(data);
+            if (data.length < PAGE_SIZE) break;
+
+            page++;
+        }
+
+        return allData;
     }
-    if (campaignId) {
-        insightsQuery = insightsQuery.eq('campaign_id', campaignId)
-    }
 
-    const { data: insights, error: insightsError } = await insightsQuery
+    // Fetch insights (potentially large dataset)
+    const insights = await fetchAllRows<any>('facebook_insights', '*', (q) => {
+        let query = q.gte('date', startDate).lte('date', endDate);
+        if (accountId) query = query.eq('account_id', accountId);
+        if (campaignId) query = query.eq('campaign_id', campaignId);
+        return query;
+    });
 
-    if (insightsError) {
-        console.error('[facebook.ts] Error fetching insights:', insightsError)
-        throw new Error('Failed to fetch Facebook insights')
-    }
+    // Fetch campaigns
+    const campaigns = await fetchAllRows<any>('facebook_campaigns', 'id, account_id, name, status, objective');
+    const campaignMap = new Map(campaigns.map(c => [c.id, c]));
 
-    // Fetch campaigns for metadata
-    const { data: campaigns } = await supabase
-        .from('facebook_campaigns')
-        .select('id, account_id, name, status, objective')
-
-    const campaignMap = new Map(campaigns?.map(c => [c.id, c]) || [])
-
-    // Fetch accounts for metadata
-    const { data: accounts } = await supabase
-        .from('facebook_ad_accounts')
-        .select('id, name')
-        .eq('active', true)
-
-    const accountMap = new Map(accounts?.map(a => [a.id, a]) || [])
+    // Fetch accounts
+    const accounts = await fetchAllRows<any>('facebook_ad_accounts', 'id, name', (q) => q.eq('active', true));
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     // Fetch ad sets
-    const { data: adsets } = await supabase
-        .from('facebook_adsets')
-        .select('id, campaign_id, name, status')
-
-    const adsetMap = new Map(adsets?.map(a => [a.id, a]) || [])
+    const adsets = await fetchAllRows<any>('facebook_adsets', 'id, campaign_id, name, status');
+    // const adsetMap = new Map(adsets.map(a => [a.id, a])); // Unused in this scope but good to have if needed
 
     // Fetch ads
-    const { data: ads } = await supabase
-        .from('facebook_ads')
-        .select('id, adset_id, campaign_id, name, status, creative_thumbnail_url')
+    const ads = await fetchAllRows<any>('facebook_ads', 'id, adset_id, campaign_id, name, status, creative_thumbnail_url');
+    const adsetMap = new Map(adsets?.map(a => [a.id, a]) || []); // Re-instantiated here for aggregateByAd
 
     // Calculate summary metrics
     const summary = calculateSummary(insights || [])
