@@ -24,15 +24,47 @@ export async function getCreativeRanking(
     // Fix: Adjust endDate to include full day
     const end = endDate.includes('T') ? endDate : `${endDate}T23:59:59`
 
-    const { data: events, error } = await supabase
-        .from('gtm_analytics_view')
-        .select('traffic_source, traffic_medium, utm_content, utm_term, event_name, value')
-        .gte('timestamp', startDate)
-        .lte('timestamp', end)
-        .not('utm_content', 'is', null)
+    // Helper to fetch all rows using pagination
+    async function fetchAllRows<T>(
+        table: string,
+        select: string,
+        filters: (query: any) => any = q => q
+    ): Promise<T[]> {
+        let allData: T[] = [];
+        let page = 0;
+        const PAGE_SIZE = 1000;
 
-    if (error) {
-        throw new Error(`Error fetching creative metrics: ${error.message}`)
+        while (true) {
+            let query = supabase
+                .from(table)
+                .select(select)
+                .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+            query = filters(query);
+
+            const { data, error } = await query;
+            if (error) {
+                console.error(`[creatives.ts] Error fetching ${table} (page ${page}):`, error);
+                throw new Error(`Failed to fetch ${table}`);
+            }
+
+            if (!data || data.length === 0) break;
+
+            allData = allData.concat(data);
+            if (data.length < PAGE_SIZE) break;
+
+            page++;
+        }
+
+        return allData;
+    }
+
+    const events = await fetchAllRows<any>('gtm_analytics_view', 'traffic_source, traffic_medium, utm_content, utm_term, event_name, value', (q) => {
+        return q.gte('timestamp', startDate).lte('timestamp', end).not('utm_content', 'is', null);
+    });
+
+    if (!events || events.length === 0) {
+        return [];
     }
 
     // Helper interface for placement stats
@@ -46,7 +78,7 @@ export async function getCreativeRanking(
 
     const creativeMap = new Map<string, CreativeMetrics & { placements: Map<string, PlacementStats> }>()
 
-    events?.forEach(event => {
+    events.forEach(event => {
         const creativeId = event.utm_content || '(not set)'
         const medium = event.traffic_medium || '(not set)'
 

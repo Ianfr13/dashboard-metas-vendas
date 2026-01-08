@@ -1,14 +1,44 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Image, Video, MonitorPlay, ExternalLink, MonitorSmartphone, LayoutGrid, Smartphone, Laptop } from "lucide-react";
+import { Image, ArrowUpDown, ArrowUp, ArrowDown, Smartphone, Laptop, LayoutGrid } from "lucide-react";
 import { CreativeMetrics } from "@/lib/edge-functions";
 
 interface CreativeRankingTableProps {
     data: CreativeMetrics[];
 }
 
+type SortKey = keyof CreativeMetrics;
+
 export default function CreativeRankingTable({ data }: CreativeRankingTableProps) {
+    const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
+
+    const sortedData = [...data].sort((a, b) => {
+        if (!sortConfig) return 0;
+        const { key, direction } = sortConfig;
+        if (a[key] < b[key]) return direction === 'asc' ? -1 : 1;
+        if (a[key] > b[key]) return direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    const requestSort = (key: SortKey) => {
+        let direction: 'asc' | 'desc' = 'desc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
+            direction = 'asc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (key: SortKey) => {
+        if (!sortConfig || sortConfig.key !== key) {
+            return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground opacity-50" />;
+        }
+        return sortConfig.direction === 'asc'
+            ? <ArrowUp className="ml-2 h-4 w-4 text-primary" />
+            : <ArrowDown className="ml-2 h-4 w-4 text-primary" />;
+    };
+
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat("pt-BR", {
             style: "currency",
@@ -35,84 +65,102 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                 <CardDescription>Performance detalhada por criativo (utm_content)</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Criativo (ID)</TableHead>
-                                <TableHead>Melhor Formato</TableHead>
-                                <TableHead className="text-right">Visitas</TableHead>
-                                <TableHead className="text-right">Add to Cart</TableHead>
-                                <TableHead className="text-right">Wishlist</TableHead>
-                                <TableHead className="text-right">Checkout (IC)</TableHead>
-                                <TableHead className="text-right">Vendas</TableHead>
-                                <TableHead className="text-right">Receita</TableHead>
-                                <TableHead className="text-right">Conv. Venda</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {data.map((item, index) => (
-                                <TableRow key={index} className="hover:bg-muted/50 transition-colors">
-                                    <TableCell className="font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-muted rounded-full text-indigo-500">
-                                                <Image className="h-4 w-4" />
-                                            </div>
-                                            <span className="font-mono text-xs truncate max-w-[150px]" title={item.creativeId}>
-                                                {item.creativeId}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-1 bg-muted rounded-full text-indigo-500">
-                                                {getPlacementIcon(item.bestPlacement)}
-                                            </div>
-                                            <span className="text-sm font-medium">{item.bestPlacement || '-'}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-sm">
-                                        {formatNumber(item.pageViews)}
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-sm">
-                                        {formatNumber(item.addToCart)}
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-sm">
-                                        {formatNumber(item.addToWishlist)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex flex-col items-end">
-                                            <span className="font-mono text-sm">{formatNumber(item.checkouts)}</span>
-                                            {item.pageViews > 0 && (
-                                                <span className="text-[10px] text-muted-foreground">
-                                                    {(((item.checkouts || 0) / (item.pageViews || 1)) * 100).toFixed(1)}%
+                <div className="overflow-auto max-h-[500px]">
+                    <div className="relative w-full">
+                        <table className="w-full caption-bottom text-sm">
+                            <TableHeader>
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead onClick={() => requestSort('creativeId')} className="sticky top-0 z-20 bg-card cursor-pointer hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center">Criativo (ID) {getSortIcon('creativeId')}</div>
+                                    </TableHead>
+                                    <TableHead className="sticky top-0 z-20 bg-card shadow-sm">Melhor Formato</TableHead>
+                                    <TableHead onClick={() => requestSort('pageViews')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Visitas {getSortIcon('pageViews')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('addToCart')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Add to Cart {getSortIcon('addToCart')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('addToWishlist')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Wishlist {getSortIcon('addToWishlist')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('checkouts')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Checkout (IC) {getSortIcon('checkouts')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('sales')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Vendas {getSortIcon('sales')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('revenue')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Receita {getSortIcon('revenue')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('conversionRate')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Conv. Venda {getSortIcon('conversionRate')}</div>
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sortedData.map((item, index) => (
+                                    <TableRow key={index} className="hover:bg-muted/50 transition-colors">
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-2 bg-muted rounded-full text-indigo-500">
+                                                    <Image className="h-4 w-4" />
+                                                </div>
+                                                <span className="font-mono text-xs truncate max-w-[150px]" title={item.creativeId}>
+                                                    {item.creativeId}
                                                 </span>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-sm">
-                                        {formatNumber(item.sales)}
-                                    </TableCell>
-                                    <TableCell className="text-right font-semibold text-green-600">
-                                        {formatCurrency(item.revenue)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Badge variant={(item.conversionRate || 0) > 1 ? "default" : "secondary"}>
-                                            {(item.conversionRate || 0).toFixed(2)}%
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-1 bg-muted rounded-full text-indigo-500">
+                                                    {getPlacementIcon(item.bestPlacement)}
+                                                </div>
+                                                <span className="text-sm font-medium">{item.bestPlacement || '-'}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-sm">
+                                            {formatNumber(item.pageViews)}
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-sm">
+                                            {formatNumber(item.addToCart)}
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-sm">
+                                            {formatNumber(item.addToWishlist)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex flex-col items-end">
+                                                <span className="font-mono text-sm">{formatNumber(item.checkouts)}</span>
+                                                {item.pageViews > 0 && (
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        {(((item.checkouts || 0) / (item.pageViews || 1)) * 100).toFixed(1)}%
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-sm">
+                                            {formatNumber(item.sales)}
+                                        </TableCell>
+                                        <TableCell className="text-right font-semibold text-green-600">
+                                            {formatCurrency(item.revenue)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge variant={(item.conversionRate || 0) > 1 ? "default" : "secondary"}>
+                                                {(item.conversionRate || 0).toFixed(2)}%
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
 
-                            {data.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                                        Nenhum dado de criativo registrado no período.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                                {sortedData.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                                            Nenhum dado de criativo registrado no período.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </table>
+                    </div>
                 </div>
             </CardContent>
         </Card>
