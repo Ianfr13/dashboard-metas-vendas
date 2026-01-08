@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpDown } from "lucide-react";
@@ -16,58 +16,29 @@ const DEFAULT_COLUMN_WIDTH = 120;
 
 export default function FacebookAdsTable({ data, selectedMetrics, level, onSort }: FacebookAdsTableProps) {
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-    const [resizeLinePos, setResizeLinePos] = useState<number | null>(null);
-    const tableContainerRef = useRef<HTMLDivElement>(null);
-    // Armazena dados do resize atual sem causar re-renders desnecessários
-    const resizeData = useRef<{ column: string; headerLeft: number } | null>(null);
+    const [resizing, setResizing] = useState<string | null>(null);
 
     const columns = useMemo(() => {
         return selectedMetrics.map(key => FACEBOOK_METRICS.find(m => m.key === key)!).filter(Boolean);
     }, [selectedMetrics]);
 
-    const handleResizeStart = (column: string, e: React.MouseEvent, headerElement: HTMLElement) => {
+    const handleResizeStart = (column: string, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
-        const container = tableContainerRef.current;
-        if (!container) return;
-
-        const headerRect = headerElement.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
-        // Armazena a posição esquerda visual do cabeçalho
-        resizeData.current = {
-            column,
-            headerLeft: headerRect.left
-        };
-
-        // Define posição inicial da linha (relativa ao container)
-        setResizeLinePos(e.clientX - containerRect.left);
+        setResizing(column);
+        const startX = e.clientX;
+        const startWidth = columnWidths[column] || DEFAULT_COLUMN_WIDTH;
 
         const handleMouseMove = (moveEvent: MouseEvent) => {
-            const currentContainerRect = container.getBoundingClientRect();
-            // Posição da linha relativa ao container principal
-            const relativeX = moveEvent.clientX - currentContainerRect.left;
-            setResizeLinePos(relativeX);
+            const diff = moveEvent.clientX - startX;
+            const newWidth = Math.max(MIN_COLUMN_WIDTH, startWidth + diff);
+            // Updating state directly triggers re-render, creating "live resize" effect
+            setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
         };
 
-        const handleMouseUp = (upEvent: MouseEvent) => {
-            if (resizeData.current) {
-                // Captura valores locais para evitar erro no callback do setState (que roda depois)
-                const { column, headerLeft } = resizeData.current;
-
-                // Cálculo da largura: Posição visual do mouse - Posição visual esquerda da coluna
-                const newWidth = Math.max(MIN_COLUMN_WIDTH, upEvent.clientX - headerLeft);
-
-                setColumnWidths(prev => ({
-                    ...prev,
-                    [column]: newWidth
-                }));
-            }
-
-            // Limpeza
-            setResizeLinePos(null);
-            resizeData.current = null;
+        const handleMouseUp = () => {
+            setResizing(null);
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
@@ -99,105 +70,111 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
         );
     }
 
-    return (
-        <div ref={tableContainerRef} className="border rounded-lg overflow-hidden relative select-none">
-            {/* Linha Fantasma */}
-            {resizeLinePos !== null && (
-                <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-50 pointer-events-none"
-                    style={{ left: resizeLinePos }}
-                />
-            )}
+    // Styles for resize handle
+    const resizeHandleStyle = "absolute right-0 top-0 bottom-0 w-4 cursor-col-resize flex items-center justify-center z-20 group hover:bg-blue-500/5 select-none touch-none";
+    const resizeLineStyle = "w-0.5 h-full bg-border group-hover:bg-blue-500 transition-colors";
 
+    return (
+        <div className="border rounded-lg overflow-hidden relative select-none bg-background">
             <div className="overflow-x-auto">
-                <Table className="min-w-[800px]" style={{ tableLayout: 'fixed' }}>
+                <Table className="w-max min-w-full" style={{ tableLayout: 'fixed' }}>
                     <TableHeader>
-                        <TableRow>
+                        <TableRow className="border-b hover:bg-transparent">
                             <TableHead
-                                className="sticky left-0 z-10 bg-background relative group border-r"
-                                style={{ width: `${getColumnWidth('name')}px`, minWidth: '180px' }}
+                                className="sticky left-0 z-10 bg-background border-r p-0 h-10"
+                                style={{ width: getColumnWidth('name'), minWidth: getColumnWidth('name') }}
                             >
-                                <div className="flex items-center justify-between pr-2 h-full">
-                                    <span className="truncate">Nome</span>
+                                <div className="flex items-center justify-between px-4 h-full relative">
+                                    <span className="truncate font-semibold">Nome</span>
                                     <div
-                                        className="absolute right-0 top-0 bottom-0 w-4 cursor-col-resize hover:bg-blue-500/10 flex items-center justify-center -mr-2 z-20"
-                                        onMouseDown={(e) => handleResizeStart('name', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                        className={resizeHandleStyle}
+                                        style={{ right: '-8px' }}
+                                        onMouseDown={(e) => handleResizeStart('name', e)}
                                     >
-                                        <div className="w-0.5 h-4 bg-gray-300 group-hover:bg-blue-400" />
+                                        <div className={resizeLineStyle} />
                                     </div>
                                 </div>
                             </TableHead>
+
                             {level === 'adset' && (
-                                <TableHead className="relative group border-r" style={{ width: `${getColumnWidth('campaign')}px`, minWidth: '150px' }}>
-                                    <div className="flex items-center justify-between pr-2 h-full">
-                                        <span className="truncate">Campanha</span>
+                                <TableHead className="p-0 h-10 border-r relative" style={{ width: getColumnWidth('campaign'), minWidth: getColumnWidth('campaign') }}>
+                                    <div className="flex items-center justify-between px-4 h-full">
+                                        <span className="truncate font-semibold">Campanha</span>
                                         <div
-                                            className="absolute right-0 top-0 bottom-0 w-4 cursor-col-resize hover:bg-blue-500/10 flex items-center justify-center -mr-2 z-20"
-                                            onMouseDown={(e) => handleResizeStart('campaign', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                            className={resizeHandleStyle}
+                                            style={{ right: '-8px' }}
+                                            onMouseDown={(e) => handleResizeStart('campaign', e)}
                                         >
-                                            <div className="w-0.5 h-4 bg-gray-300 group-hover:bg-blue-400" />
+                                            <div className={resizeLineStyle} />
                                         </div>
                                     </div>
                                 </TableHead>
                             )}
+
                             {level === 'ad' && (
                                 <>
-                                    <TableHead className="relative group border-r" style={{ width: `${getColumnWidth('campaign')}px`, minWidth: '150px' }}>
-                                        <div className="flex items-center justify-between pr-2 h-full">
-                                            <span className="truncate">Campanha</span>
+                                    <TableHead className="p-0 h-10 border-r relative" style={{ width: getColumnWidth('campaign'), minWidth: getColumnWidth('campaign') }}>
+                                        <div className="flex items-center justify-between px-4 h-full">
+                                            <span className="truncate font-semibold">Campanha</span>
                                             <div
-                                                className="absolute right-0 top-0 bottom-0 w-4 cursor-col-resize hover:bg-blue-500/10 flex items-center justify-center -mr-2 z-20"
-                                                onMouseDown={(e) => handleResizeStart('campaign', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                                className={resizeHandleStyle}
+                                                style={{ right: '-8px' }}
+                                                onMouseDown={(e) => handleResizeStart('campaign', e)}
                                             >
-                                                <div className="w-0.5 h-4 bg-gray-300 group-hover:bg-blue-400" />
+                                                <div className={resizeLineStyle} />
                                             </div>
                                         </div>
                                     </TableHead>
-                                    <TableHead className="relative group border-r" style={{ width: `${getColumnWidth('adset')}px`, minWidth: '150px' }}>
-                                        <div className="flex items-center justify-between pr-2 h-full">
-                                            <span className="truncate">Conjunto</span>
+                                    <TableHead className="p-0 h-10 border-r relative" style={{ width: getColumnWidth('adset'), minWidth: getColumnWidth('adset') }}>
+                                        <div className="flex items-center justify-between px-4 h-full">
+                                            <span className="truncate font-semibold">Conjunto</span>
                                             <div
-                                                className="absolute right-0 top-0 bottom-0 w-4 cursor-col-resize hover:bg-blue-500/10 flex items-center justify-center -mr-2 z-20"
-                                                onMouseDown={(e) => handleResizeStart('adset', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                                className={resizeHandleStyle}
+                                                style={{ right: '-8px' }}
+                                                onMouseDown={(e) => handleResizeStart('adset', e)}
                                             >
-                                                <div className="w-0.5 h-4 bg-gray-300 group-hover:bg-blue-400" />
+                                                <div className={resizeLineStyle} />
                                             </div>
                                         </div>
                                     </TableHead>
                                 </>
                             )}
-                            <TableHead className="relative group border-r" style={{ width: `${getColumnWidth('status')}px`, minWidth: '100px' }}>
-                                <div className="flex items-center justify-between pr-2 h-full">
-                                    <span className="truncate">Status</span>
+
+                            <TableHead className="p-0 h-10 border-r relative" style={{ width: getColumnWidth('status'), minWidth: getColumnWidth('status') }}>
+                                <div className="flex items-center justify-between px-4 h-full">
+                                    <span className="truncate font-semibold">Status</span>
                                     <div
-                                        className="absolute right-0 top-0 bottom-0 w-4 cursor-col-resize hover:bg-blue-500/10 flex items-center justify-center -mr-2 z-20"
-                                        onMouseDown={(e) => handleResizeStart('status', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                        className={resizeHandleStyle}
+                                        style={{ right: '-8px' }}
+                                        onMouseDown={(e) => handleResizeStart('status', e)}
                                     >
-                                        <div className="w-0.5 h-4 bg-gray-300 group-hover:bg-blue-400" />
+                                        <div className={resizeLineStyle} />
                                     </div>
                                 </div>
                             </TableHead>
+
                             {columns.map(col => (
                                 <TableHead
                                     key={col.key}
-                                    className="cursor-pointer hover:bg-muted/50 relative group border-r"
+                                    className="p-0 h-10 border-r relative cursor-pointer hover:bg-muted/50 transition-colors"
                                     onClick={() => onSort?.(col.key)}
-                                    style={{ width: `${getColumnWidth(col.key)}px`, minWidth: `${MIN_COLUMN_WIDTH}px` }}
+                                    style={{ width: getColumnWidth(col.key), minWidth: getColumnWidth(col.key) }}
                                 >
-                                    <div className="flex items-center justify-between pr-2 h-full">
-                                        <div className="flex items-center gap-1 truncate">
+                                    <div className="flex items-center justify-between px-4 h-full">
+                                        <div className="flex items-center gap-1 truncate font-semibold">
                                             {col.label}
-                                            <ArrowUpDown className="h-3 w-3" />
+                                            <ArrowUpDown className="h-3 w-3 opacity-50" />
                                         </div>
                                         <div
-                                            className="absolute right-0 top-0 bottom-0 w-4 cursor-col-resize hover:bg-blue-500/10 flex items-center justify-center -mr-2 z-20"
+                                            className={resizeHandleStyle}
+                                            style={{ right: '-8px' }}
                                             onMouseDown={(e) => {
                                                 e.stopPropagation();
-                                                handleResizeStart(col.key, e, e.currentTarget.parentElement?.parentElement as HTMLElement);
+                                                handleResizeStart(col.key, e);
                                             }}
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <div className="w-0.5 h-4 bg-gray-300 group-hover:bg-blue-400" />
+                                            <div className={resizeLineStyle} />
                                         </div>
                                     </div>
                                 </TableHead>
@@ -206,14 +183,14 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
                     </TableHeader>
                     <TableBody>
                         {data.map((row, idx) => (
-                            <TableRow key={row.id || idx}>
-                                <TableCell className="sticky left-0 z-10 bg-background font-medium border-r">
+                            <TableRow key={row.id || idx} className="hover:bg-muted/30">
+                                <TableCell className="sticky left-0 z-10 bg-background border-r py-3 px-4 font-medium">
                                     <div className="truncate" title={row.name}>
                                         {row.name}
                                     </div>
                                 </TableCell>
                                 {level === 'adset' && (
-                                    <TableCell className="text-sm text-muted-foreground border-r">
+                                    <TableCell className="border-r py-3 px-4 text-muted-foreground">
                                         <div className="truncate" title={row.campaignName}>
                                             {row.campaignName}
                                         </div>
@@ -221,7 +198,7 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
                                 )}
                                 {level === 'ad' && (
                                     <>
-                                        <TableCell className="text-sm text-muted-foreground border-r">
+                                        <TableCell className="border-r py-3 px-4 text-muted-foreground">
                                             <div className="truncate" title={row.campaignName}>
                                                 {row.campaignName}
                                             </div>
@@ -233,14 +210,14 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
                                         </TableCell>
                                     </>
                                 )}
-                                <TableCell className="border-r">
+                                <TableCell className="border-r py-3 px-4">
                                     <Badge variant="outline" className={getStatusColor(row.status)}>
                                         {row.status}
                                     </Badge>
                                 </TableCell>
                                 {columns.map(col => (
-                                    <TableCell key={col.key} className="text-right border-r">
-                                        <div className="truncate">
+                                    <TableCell key={col.key} className="text-right border-r py-3 px-4">
+                                        <div className="truncate font-mono text-sm">
                                             {formatMetricValue(row[col.key], col.format)}
                                         </div>
                                     </TableCell>
