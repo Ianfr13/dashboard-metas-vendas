@@ -18,6 +18,15 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
     const [resizing, setResizing] = useState<string | null>(null);
 
+    const visibleColumns = useMemo(() => {
+        const cols = ['name'];
+        if (level === 'adset' || level === 'ad') cols.push('campaign');
+        if (level === 'ad') cols.push('adset');
+        cols.push('status');
+        selectedMetrics.forEach(key => cols.push(key));
+        return cols;
+    }, [level, selectedMetrics]);
+
     const columns = useMemo(() => {
         return selectedMetrics.map(key => FACEBOOK_METRICS.find(m => m.key === key)!).filter(Boolean);
     }, [selectedMetrics]);
@@ -30,11 +39,46 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
         const startX = e.clientX;
         const startWidth = columnWidths[column] || DEFAULT_COLUMN_WIDTH;
 
+        // Find neighbor for "Grow" case (Drag Right)
+        const columnIndex = visibleColumns.indexOf(column);
+        const nextColumn = visibleColumns[columnIndex + 1];
+        const startNextWidth = nextColumn ? (columnWidths[nextColumn] || DEFAULT_COLUMN_WIDTH) : 0;
+
         const handleMouseMove = (moveEvent: MouseEvent) => {
-            const diff = moveEvent.clientX - startX;
-            const newWidth = Math.max(MIN_COLUMN_WIDTH, startWidth + diff);
-            // Updating state directly triggers re-render, creating "live resize" effect
-            setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
+            const currentX = moveEvent.clientX;
+            const rawDelta = currentX - startX;
+
+            if (rawDelta < 0) {
+                // Dragging Left (Shrink): Only affect current column
+                // Limit: Cannot shrink below MIN_COLUMN_WIDTH
+                const newWidth = Math.max(MIN_COLUMN_WIDTH, startWidth + rawDelta);
+                setColumnWidths(prev => ({
+                    ...prev,
+                    [column]: newWidth
+                }));
+            } else {
+                // Dragging Right (Grow): Affect current AND neighbor
+                if (!nextColumn) {
+                    // No neighbor to shrink, just grow current (or block it? User said "diminuir o tamanho da caixa do gasto". If no neighbor, maybe just grow?)
+                    // Let's allow growing if it's the last column, just extends the table.
+                    const newWidth = startWidth + rawDelta;
+                    setColumnWidths(prev => ({
+                        ...prev,
+                        [column]: newWidth
+                    }));
+                } else {
+                    // Calculate max expansion allowed by neighbor
+                    // Neighbor cannot go below MIN_COLUMN_WIDTH
+                    const maxDelta = Math.max(0, startNextWidth - MIN_COLUMN_WIDTH);
+                    const constrainedDelta = Math.min(rawDelta, maxDelta);
+
+                    setColumnWidths(prev => ({
+                        ...prev,
+                        [column]: startWidth + constrainedDelta,
+                        [nextColumn]: startNextWidth - constrainedDelta
+                    }));
+                }
+            }
         };
 
         const handleMouseUp = () => {
