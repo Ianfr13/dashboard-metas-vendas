@@ -1,14 +1,50 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Youtube, Facebook, Instagram, Linkedin, Globe, MousePointer2, Search, Share2, Twitter } from "lucide-react";
+import { Youtube, Facebook, Instagram, Linkedin, Globe, MousePointer2, Search, Share2, Twitter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { TrafficSourceMetrics } from "@/lib/edge-functions";
 
 interface TrafficSourcesTableProps {
     data: TrafficSourceMetrics[];
 }
 
+type SortKey = keyof TrafficSourceMetrics;
+
 export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) {
+    const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
+
+    const sortedData = [...data].sort((a, b) => {
+        if (!sortConfig) return 0;
+
+        const { key, direction } = sortConfig;
+
+        if (a[key] < b[key]) {
+            return direction === 'asc' ? -1 : 1;
+        }
+        if (a[key] > b[key]) {
+            return direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+    });
+
+    const requestSort = (key: SortKey) => {
+        let direction: 'asc' | 'desc' = 'desc'; // Default to desc for metrics usually
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
+            direction = 'asc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (key: SortKey) => {
+        if (!sortConfig || sortConfig.key !== key) {
+            return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground opacity-50" />;
+        }
+        return sortConfig.direction === 'asc'
+            ? <ArrowUp className="ml-2 h-4 w-4 text-primary" />
+            : <ArrowDown className="ml-2 h-4 w-4 text-primary" />;
+    };
+
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat("pt-BR", {
             style: "currency",
@@ -49,16 +85,28 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Canal</TableHead>
-                                <TableHead className="text-right">Sessões</TableHead>
-                                <TableHead className="text-right">Leads</TableHead>
-                                <TableHead className="text-right">Vendas</TableHead>
-                                <TableHead className="text-right">Receita</TableHead>
-                                <TableHead className="text-right">Conv. Venda</TableHead>
+                                <TableHead onClick={() => requestSort('source')} className="cursor-pointer hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center">Canal {getSortIcon('source')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('sessions')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Sessões {getSortIcon('sessions')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('leads')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Leads {getSortIcon('leads')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('sales')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Vendas {getSortIcon('sales')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('revenue')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Receita {getSortIcon('revenue')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('conversionRate')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Conv. Venda {getSortIcon('conversionRate')}</div>
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.map((item, index) => (
+                            {sortedData.map((item, index) => (
                                 <TableRow key={index} className="hover:bg-muted/50 transition-colors">
                                     <TableCell>
                                         <div className="flex items-center gap-2">

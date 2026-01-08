@@ -15,6 +15,19 @@ interface FunnelMetrics {
   cpl: number;
   cpa: number;
   taxaConversao: number;
+  dropOff?: {
+    pageViewToViewItem: number;
+    viewItemToAddToCart: number;
+    addToCartToCheckout: number;
+    checkoutToPurchase: number;
+  };
+  etapas?: {
+    pageViews: number;
+    viewItem: number;
+    addToCart: number;
+    beginCheckout: number;
+    purchases: number;
+  };
 }
 
 interface EvolutionData {
@@ -69,7 +82,15 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
           custoTotal: 0, // Custo vem de outra fonte
           cpl: 0,
           cpa: 0,
-          taxaConversao: Math.round(taxaConversao * 100) / 100
+          taxaConversao: Math.round(taxaConversao * 100) / 100,
+          dropOff: funnelData.dropOff,
+          etapas: {
+            pageViews: funnelData.etapas?.pageViews || 0,
+            viewItem: funnelData.etapas?.viewItem || 0,
+            addToCart: funnelData.etapas?.addToCart || 0,
+            beginCheckout: funnelData.etapas?.beginCheckout || 0,
+            purchases: funnelData.etapas?.purchases || 0
+          }
         });
 
         // Buscar dados de evolução
@@ -281,37 +302,71 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
           <CardDescription>Acompanhe o fluxo de leads até a conversão</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {/* Leads */}
-            <div className="relative">
-              <div className="bg-blue-500 text-white p-6 rounded-lg text-center">
-                <div className="text-4xl font-bold">{metrics.leads}</div>
-                <div className="text-sm mt-2">Leads Gerados</div>
+          <CardContent>
+            <div className="space-y-6">
+
+              {/* 1. Page View -> View Content */}
+              <div className="flex items-center gap-4">
+                <div className="bg-blue-600 text-white p-4 rounded-lg flex-1 text-center">
+                  <div className="text-2xl font-bold">{metrics.etapas?.pageViews.toLocaleString() || 0}</div>
+                  <div className="text-sm">Visualizações de Página</div>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="text-red-500 font-bold text-xs">{metrics.dropOff?.pageViewToViewItem.toFixed(1)}% Drop-off</div>
+                  <div className="h-0.5 w-16 bg-gray-300 my-1 relative">
+                    <div className="absolute right-0 top-1/2 -mt-1 -mr-1 w-2 h-2 border-t-2 border-r-2 border-gray-300 transform rotate-45"></div>
+                  </div>
+                </div>
+                <div className="bg-blue-500 text-white p-4 rounded-lg flex-1 text-center">
+                  <div className="text-2xl font-bold">{metrics.etapas?.viewItem.toLocaleString() || 0}</div>
+                  <div className="text-sm">Visualização de Produto</div>
+                </div>
               </div>
-              <div className="absolute left-1/2 -bottom-4 transform -translate-x-1/2">
-                <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[20px] border-t-blue-500"></div>
+
+              {/* 2. View Content -> Add To Cart */}
+              <div className="flex items-center gap-4 pl-12">
+                <div className="w-0.5 h-8 bg-gray-300 ml-[25%]"></div>
               </div>
-            </div>
-
-            <div className="h-4"></div>
-
-            {/* Vendas */}
-            <div className="relative">
-              <div className="bg-green-500 text-white p-6 rounded-lg text-center mx-auto" style={{ width: `${metrics.leads > 0 ? (metrics.vendas / metrics.leads) * 100 : 0}%`, minWidth: '200px' }}>
-                <div className="text-4xl font-bold">{metrics.vendas}</div>
-                <div className="text-sm mt-2">Vendas ({metrics.taxaConversao}%)</div>
+              <div className="flex items-center gap-4">
+                <div className="flex-1 text-right text-red-500 text-xs font-bold pr-4">
+                  {metrics.dropOff?.viewItemToAddToCart.toFixed(1)}% Drop-off
+                </div>
+                <div className="bg-blue-400 text-white p-4 rounded-lg flex-1 text-center">
+                  <div className="text-2xl font-bold">{metrics.etapas?.addToCart.toLocaleString() || 0}</div>
+                  <div className="text-sm">Adições ao Carrinho</div>
+                </div>
               </div>
-            </div>
 
-            <div className="h-4"></div>
+              {/* 3. Add to Cart -> Checkout */}
+              <div className="flex items-center gap-4 pl-12">
+                <div className="w-0.5 h-8 bg-gray-300 ml-[60%]"></div>
+              </div>
+              <div className="flex items-center gap-4 justify-end">
+                <div className="flex-1 text-right text-red-500 text-xs font-bold pr-4">
+                  {metrics.dropOff?.addToCartToCheckout.toFixed(1)}% Drop-off
+                </div>
+                <div className="bg-orange-500 text-white p-4 rounded-lg flex-1 text-center max-w-[50%]">
+                  <div className="text-2xl font-bold">{metrics.etapas?.beginCheckout.toLocaleString() || 0}</div>
+                  <div className="text-sm">Initiate Checkout</div>
+                </div>
+              </div>
 
-            {/* Receita */}
-            <div className="bg-purple-500 text-white p-6 rounded-lg text-center mx-auto" style={{ width: '60%', minWidth: '200px' }}>
-              <div className="text-4xl font-bold">R$ {(metrics.receita / 1000).toFixed(0)}k</div>
-              <div className="text-sm mt-2">Receita Gerada</div>
+              {/* 4. Checkout -> Purchase */}
+              <div className="flex items-center gap-4 pl-12">
+                <div className="w-0.5 h-8 bg-gray-300 ml-[75%]"></div>
+              </div>
+              <div className="flex items-center gap-4 justify-end">
+                <div className="flex-1 text-right text-red-500 text-xs font-bold pr-4">
+                  {metrics.dropOff?.checkoutToPurchase.toFixed(1)}% Drop-off
+                </div>
+                <div className="bg-green-600 text-white p-4 rounded-lg flex-1 text-center max-w-[40%]">
+                  <div className="text-2xl font-bold">{metrics.etapas?.purchases.toLocaleString() || 0}</div>
+                  <div className="text-sm">Compras Realizadas</div>
+                </div>
+              </div>
+
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

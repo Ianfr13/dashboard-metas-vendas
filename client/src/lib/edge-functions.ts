@@ -316,6 +316,12 @@ export interface FunnelMetrics {
     checkoutParaVenda: number;
     endToEnd: number;
   };
+  dropOff: {
+    pageViewToViewItem: number;
+    viewItemToAddToCart: number;
+    addToCartToCheckout: number;
+    checkoutToPurchase: number;
+  };
   financeiro: {
     receitaTotal: number;
     ticketMedio: number;
