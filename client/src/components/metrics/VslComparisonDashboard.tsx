@@ -191,7 +191,6 @@ const groupVslsByBaseName = (vsls: VslData[]): Record<string, VslData[]> => {
 
 export default function VslComparisonDashboard({ vsls, startDate, endDate }: VslComparisonDashboardProps) {
     const [selectedVsls, setSelectedVsls] = useState<Set<string>>(new Set());
-    const [retentionData, setRetentionData] = useState<RetentionData[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Individual settings for each VSL
@@ -312,7 +311,6 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
     // Fetch retention data for selected VSLs using React Query with cache
     const startStr = format(startDate, 'yyyy-MM-dd');
     const endStr = format(endDate, 'yyyy-MM-dd');
-
     const selectedVslsArray = Array.from(selectedVsls);
 
     const retentionQueries = useQueries({
@@ -324,29 +322,20 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                 queryKey: ['vturb', 'engagement', vslId, startStr, endStr, duration],
                 queryFn: () => vturbAnalyticsAPI.getEngagement(vslId, startStr, endStr, duration),
                 enabled: !!vslId,
-                staleTime: 10 * 60 * 1000, // 10 minutes
-                gcTime: 30 * 60 * 1000, // 30 minutes cache
+                staleTime: 10 * 60 * 1000,
+                gcTime: 30 * 60 * 1000,
                 refetchOnWindowFocus: false,
-                placeholderData: (prev: any) => prev, // Keep previous data while loading
+                placeholderData: (prev: any) => prev,
             };
         }),
     });
 
-    // Combine retention data from all queries
-    useEffect(() => {
-        if (selectedVsls.size === 0) {
-            setRetentionData([]);
-            return;
-        }
+    // Check if any query is refetching (for subtle indicator)
+    const isFetchingDetailed = retentionQueries.some(q => q.isFetching);
 
-        // Check if any query is loading for the first time (no data yet)
-        const hasInitialLoading = retentionQueries.some(q => q.isLoading && !q.data);
-        if (hasInitialLoading) {
-            setLoading(true);
-            return;
-        }
-
-        setLoading(false);
+    // Combine retention data from all queries using useMemo
+    const retentionData = useMemo(() => {
+        if (selectedVsls.size === 0) return [];
 
         // Combine results
         const results = retentionQueries.map((query, index) => ({
@@ -355,20 +344,32 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
             duration: vsls.find(v => v.id === selectedVslsArray[index])?.duration || 1800
         }));
 
-        const maxMinutes = Math.max(...results.map(r => r.data.length), 30);
+        // If we have no data at all in any selected VSL and we are loading, return empty
+        // But if we have any data (from placeholder or previous), show it
+        if (results.every(r => (r.data?.length ?? 0) === 0)) return [];
+
+        const maxMinutes = Math.max(...results.map(r => r.data?.length ?? 0), 30);
         const combined: RetentionData[] = [];
 
         for (let min = 0; min < maxMinutes; min++) {
             const row: RetentionData = { minute: min };
             results.forEach(({ vslId, data }) => {
-                const point = data.find((d: any) => d.minute === min);
+                const point = Array.isArray(data) ? data.find((d: any) => d.minute === min) : null;
                 row[vslId] = point?.retention || 0;
             });
             combined.push(row);
         }
 
-        setRetentionData(combined);
+        return combined;
     }, [retentionQueries.map(q => q.dataUpdatedAt).join(','), selectedVslsArray.join(',')]);
+
+    // Update global loading state only for initial load (when we have no data at all)
+    useEffect(() => {
+        const hasNoDataAtAll = selectedVslsArray.length > 0 && (retentionData?.length ?? 0) === 0;
+        const isCurrentlyLoading = retentionQueries.some(q => q.isLoading && !q.data);
+
+        setLoading(hasNoDataAtAll && isCurrentlyLoading);
+    }, [retentionData?.length, retentionQueries.some(q => q.isLoading)]);
 
 
     const formatPercent = (value: number) => `${(value || 0).toFixed(1)}%`;
@@ -502,8 +503,8 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                 )}
 
                 {/* Retention Chart */}
-                <div className="h-[350px]">
-                    {loading ? (
+                <div className="h-[350px] relative">
+                    {loading && retentionData.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
@@ -512,49 +513,56 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
                             <p>Selecione VSLs na tabela abaixo para comparar retenção</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={retentionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                                <XAxis
-                                    dataKey="minute"
-                                    tickFormatter={(v) => `${v}:00`}
-                                    className="text-xs"
-                                />
-                                <YAxis
-                                    domain={[0, 100]}
-                                    tickFormatter={(v) => `${v}%`}
-                                    className="text-xs"
-                                />
-                                <Tooltip
-                                    formatter={(value: number, name: string) => {
-                                        const vsl = vsls.find(v => v.id === name);
-                                        return [`${value.toFixed(1)}%`, getLeadLabel(vsl?.name || name)];
-                                    }}
-                                    labelFormatter={(label) => `${label}:00`}
-                                    contentStyle={{
-                                        backgroundColor: 'hsl(var(--background))',
-                                        borderColor: 'hsl(var(--border))'
-                                    }}
-                                />
-                                <Legend
-                                    formatter={(value) => {
-                                        const vsl = vsls.find(v => v.id === value);
-                                        return getLeadLabel(vsl?.name || value);
-                                    }}
-                                />
-                                {Array.from(selectedVsls).map((vslId, index) => (
-                                    <Area
-                                        key={vslId}
-                                        type="monotone"
-                                        dataKey={vslId}
-                                        stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                                        fill={CHART_COLORS[index % CHART_COLORS.length]}
-                                        fillOpacity={0.1}
-                                        strokeWidth={2}
+                        <>
+                            {isFetchingDetailed && (
+                                <div className="absolute top-2 right-2 z-10">
+                                    <Loader2 className="h-4 w-4 animate-spin text-orange-500 opacity-50" />
+                                </div>
+                            )}
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={retentionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                                    <XAxis
+                                        dataKey="minute"
+                                        tickFormatter={(v) => `${v}:00`}
+                                        className="text-xs"
                                     />
-                                ))}
-                            </AreaChart>
-                        </ResponsiveContainer>
+                                    <YAxis
+                                        domain={[0, 100]}
+                                        tickFormatter={(v) => `${v}%`}
+                                        className="text-xs"
+                                    />
+                                    <Tooltip
+                                        formatter={(value: number, name: string) => {
+                                            const vsl = vsls.find(v => v.id === name);
+                                            return [`${value.toFixed(1)}%`, getLeadLabel(vsl?.name || name)];
+                                        }}
+                                        labelFormatter={(label) => `${label}:00`}
+                                        contentStyle={{
+                                            backgroundColor: 'hsl(var(--background))',
+                                            borderColor: 'hsl(var(--border))'
+                                        }}
+                                    />
+                                    <Legend
+                                        formatter={(value) => {
+                                            const vsl = vsls.find(v => v.id === value);
+                                            return getLeadLabel(vsl?.name || value);
+                                        }}
+                                    />
+                                    {Array.from(selectedVsls).map((vslId, index) => (
+                                        <Area
+                                            key={vslId}
+                                            type="monotone"
+                                            dataKey={vslId}
+                                            stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                                            fill={CHART_COLORS[index % CHART_COLORS.length]}
+                                            fillOpacity={0.1}
+                                            strokeWidth={2}
+                                        />
+                                    ))}
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </>
                     )}
                 </div>
 
