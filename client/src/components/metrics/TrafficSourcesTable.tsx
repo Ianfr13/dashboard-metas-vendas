@@ -117,85 +117,87 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
             </CardHeader>
             <CardContent>
                 <div className="overflow-auto max-h-[400px]">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead onClick={() => requestSort('source')} className="sticky top-0 z-20 bg-card cursor-pointer hover:bg-muted/50 transition-colors shadow-sm">
-                                    <div className="flex items-center">Canal {getSortIcon('source')}</div>
-                                </TableHead>
-                                <TableHead onClick={() => requestSort('sessions')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                    <div className="flex items-center justify-end">Sessões {getSortIcon('sessions')}</div>
-                                </TableHead>
-                                <TableHead onClick={() => requestSort('leads')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                    <div className="flex items-center justify-end">Leads {getSortIcon('leads')}</div>
-                                </TableHead>
-                                <TableHead onClick={() => requestSort('sales')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                    <div className="flex items-center justify-end">Vendas {getSortIcon('sales')}</div>
-                                </TableHead>
-                                <TableHead onClick={() => requestSort('revenue')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                    <div className="flex items-center justify-end">Receita {getSortIcon('revenue')}</div>
-                                </TableHead>
-                                <TableHead onClick={() => requestSort('conversionRate')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                    <div className="flex items-center justify-end">Conv. Venda {getSortIcon('conversionRate')}</div>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sortedData.map((item, index) => {
-                                const isMetaAds = item.source.toLowerCase().includes('meta_ads') || item.source.toLowerCase().includes('meta ads');
-                                const displaySource = isMetaAds ? item.medium : item.source; // Se for meta ads, mostra o medium (posicionamento) como título
-                                const displayMedium = isMetaAds ? "Ads" : item.medium; // Se for meta ads, mostra "Ads" como subtítulo
+                    <div className="relative w-full">
+                        <table className="w-full caption-bottom text-sm">
+                            <TableHeader>
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead onClick={() => requestSort('source')} className="sticky top-0 z-20 bg-card cursor-pointer hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center">Canal {getSortIcon('source')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('sessions')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Sessões {getSortIcon('sessions')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('leads')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Leads {getSortIcon('leads')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('sales')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Vendas {getSortIcon('sales')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('revenue')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Receita {getSortIcon('revenue')}</div>
+                                    </TableHead>
+                                    <TableHead onClick={() => requestSort('conversionRate')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
+                                        <div className="flex items-center justify-end">Conv. Venda {getSortIcon('conversionRate')}</div>
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sortedData.map((item, index) => {
+                                    const isMetaAds = item.source.toLowerCase().includes('meta_ads') || item.source.toLowerCase().includes('meta ads');
+                                    const displaySource = isMetaAds ? item.medium : item.source; // Se for meta ads, mostra o medium (posicionamento) como título
+                                    const displayMedium = isMetaAds ? "Ads" : item.medium; // Se for meta ads, mostra "Ads" como subtítulo
 
-                                return (
-                                    <TableRow key={index} className="hover:bg-muted/50 transition-colors">
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-2 bg-muted rounded-full">
-                                                    {getSourceIcon(displaySource)}
+                                    return (
+                                        <TableRow key={index} className="hover:bg-muted/50 transition-colors">
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2 bg-muted rounded-full">
+                                                        {getSourceIcon(displaySource)}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-sm">{getSourceLabel(displaySource)}</span>
+                                                        <span className="text-xs text-muted-foreground">{displayMedium}</span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-sm">{getSourceLabel(displaySource)}</span>
-                                                    <span className="text-xs text-muted-foreground">{displayMedium}</span>
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono text-sm">
+                                                {formatNumber(item.sessions)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex flex-col items-end">
+                                                    <span className="font-mono text-sm">{formatNumber(item.leads)}</span>
+                                                    {item.sessions > 0 && (
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            {(((item.leads || 0) / (item.sessions || 1)) * 100).toFixed(1)}%
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono text-sm">
-                                            {formatNumber(item.sessions)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex flex-col items-end">
-                                                <span className="font-mono text-sm">{formatNumber(item.leads)}</span>
-                                                {item.sessions > 0 && (
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        {(((item.leads || 0) / (item.sessions || 1)) * 100).toFixed(1)}%
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono text-sm">
-                                            {formatNumber(item.sales)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-semibold text-green-600">
-                                            {formatCurrency(item.revenue)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Badge variant={(item.conversionRate || 0) > 1 ? "default" : "secondary"}>
-                                                {(item.conversionRate || 0).toFixed(2)}%
-                                            </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono text-sm">
+                                                {formatNumber(item.sales)}
+                                            </TableCell>
+                                            <TableCell className="text-right font-semibold text-green-600">
+                                                {formatCurrency(item.revenue)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Badge variant={(item.conversionRate || 0) > 1 ? "default" : "secondary"}>
+                                                    {(item.conversionRate || 0).toFixed(2)}%
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+
+                                {sortedData.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                            Nenhum dado encontrado para o filtro selecionado.
                                         </TableCell>
                                     </TableRow>
-                                );
-                            })}
-
-                            {sortedData.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                        Nenhum dado encontrado para o filtro selecionado.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                                )}
+                            </TableBody>
+                        </table>
+                    </div>
                 </div>
             </CardContent>
         </Card>
