@@ -115,6 +115,31 @@ export function useVturbMetrics({ startDate, endDate, enabled = true }: UseMetri
     });
 }
 
+// Hook for individual VSL engagement/retention data with caching
+export interface UseVturbEngagementParams {
+    playerId: string;
+    startDate: Date;
+    endDate: Date;
+    duration: number;
+    enabled?: boolean;
+}
+
+export function useVturbEngagement({ playerId, startDate, endDate, duration, enabled = true }: UseVturbEngagementParams) {
+    const { startIso, endIso } = getIsoDates(startDate, endDate);
+    const startStr = startIso.split('T')[0];
+    const endStr = endIso.split('T')[0];
+
+    return useQuery({
+        queryKey: ['vturb', 'engagement', playerId, startStr, endStr, duration],
+        queryFn: () => vturbAnalyticsAPI.getEngagement(playerId, startStr, endStr, duration),
+        enabled: enabled && !!playerId,
+        staleTime: 10 * 60 * 1000, // 10 minutes - retention data changes slowly
+        gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+        refetchOnWindowFocus: false, // Don't refetch on tab focus
+        placeholderData: (previousData) => previousData, // Keep showing previous data while loading new
+    });
+}
+
 export function useFacebookMetrics({ startDate, endDate, enabled = true }: UseMetricsParams) {
     const { startIso, endIso } = getIsoDates(startDate, endDate);
     return useQuery({

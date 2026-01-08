@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, TrendingDown, Play, Target, Clock, Users } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { vturbAnalyticsAPI } from "@/lib/edge-functions";
+import { useQueries } from '@tanstack/react-query';
 import { format } from "date-fns";
 
 // Helper to format seconds as MM:SS
@@ -308,71 +309,66 @@ export default function VslComparisonDashboard({ vsls, startDate, endDate }: Vsl
         }, 1000);
     }, []);
 
+    // Fetch retention data for selected VSLs using React Query with cache
+    const startStr = format(startDate, 'yyyy-MM-dd');
+    const endStr = format(endDate, 'yyyy-MM-dd');
+
+    const selectedVslsArray = Array.from(selectedVsls);
+
+    const retentionQueries = useQueries({
+        queries: selectedVslsArray.map((vslId) => {
+            const vsl = vsls.find(v => v.id === vslId);
+            const duration = vsl?.duration || 1800;
+
+            return {
+                queryKey: ['vturb', 'engagement', vslId, startStr, endStr, duration],
+                queryFn: () => vturbAnalyticsAPI.getEngagement(vslId, startStr, endStr, duration),
+                enabled: !!vslId,
+                staleTime: 10 * 60 * 1000, // 10 minutes
+                gcTime: 30 * 60 * 1000, // 30 minutes cache
+                refetchOnWindowFocus: false,
+                placeholderData: (prev: any) => prev, // Keep previous data while loading
+            };
+        }),
+    });
+
+    // Combine retention data from all queries
     useEffect(() => {
         if (selectedVsls.size === 0) {
             setRetentionData([]);
             return;
         }
 
-        let isMounted = true;
-        let intervalId: NodeJS.Timeout | null = null;
+        // Check if any query is loading for the first time (no data yet)
+        const hasInitialLoading = retentionQueries.some(q => q.isLoading && !q.data);
+        if (hasInitialLoading) {
+            setLoading(true);
+            return;
+        }
 
-        const fetchRetentions = async () => {
-            // Only show full loading state if we don't have any data yet
-            if (retentionData.length === 0) {
-                setLoading(true);
-            }
+        setLoading(false);
 
-            try {
-                const start = format(startDate, 'yyyy-MM-dd');
-                const end = format(endDate, 'yyyy-MM-dd');
+        // Combine results
+        const results = retentionQueries.map((query, index) => ({
+            vslId: selectedVslsArray[index],
+            data: query.data || [],
+            duration: vsls.find(v => v.id === selectedVslsArray[index])?.duration || 1800
+        }));
 
-                const promises = Array.from(selectedVsls).map(async (vslId) => {
-                    const vsl = vsls.find(v => v.id === vslId);
-                    const duration = vsl?.duration || 1800; // Default to 30 mins if missing
-                    const data = await vturbAnalyticsAPI.getEngagement(vslId, start, end, duration);
-                    return { vslId, data, duration };
-                });
+        const maxMinutes = Math.max(...results.map(r => r.data.length), 30);
+        const combined: RetentionData[] = [];
 
-                const results = await Promise.all(promises);
+        for (let min = 0; min < maxMinutes; min++) {
+            const row: RetentionData = { minute: min };
+            results.forEach(({ vslId, data }) => {
+                const point = data.find((d: any) => d.minute === min);
+                row[vslId] = point?.retention || 0;
+            });
+            combined.push(row);
+        }
 
-                if (!isMounted) return;
-
-                const maxMinutes = Math.max(...results.map(r => r.data.length), 30);
-                const combined: RetentionData[] = [];
-
-                for (let min = 0; min < maxMinutes; min++) {
-                    const row: RetentionData = { minute: min };
-                    results.forEach(({ vslId, data }) => {
-                        const point = data.find(d => d.minute === min);
-                        row[vslId] = point?.retention || 0;
-                    });
-                    combined.push(row);
-                }
-
-                setRetentionData(combined);
-            } catch (err) {
-                console.error('Error fetching retentions:', err);
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        fetchRetentions();
-
-        intervalId = setInterval(() => {
-            fetchRetentions();
-        }, 30000);
-
-        return () => {
-            isMounted = false;
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
-    }, [selectedVsls, startDate, endDate, vsls]);
+        setRetentionData(combined);
+    }, [retentionQueries.map(q => q.dataUpdatedAt).join(','), selectedVslsArray.join(',')]);
 
 
     const formatPercent = (value: number) => `${(value || 0).toFixed(1)}%`;
