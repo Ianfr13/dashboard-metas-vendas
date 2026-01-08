@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpDown } from "lucide-react";
@@ -16,37 +16,30 @@ const DEFAULT_COLUMN_WIDTH = 120;
 
 export default function FacebookAdsTable({ data, selectedMetrics, level, onSort }: FacebookAdsTableProps) {
     const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-    const [resizePreview, setResizePreview] = useState<{ column: string; x: number } | null>(null);
+    const [resizing, setResizing] = useState<{ column: string; startX: number; startWidth: number } | null>(null);
+    const tableRef = useRef<HTMLDivElement>(null);
 
     const columns = useMemo(() => {
         return selectedMetrics.map(key => FACEBOOK_METRICS.find(m => m.key === key)!).filter(Boolean);
     }, [selectedMetrics]);
 
-    const handleResizeStart = (column: string, e: React.MouseEvent, headerElement: HTMLElement) => {
+    const handleResizeStart = (column: string, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
-        const tableContainer = headerElement.closest('.overflow-x-auto') as HTMLElement;
-        const containerRect = tableContainer.getBoundingClientRect();
-        const headerRect = headerElement.getBoundingClientRect();
-
-        // Posição inicial da coluna relativa ao container
-        const columnStart = headerRect.left - containerRect.left + tableContainer.scrollLeft;
+        const currentWidth = columnWidths[column] || DEFAULT_COLUMN_WIDTH;
+        setResizing({ column, startX: e.clientX, startWidth: currentWidth });
 
         const handleMouseMove = (moveEvent: MouseEvent) => {
-            // Onde o mouse está agora, relativo ao container
-            const mouseX = moveEvent.clientX - containerRect.left + tableContainer.scrollLeft;
-            setResizePreview({ column, x: mouseX });
+            if (!resizing) return;
+
+            const diff = moveEvent.clientX - e.clientX;
+            const newWidth = Math.max(MIN_COLUMN_WIDTH, currentWidth + diff);
+            setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
         };
 
-        const handleMouseUp = (upEvent: MouseEvent) => {
-            // Largura = onde soltou - onde a coluna começa
-            const mouseX = upEvent.clientX - containerRect.left + tableContainer.scrollLeft;
-            const newWidth = Math.max(MIN_COLUMN_WIDTH, mouseX - columnStart);
-
-            setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
-            setResizePreview(null);
-
+        const handleMouseUp = () => {
+            setResizing(null);
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
@@ -79,80 +72,72 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
     }
 
     return (
-        <div className="border rounded-lg overflow-hidden relative">
-            {/* Ghost resize line */}
-            {resizePreview && (
-                <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-primary z-50 pointer-events-none"
-                    style={{ left: `${resizePreview.x}px` }}
-                />
-            )}
-
+        <div className="border rounded-lg overflow-hidden relative" ref={tableRef}>
             <div className="overflow-x-auto">
                 <Table className="min-w-[800px]">
                     <TableHeader>
                         <TableRow>
                             <TableHead
                                 className="sticky left-0 z-10 bg-background relative group"
-                                style={{ width: getColumnWidth('name'), minWidth: '180px' }}
+                                style={{ width: `${getColumnWidth('name')}px`, minWidth: '180px' }}
                             >
                                 <div className="flex items-center justify-between pr-2">
                                     Nome
                                     <div
-                                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-primary/30 flex items-center justify-center"
-                                        onMouseDown={(e) => handleResizeStart('name', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 flex items-center justify-center"
+                                        onMouseDown={(e) => handleResizeStart('name', e)}
                                     >
-                                        <div className="w-0.5 h-4 bg-border" />
+                                        <div className="w-px h-4 bg-border" />
                                     </div>
                                 </div>
                             </TableHead>
                             {level === 'adset' && (
-                                <TableHead className="relative group" style={{ width: getColumnWidth('campaign'), minWidth: '150px' }}>
+                                <TableHead className="relative group" style={{ width: `${getColumnWidth('campaign')}px`, minWidth: '150px' }}>
                                     <div className="flex items-center justify-between pr-2">
                                         Campanha
                                         <div
-                                            className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-primary/30 flex items-center justify-center"
-                                            onMouseDown={(e) => handleResizeStart('campaign', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
+                                            onMouseDown={(e) => handleResizeStart('campaign', e)}
                                         >
-                                            <div className="w-0.5 h-4 bg-border" />
+                                            <div className="w-px h-4 bg-border" />
                                         </div>
                                     </div>
                                 </TableHead>
                             )}
                             {level === 'ad' && (
                                 <>
-                                    <TableHead className="relative group" style={{ width: getColumnWidth('campaign'), minWidth: '150px' }}>
+                                    <TableHead className="relative group" style={{ width: `${getColumnWidth('campaign')}px`, minWidth: '150px' }}>
                                         <div className="flex items-center justify-between pr-2">
                                             Campanha
                                             <div
-                                                className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-primary/30 flex items-center justify-center"
-                                                onMouseDown={(e) => handleResizeStart('campaign', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                                className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
+                                                onMouseDown={(e) => handleResizeStart('campaign', e)}
                                             >
-                                                <div className="w-0.5 h-4 bg-border" />
+                                                <div className="w-px h-4 bg-border" />
                                             </div>
                                         </div>
                                     </TableHead>
-                                    <TableHead className="relative group" style={{ width: getColumnWidth('adset'), minWidth: '150px' }}>
+                                    <TableHead className="relative group" style={{ width: `${getColumnWidth('adset')}px`, minWidth: '150px' }}>
                                         <div className="flex items-center justify-between pr-2">
                                             Conjunto
                                             <div
-                                                className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-primary/30 flex items-center justify-center"
-                                                onMouseDown={(e) => handleResizeStart('adset', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                                className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
+                                                onMouseDown={(e) => handleResizeStart('adset', e)}
                                             >
-                                                <div className="w-0.5 h-4 bg-border" />
+                                                <div className="w-px h-4 bg-border" />
                                             </div>
                                         </div>
                                     </TableHead>
                                 </>
                             )}
-                            <TableHead className="relative group" style={{ width: getColumnWidth('status'), minWidth: '100px' }}>
+                            <TableHead className="relative group" style={{ width: `${getColumnWidth('status')}px`, minWidth: '100px' }}>
                                 <div className="flex items-center justify-between pr-2">
                                     Status
                                     <div
-                                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-primary/30 flex items-center justify-center"
-                                        onMouseDown={(e) => handleResizeStart('status', e, e.currentTarget.parentElement?.parentElement as HTMLElement)}
+                                        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
+                                        onMouseDown={(e) => handleResizeStart('status', e)}
                                     >
-                                        <div className="w-0.5 h-4 bg-border" />
+                                        <div className="w-px h-4 bg-border" />
                                     </div>
                                 </div>
                             </TableHead>
@@ -161,7 +146,7 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
                                     key={col.key}
                                     className="cursor-pointer hover:bg-muted/50 relative group"
                                     onClick={() => onSort?.(col.key)}
-                                    style={{ width: getColumnWidth(col.key), minWidth: MIN_COLUMN_WIDTH }}
+                                    style={{ width: `${getColumnWidth(col.key)}px`, minWidth: `${MIN_COLUMN_WIDTH}px` }}
                                 >
                                     <div className="flex items-center justify-between pr-2">
                                         <div className="flex items-center gap-1">
@@ -169,14 +154,14 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
                                             <ArrowUpDown className="h-3 w-3" />
                                         </div>
                                         <div
-                                            className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-primary/30 flex items-center justify-center z-10"
+                                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 z-10"
                                             onMouseDown={(e) => {
                                                 e.stopPropagation();
-                                                handleResizeStart(col.key, e, e.currentTarget.parentElement?.parentElement as HTMLElement);
+                                                handleResizeStart(col.key, e);
                                             }}
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <div className="w-0.5 h-4 bg-border" />
+                                            <div className="w-px h-4 bg-border" />
                                         </div>
                                     </div>
                                 </TableHead>
