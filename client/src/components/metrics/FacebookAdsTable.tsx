@@ -46,32 +46,29 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
 
     const handleResizeStart = (column: string, e: React.MouseEvent) => {
         e.preventDefault();
-        setResizingColumn(column);
-        resizeStartX.current = e.clientX;
-        resizeStartWidth.current = columnWidths[column] || DEFAULT_COLUMN_WIDTH;
-    };
+        e.stopPropagation();
 
-    useEffect(() => {
-        if (!resizingColumn) return;
+        const startX = e.clientX;
+        const startWidth = columnWidths[column] || DEFAULT_COLUMN_WIDTH;
 
-        const handleMouseMove = (e: MouseEvent) => {
-            const diff = e.clientX - resizeStartX.current;
-            const newWidth = Math.max(MIN_COLUMN_WIDTH, resizeStartWidth.current + diff);
-            setColumnWidths(prev => ({ ...prev, [resizingColumn]: newWidth }));
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const currentX = moveEvent.clientX;
+            const diffX = currentX - startX;
+            const newWidth = Math.max(MIN_COLUMN_WIDTH, startWidth + diffX);
+
+            setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
         };
 
         const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
             setResizingColumn(null);
         };
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [resizingColumn]);
+        setResizingColumn(column);
+    };
 
     const getColumnWidth = (key: string) => {
         return columnWidths[key] || DEFAULT_COLUMN_WIDTH;
@@ -99,7 +96,7 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
     return (
         <div className="border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
-                <Table className="min-w-[800px]">
+                <Table className="min-w-[800px]" style={{ tableLayout: 'fixed' }}>
                     <TableHeader>
                         <TableRow>
                             <TableHead className="sticky left-0 z-10 bg-background relative group" style={{ minWidth: '250px' }}>
