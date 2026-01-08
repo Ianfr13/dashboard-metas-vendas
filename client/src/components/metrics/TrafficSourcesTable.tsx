@@ -13,8 +13,27 @@ type SortKey = keyof TrafficSourceMetrics;
 
 export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) {
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
+    const [filterType, setFilterType] = useState<'all' | 'paid' | 'organic' | 'direct'>('all'); // State for filter
 
-    const sortedData = [...data].sort((a, b) => {
+    const filteredData = data.filter(item => {
+        if (filterType === 'all') return true;
+
+        const m = (item.medium || '').toLowerCase();
+        const s = (item.source || '').toLowerCase();
+
+        if (filterType === 'paid') {
+            return m.includes('cpc') || m.includes('paid') || m.includes('ppc') || m.includes('ad');
+        }
+        if (filterType === 'organic') {
+            return m.includes('organic') || m.includes('referral') || m.includes('email') || m.includes('social');
+        }
+        if (filterType === 'direct') {
+            return s.includes('direct') || m.includes('none') || m === '';
+        }
+        return true;
+    });
+
+    const sortedData = [...filteredData].sort((a, b) => {
         if (!sortConfig) return 0;
 
         const { key, direction } = sortConfig;
@@ -77,8 +96,24 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Fontes de Tráfego</CardTitle>
-                <CardDescription>Origem dos seus visitantes e conversões</CardDescription>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle>Fontes de Tráfego</CardTitle>
+                        <CardDescription>Origem dos seus visitantes e conversões</CardDescription>
+                    </div>
+                    <div className="w-[180px]">
+                        <select
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={filterType}
+                            onChange={(e) => setFilterType(e.target.value as any)}
+                        >
+                            <option value="all">Todos os Canais</option>
+                            <option value="paid">Tráfego Pago</option>
+                            <option value="organic">Orgânico / Referral</option>
+                            <option value="direct">Direto</option>
+                        </select>
+                    </div>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -146,10 +181,10 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
                                 </TableRow>
                             ))}
 
-                            {data.length === 0 && (
+                            {sortedData.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                        Nenhum dado de tráfego registrado no período.
+                                        Nenhum dado encontrado para o filtro selecionado.
                                     </TableCell>
                                 </TableRow>
                             )}
