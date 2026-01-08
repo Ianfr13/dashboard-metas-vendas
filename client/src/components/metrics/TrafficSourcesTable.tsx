@@ -12,7 +12,6 @@ interface TrafficSourcesTableProps {
 type SortKey = keyof TrafficSourceMetrics;
 
 export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) {
-    const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
     const [filterType, setFilterType] = useState<'all' | 'paid' | 'organic' | 'direct'>('all'); // State for filter
 
     const filteredData = data.filter(item => {
@@ -22,7 +21,7 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
         const s = (item.source || '').toLowerCase();
 
         if (filterType === 'paid') {
-            return m.includes('cpc') || m.includes('paid') || m.includes('ppc') || m.includes('ad');
+            return m.includes('cpc') || m.includes('paid') || m.includes('ppc') || m.includes('ad') || s.includes('meta_ads') || s.includes('meta ads');
         }
         if (filterType === 'organic') {
             return m.includes('organic') || m.includes('referral') || m.includes('email') || m.includes('social');
@@ -141,45 +140,51 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {sortedData.map((item, index) => (
-                                <TableRow key={index} className="hover:bg-muted/50 transition-colors">
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-muted rounded-full">
-                                                {getSourceIcon(item.source)}
+                            {sortedData.map((item, index) => {
+                                const isMetaAds = item.source.toLowerCase().includes('meta_ads') || item.source.toLowerCase().includes('meta ads');
+                                const displaySource = isMetaAds ? item.medium : item.source; // Se for meta ads, mostra o medium (posicionamento) como título
+                                const displayMedium = isMetaAds ? "Ads" : item.medium; // Se for meta ads, mostra "Ads" como subtítulo
+
+                                return (
+                                    <TableRow key={index} className="hover:bg-muted/50 transition-colors">
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-2 bg-muted rounded-full">
+                                                    {getSourceIcon(displaySource)}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-sm">{getSourceLabel(displaySource)}</span>
+                                                    <span className="text-xs text-muted-foreground">{displayMedium}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-sm">{getSourceLabel(item.source)}</span>
-                                                <span className="text-xs text-muted-foreground">{item.medium}</span>
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-sm">
+                                            {formatNumber(item.sessions)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex flex-col items-end">
+                                                <span className="font-mono text-sm">{formatNumber(item.leads)}</span>
+                                                {item.sessions > 0 && (
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        {(((item.leads || 0) / (item.sessions || 1)) * 100).toFixed(1)}%
+                                                    </span>
+                                                )}
                                             </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-sm">
-                                        {formatNumber(item.sessions)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex flex-col items-end">
-                                            <span className="font-mono text-sm">{formatNumber(item.leads)}</span>
-                                            {item.sessions > 0 && (
-                                                <span className="text-[10px] text-muted-foreground">
-                                                    {(((item.leads || 0) / (item.sessions || 1)) * 100).toFixed(1)}%
-                                                </span>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-sm">
-                                        {formatNumber(item.sales)}
-                                    </TableCell>
-                                    <TableCell className="text-right font-semibold text-green-600">
-                                        {formatCurrency(item.revenue)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Badge variant={(item.conversionRate || 0) > 1 ? "default" : "secondary"}>
-                                            {(item.conversionRate || 0).toFixed(2)}%
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-sm">
+                                            {formatNumber(item.sales)}
+                                        </TableCell>
+                                        <TableCell className="text-right font-semibold text-green-600">
+                                            {formatCurrency(item.revenue)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge variant={(item.conversionRate || 0) > 1 ? "default" : "secondary"}>
+                                                {(item.conversionRate || 0).toFixed(2)}%
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
 
                             {sortedData.length === 0 && (
                                 <TableRow>
