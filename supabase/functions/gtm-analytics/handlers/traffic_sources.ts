@@ -29,6 +29,7 @@ export async function getTrafficSources(
     // Agrupar
     const sourceMap = new Map<string, {
         sessions: Set<string>,
+        pageViews: number,
         leads: number,
         sales: number,
         revenue: number
@@ -40,6 +41,7 @@ export async function getTrafficSources(
         if (!sourceMap.has(key)) {
             sourceMap.set(key, {
                 sessions: new Set(),
+                pageViews: 0,
                 leads: 0,
                 sales: 0,
                 revenue: 0
@@ -51,6 +53,11 @@ export async function getTrafficSources(
         // Contar Sessões (Distinct Session ID)
         if (event.session_id) {
             metrics.sessions.add(event.session_id)
+        }
+
+        // Contar Page Views como fallback para sessões
+        if (event.event_name === 'page_view') {
+            metrics.pageViews++
         }
 
         // Contar Conversões
@@ -66,7 +73,14 @@ export async function getTrafficSources(
     const trafficMetrics: TrafficSourceMetrics[] = Array.from(sourceMap.entries())
         .map(([key, metrics]) => {
             const [source, medium] = key.split('|')
-            const sessionCount = metrics.sessions.size || 1 // Evitar divisão por zero se não tiver session_id trackeado
+            // Se tiver session_id, usa o size. Se não, usa pageViews como proxy.
+            // Se ambos forem 0, usa 0 (não força 1 artificialmente)
+            const sessionCount = metrics.sessions.size > 0
+                ? metrics.sessions.size
+                : (metrics.pageViews > 0 ? metrics.pageViews : 0)
+
+            // Evitar divisão por zero no cálculo de taxa, mas permitir sessions=0 na display
+            const safeSessions = sessionCount || 1
 
             return {
                 source,
@@ -75,7 +89,7 @@ export async function getTrafficSources(
                 leads: metrics.leads,
                 sales: metrics.sales,
                 revenue: Math.round(metrics.revenue * 100) / 100,
-                conversionRate: Math.round((metrics.sales / sessionCount) * 100 * 100) / 100
+                conversionRate: Math.round((metrics.sales / safeSessions) * 100 * 100) / 100
             }
         })
         .sort((a, b) => b.revenue - a.revenue) // Ordernar por receita
