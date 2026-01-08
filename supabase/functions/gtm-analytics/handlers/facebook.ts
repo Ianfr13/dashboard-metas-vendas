@@ -23,6 +23,17 @@ export interface FacebookMetricsResponse {
     evolution: DailyMetrics[]
 }
 
+export async function getFacebookAccounts(supabase: SupabaseClient) {
+    const { data, error } = await supabase
+        .from('facebook_ad_accounts')
+        .select('id, name, currency, account_status')
+        .eq('active', true)
+        .order('name')
+
+    if (error) throw new Error(`Failed to fetch accounts: ${error.message}`)
+    return data
+}
+
 interface AccountMetrics {
     id: string
     name: string

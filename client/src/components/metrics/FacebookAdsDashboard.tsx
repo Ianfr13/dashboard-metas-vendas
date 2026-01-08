@@ -35,11 +35,6 @@ export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAds
                 selectedAccount !== "all" ? selectedAccount : undefined
             );
             setMetrics(data);
-
-            // Extract unique accounts from metrics
-            if (data.byAccount && data.byAccount.length > 0) {
-                setAccounts(data.byAccount.map(a => ({ id: a.id, name: a.name })));
-            }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar métricas';
             console.error('Erro ao carregar métricas do Facebook:', errorMessage);
@@ -48,6 +43,21 @@ export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAds
             setLoading(false);
         }
     };
+
+    const loadAccounts = async () => {
+        try {
+            const accs = await facebookAdsAPI.listAccounts();
+            if (accs && accs.length > 0) {
+                setAccounts(accs.map(a => ({ id: a.id, name: a.name })));
+            }
+        } catch (err) {
+            console.error('Erro ao carregar contas:', err);
+        }
+    };
+
+    useEffect(() => {
+        loadAccounts();
+    }, []);
 
     const handleSync = async () => {
         try {
@@ -132,6 +142,24 @@ export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAds
 
     return (
         <div className="space-y-6">
+            <div className="p-4 bg-yellow-100 text-yellow-800 rounded mb-4 flex justify-between items-center">
+                <span>Versão de Debug: {new Date().toLocaleTimeString()}</span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                        try {
+                            alert("Debug Iniciado via Topo");
+                            const accs = await facebookAdsAPI.listAccounts();
+                            alert(`Contas: ${accs?.length}`);
+                        } catch (e) {
+                            alert(`Erro: ${e}`);
+                        }
+                    }}
+                >
+                    Testar Conexão
+                </Button>
+            </div>
             {/* Header com controles */}
             <Card>
                 <CardHeader>
@@ -162,6 +190,24 @@ export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAds
                             <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
                                 {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                             </Button>
+
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-muted-foreground"
+                                onClick={async () => {
+                                    try {
+                                        alert("Debug (Cache Bust): Fetching accounts...");
+                                        const accs = await facebookAdsAPI.listAccounts();
+                                        alert(`Success! Found ${accs?.length || 0} accounts.\nFirst: ${JSON.stringify(accs?.[0])}`);
+                                        if (accs && accs.length > 0) {
+                                            setAccounts(accs.map(a => ({ id: a.id, name: a.name })));
+                                        }
+                                    } catch (e) {
+                                        alert(`Error: ${e instanceof Error ? e.message : String(e)}`);
+                                    }
+                                }}
+                            >Debug</Button>
                         </div>
                     </div>
                 </CardHeader>

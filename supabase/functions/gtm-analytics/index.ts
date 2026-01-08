@@ -6,7 +6,7 @@ import { getProductMetrics } from './handlers/products.ts'
 import { getTrafficSources } from './handlers/traffic_sources.ts'
 import { getCreativeRanking } from './handlers/creatives.ts'
 import { getPlacementRanking } from './handlers/placements.ts'
-import { getFacebookMetrics } from './handlers/facebook.ts'
+import { getFacebookMetrics, getFacebookAccounts } from './handlers/facebook.ts'
 import { RateLimiter } from './rate-limiter.ts'
 
 // Configurar Rate Limiter: 100 requisições por minuto por IP
@@ -123,6 +123,11 @@ Deno.serve(async (req) => {
         const fbAccountId = url.searchParams.get('account_id') || undefined
         const fbCampaignId = url.searchParams.get('campaign_id') || undefined
         result = await getFacebookMetrics(supabase, startDate, endDate, fbAccountId, fbCampaignId)
+        break
+
+      case 'facebook-accounts':
+      case 'fb-accounts': // Alias for debugging/adblock bypass
+        result = await getFacebookAccounts(supabase)
         break
 
       default:

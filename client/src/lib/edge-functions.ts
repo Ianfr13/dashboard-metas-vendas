@@ -855,10 +855,10 @@ export const facebookAdsAPI = {
   },
 
   /**
-   * Lista todas as contas de anúncio conectadas
    */
   listAccounts: async (): Promise<{ id: string; name: string; currency: string; active: boolean }[]> => {
-    const response = await fetch(`${FUNCTIONS_URL}/facebook-sync?action=accounts`, {
+    // Agora busca do banco de dados via gtm-analytics para performance e consistência
+    const response = await fetch(`${FUNCTIONS_URL}/gtm-analytics?action=fb-accounts&t=${Date.now()}`, {
       method: 'GET',
       headers: await getAuthHeaders(),
     });
