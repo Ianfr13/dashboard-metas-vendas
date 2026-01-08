@@ -31,6 +31,7 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
         const startX = e.clientX;
         const headerRect = headerElement.getBoundingClientRect();
         const startWidth = columnWidths[column] || DEFAULT_COLUMN_WIDTH;
+        const headerLeft = headerRect.left - containerRect.left + tableContainer.scrollLeft;
 
         const handleMouseMove = (moveEvent: MouseEvent) => {
             const diffX = moveEvent.clientX - startX;
@@ -41,7 +42,9 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
 
         const handleMouseUp = (upEvent: MouseEvent) => {
             const diffX = upEvent.clientX - startX;
-            const newWidth = Math.max(MIN_COLUMN_WIDTH, startWidth + diffX);
+            // Calculate new width based on where the ghost line ended up
+            const ghostLineX = headerRect.right - containerRect.left + diffX + tableContainer.scrollLeft;
+            const newWidth = Math.max(MIN_COLUMN_WIDTH, ghostLineX - headerLeft);
 
             setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
             setResizePreview(null);
