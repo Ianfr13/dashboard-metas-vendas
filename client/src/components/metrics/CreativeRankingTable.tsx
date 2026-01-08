@@ -65,102 +65,100 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                 <CardDescription>Performance detalhada por criativo (utm_content)</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="overflow-auto max-h-[500px]">
-                    <div className="relative w-full">
-                        <table className="w-full caption-bottom text-sm">
-                            <TableHeader>
-                                <TableRow className="hover:bg-transparent">
-                                    <TableHead onClick={() => requestSort('creativeId')} className="sticky top-0 z-20 bg-card cursor-pointer hover:bg-muted/50 transition-colors shadow-sm">
-                                        <div className="flex items-center">Criativo (ID) {getSortIcon('creativeId')}</div>
-                                    </TableHead>
-                                    <TableHead className="sticky top-0 z-20 bg-card shadow-sm">Melhor Formato</TableHead>
-                                    <TableHead onClick={() => requestSort('pageViews')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                        <div className="flex items-center justify-end">Visitas {getSortIcon('pageViews')}</div>
-                                    </TableHead>
-                                    <TableHead onClick={() => requestSort('addToCart')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                        <div className="flex items-center justify-end">Add to Cart {getSortIcon('addToCart')}</div>
-                                    </TableHead>
-                                    <TableHead onClick={() => requestSort('addToWishlist')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                        <div className="flex items-center justify-end">Wishlist {getSortIcon('addToWishlist')}</div>
-                                    </TableHead>
-                                    <TableHead onClick={() => requestSort('checkouts')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                        <div className="flex items-center justify-end">Checkout (IC) {getSortIcon('checkouts')}</div>
-                                    </TableHead>
-                                    <TableHead onClick={() => requestSort('sales')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                        <div className="flex items-center justify-end">Vendas {getSortIcon('sales')}</div>
-                                    </TableHead>
-                                    <TableHead onClick={() => requestSort('revenue')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                        <div className="flex items-center justify-end">Receita {getSortIcon('revenue')}</div>
-                                    </TableHead>
-                                    <TableHead onClick={() => requestSort('conversionRate')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                        <div className="flex items-center justify-end">Conv. Venda {getSortIcon('conversionRate')}</div>
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {sortedData.map((item, index) => (
-                                    <TableRow key={index} className="hover:bg-muted/50 transition-colors">
-                                        <TableCell className="font-medium">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-2 bg-muted rounded-full text-indigo-500">
-                                                    <Image className="h-4 w-4" />
-                                                </div>
-                                                <span className="font-mono text-xs truncate max-w-[150px]" title={item.creativeId}>
-                                                    {item.creativeId}
+                <div className="overflow-x-auto">
+                    <table className="w-full caption-bottom text-sm">
+                        <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead onClick={() => requestSort('creativeId')} className="cursor-pointer hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center">Criativo (ID) {getSortIcon('creativeId')}</div>
+                                </TableHead>
+                                <TableHead>Melhor Formato</TableHead>
+                                <TableHead onClick={() => requestSort('pageViews')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Visitas {getSortIcon('pageViews')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('addToCart')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Add to Cart {getSortIcon('addToCart')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('addToWishlist')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Wishlist {getSortIcon('addToWishlist')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('checkouts')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Checkout (IC) {getSortIcon('checkouts')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('sales')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Vendas {getSortIcon('sales')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('revenue')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Receita {getSortIcon('revenue')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('conversionRate')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Conv. Venda {getSortIcon('conversionRate')}</div>
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {sortedData.map((item, index) => (
+                                <TableRow key={index} className="hover:bg-muted/50 transition-colors">
+                                    <TableCell className="font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-muted rounded-full text-indigo-500">
+                                                <Image className="h-4 w-4" />
+                                            </div>
+                                            <span className="font-mono text-xs truncate max-w-[150px]" title={item.creativeId}>
+                                                {item.creativeId}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-1 bg-muted rounded-full text-indigo-500">
+                                                {getPlacementIcon(item.bestPlacement)}
+                                            </div>
+                                            <span className="text-sm font-medium">{item.bestPlacement || '-'}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-sm">
+                                        {formatNumber(item.pageViews)}
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-sm">
+                                        {formatNumber(item.addToCart)}
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-sm">
+                                        {formatNumber(item.addToWishlist)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex flex-col items-end">
+                                            <span className="font-mono text-sm">{formatNumber(item.checkouts)}</span>
+                                            {item.pageViews > 0 && (
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    {(((item.checkouts || 0) / (item.pageViews || 1)) * 100).toFixed(1)}%
                                                 </span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1 bg-muted rounded-full text-indigo-500">
-                                                    {getPlacementIcon(item.bestPlacement)}
-                                                </div>
-                                                <span className="text-sm font-medium">{item.bestPlacement || '-'}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono text-sm">
-                                            {formatNumber(item.pageViews)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono text-sm">
-                                            {formatNumber(item.addToCart)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono text-sm">
-                                            {formatNumber(item.addToWishlist)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex flex-col items-end">
-                                                <span className="font-mono text-sm">{formatNumber(item.checkouts)}</span>
-                                                {item.pageViews > 0 && (
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        {(((item.checkouts || 0) / (item.pageViews || 1)) * 100).toFixed(1)}%
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono text-sm">
-                                            {formatNumber(item.sales)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-semibold text-green-600">
-                                            {formatCurrency(item.revenue)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Badge variant={(item.conversionRate || 0) > 1 ? "default" : "secondary"}>
-                                                {(item.conversionRate || 0).toFixed(2)}%
-                                            </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-sm">
+                                        {formatNumber(item.sales)}
+                                    </TableCell>
+                                    <TableCell className="text-right font-semibold text-green-600">
+                                        {formatCurrency(item.revenue)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Badge variant={(item.conversionRate || 0) > 1 ? "default" : "secondary"}>
+                                            {(item.conversionRate || 0).toFixed(2)}%
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
 
-                                {sortedData.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                                            Nenhum dado de criativo registrado no período.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </table>
-                    </div>
+                            {sortedData.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                                        Nenhum dado de criativo registrado no período.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </table>
                 </div>
             </CardContent>
         </Card>
