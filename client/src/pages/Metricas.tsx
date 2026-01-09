@@ -619,17 +619,10 @@ export default function Metricas() {
             </TabsContent>
 
             <TabsContent value="funis" className="space-y-6">
-              <FunisCadastrados
+              <FunnelPerformance
                 startDate={startDate}
                 endDate={endDate}
               />
-
-              <div className="pt-6 border-t">
-                <FunnelPerformance
-                  startDate={startDate}
-                  endDate={endDate}
-                />
-              </div>
             </TabsContent>
           </Tabs>
         )}

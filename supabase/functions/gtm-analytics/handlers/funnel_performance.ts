@@ -8,6 +8,9 @@ export interface FunnelPerformanceMetrics {
     offerId: string
     funnelStage: string
     sessions: number
+    pageViews: number
+    addToCart: number
+    checkouts: number
     leads: number
     sales: number
     revenue: number
@@ -57,8 +60,10 @@ export async function getFunnelPerformance(
 
     // Query raw events
     // We need 'page_view', 'generate_lead', 'purchase'
+    // Ensure endDate includes the full day by adding end-of-day time
+    const endDateWithTime = endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`;
     const events = await fetchAllRows<any>('gtm_events', 'event_name, event_data, session_id', (q) => {
-        return q.gte('timestamp', startDate).lte('timestamp', endDate);
+        return q.gte('timestamp', startDate).lte('timestamp', endDateWithTime);
     });
 
     // Grouping Map
@@ -71,6 +76,8 @@ export async function getFunnelPerformance(
         funnelStage: string,
         sessions: Set<string>,
         pageViews: number,
+        addToCart: number,
+        checkouts: number,
         leads: number,
         sales: number,
         revenue: number
@@ -108,6 +115,8 @@ export async function getFunnelPerformance(
                 funnelStage: fstg,
                 sessions: new Set(),
                 pageViews: 0,
+                addToCart: 0,
+                checkouts: 0,
                 leads: 0,
                 sales: 0,
                 revenue: 0
@@ -124,6 +133,10 @@ export async function getFunnelPerformance(
         // Metrics
         if (event.event_name === 'page_view') {
             metrics.pageViews++;
+        } else if (event.event_name === 'add_to_cart') {
+            metrics.addToCart++;
+        } else if (event.event_name === 'begin_checkout') {
+            metrics.checkouts++;
         } else if (event.event_name === 'generate_lead') {
             metrics.leads++;
         } else if (event.event_name === 'purchase') {
@@ -144,6 +157,9 @@ export async function getFunnelPerformance(
                 offerId: m.offerId,
                 funnelStage: m.funnelStage,
                 sessions: sessionCount,
+                pageViews: m.pageViews,
+                addToCart: m.addToCart,
+                checkouts: m.checkouts,
                 leads: m.leads,
                 sales: m.sales,
                 revenue: Math.round(m.revenue * 100) / 100,

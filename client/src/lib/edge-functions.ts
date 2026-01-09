@@ -382,6 +382,9 @@ export interface FunnelPerformanceMetrics {
   offerId: string;
   funnelStage: string;
   sessions: number;
+  pageViews: number;
+  addToCart: number;
+  checkouts: number;
   leads: number;
   sales: number;
   revenue: number;

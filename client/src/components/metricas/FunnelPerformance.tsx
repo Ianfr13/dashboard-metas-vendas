@@ -18,6 +18,9 @@ interface FunnelPerformanceProps {
 interface StageMetrics {
     stage: string;
     sessions: number;
+    pageViews: number;
+    addToCart: number;
+    checkouts: number;
     leads: number;
     sales: number;
     revenue: number;
@@ -72,7 +75,7 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
         const funnelData = data.filter(d => d.funnelId === selectedFunnelId);
 
         // Group by funnel stage
-        const stageMap = new Map<string, { sessions: number; leads: number; sales: number; revenue: number }>();
+        const stageMap = new Map<string, { sessions: number; pageViews: number; addToCart: number; checkouts: number; leads: number; sales: number; revenue: number }>();
 
         // Define stage order
         const stageOrder = ['frontend', 'upsell-1', 'downsell-1', 'upsell-2', 'downsell-2', 'upsell-3', 'downsell-3'];
@@ -80,10 +83,13 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
         funnelData.forEach(item => {
             const stage = item.funnelStage || '(not set)';
             if (!stageMap.has(stage)) {
-                stageMap.set(stage, { sessions: 0, leads: 0, sales: 0, revenue: 0 });
+                stageMap.set(stage, { sessions: 0, pageViews: 0, addToCart: 0, checkouts: 0, leads: 0, sales: 0, revenue: 0 });
             }
             const current = stageMap.get(stage)!;
             current.sessions += item.sessions;
+            current.pageViews += item.pageViews || 0;
+            current.addToCart += item.addToCart || 0;
+            current.checkouts += item.checkouts || 0;
             current.leads += item.leads;
             current.sales += item.sales;
             current.revenue += item.revenue;
@@ -112,6 +118,9 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
             stages.push({
                 stage,
                 sessions: metrics.sessions,
+                pageViews: metrics.pageViews,
+                addToCart: metrics.addToCart,
+                checkouts: metrics.checkouts,
                 leads: metrics.leads,
                 sales: metrics.sales,
                 revenue: metrics.revenue,
@@ -318,7 +327,9 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Etapa</TableHead>
-                                            <TableHead className="text-right">Sessões</TableHead>
+                                            <TableHead className="text-right">PageViews</TableHead>
+                                            <TableHead className="text-right">Add Cart</TableHead>
+                                            <TableHead className="text-right">Checkout</TableHead>
                                             <TableHead className="text-right">Leads</TableHead>
                                             <TableHead className="text-right">Vendas</TableHead>
                                             <TableHead className="text-right">Receita</TableHead>
@@ -338,7 +349,9 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                                         {stage.stage}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right">{stage.sessions}</TableCell>
+                                                <TableCell className="text-right">{stage.pageViews}</TableCell>
+                                                <TableCell className="text-right">{stage.addToCart}</TableCell>
+                                                <TableCell className="text-right">{stage.checkouts}</TableCell>
                                                 <TableCell className="text-right">{stage.leads}</TableCell>
                                                 <TableCell className="text-right font-medium">{stage.sales}</TableCell>
                                                 <TableCell className="text-right">
