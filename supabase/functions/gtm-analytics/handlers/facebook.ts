@@ -235,19 +235,32 @@ export async function getFacebookMetrics(
     });
 
     // Fetch campaigns
-    const campaigns = await fetchAllRows<any>('facebook_campaigns', 'id, account_id, name, status, objective');
+    const campaigns = await fetchAllRows<any>('facebook_campaigns', 'id, account_id, name, status, objective', (q) => {
+        if (accountId) return q.eq('account_id', accountId);
+        return q;
+    });
     const campaignMap = new Map(campaigns.map(c => [c.id, c]));
 
     // Fetch accounts
-    const accounts = await fetchAllRows<any>('facebook_ad_accounts', 'id, name', (q) => q.eq('active', true));
+    const accounts = await fetchAllRows<any>('facebook_ad_accounts', 'id, name', (q) => {
+        let query = q.eq('active', true);
+        if (accountId) query = query.eq('id', accountId);
+        return query;
+    });
     const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     // Fetch ad sets
-    const adsets = await fetchAllRows<any>('facebook_adsets', 'id, campaign_id, name, status');
+    const adsets = await fetchAllRows<any>('facebook_adsets', 'id, campaign_id, name, status', (q) => {
+        if (accountId) return q.eq('account_id', accountId);
+        return q;
+    });
     // const adsetMap = new Map(adsets.map(a => [a.id, a])); // Unused in this scope but good to have if needed
 
     // Fetch ads
-    const ads = await fetchAllRows<any>('facebook_ads', 'id, adset_id, campaign_id, name, status, creative_thumbnail_url');
+    const ads = await fetchAllRows<any>('facebook_ads', 'id, adset_id, campaign_id, name, status, creative_thumbnail_url', (q) => {
+        if (accountId) return q.eq('account_id', accountId);
+        return q;
+    });
     const adsetMap = new Map(adsets?.map(a => [a.id, a]) || []); // Re-instantiated here for aggregateByAd
 
     // Calculate summary metrics
