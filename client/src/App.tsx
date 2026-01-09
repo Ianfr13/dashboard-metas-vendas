@@ -19,6 +19,8 @@ import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 import { AdminRoute } from "./components/Auth/AdminRoute";
 
 
+import { PushNotificationButton } from "./components/PushNotificationButton";
+
 function Router() {
   return (
     <Switch>
@@ -128,6 +130,9 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <div className="fixed bottom-4 right-4 z-50">
+              <PushNotificationButton />
+            </div>
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>
