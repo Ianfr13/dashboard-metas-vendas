@@ -19,23 +19,21 @@ self.addEventListener('push', (event) => {
         icon: '/pwa-192x192.png',
         badge: '/pwa-192x192.png',
         data: data?.url || '/',
-    };
-
-    sound: '/sounds/cash.mp3', // Try standard sound property
+        sound: '/sounds/cash.mp3',
         vibrate: [200, 100, 200],
     };
 
-// Broadcast to open windows to play sound
-const broadcastPromise = self.clients.matchAll({ type: 'window' }).then(clients => {
-    clients.forEach(client => {
-        client.postMessage({ type: 'PLAY_SOUND', sound: '/sounds/cash.mp3' });
+    // Broadcast to open windows to play sound
+    const broadcastPromise = self.clients.matchAll({ type: 'window' }).then(clients => {
+        clients.forEach(client => {
+            client.postMessage({ type: 'PLAY_SOUND', sound: '/sounds/cash.mp3' });
+        });
     });
-});
 
-event.waitUntil(Promise.all([
-    self.registration.showNotification(title, options),
-    broadcastPromise
-]));
+    event.waitUntil(Promise.all([
+        self.registration.showNotification(title, options),
+        broadcastPromise
+    ]));
 });
 
 self.addEventListener('notificationclick', (event) => {
