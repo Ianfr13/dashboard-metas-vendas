@@ -7,6 +7,7 @@ export interface FunnelPerformanceMetrics {
     pageVersion: string
     offerId: string
     funnelStage: string
+    productName: string
     sessions: number
     pageViews: number
     addToCart: number
@@ -74,6 +75,7 @@ export async function getFunnelPerformance(
         pageVersion: string,
         offerId: string,
         funnelStage: string,
+        productName: string,
         sessions: Set<string>,
         pageViews: number,
         addToCart: number,
@@ -103,8 +105,11 @@ export async function getFunnelPerformance(
         const oid = oidMatch?.[1] || '(not set)';
         const fstg = fstgMatch?.[1] || '(not set)';
 
-        // Chave única para agroupamento
-        const key = `${fid}|${fver}|${pver}|${oid}|${fstg}`;
+        // Extract product name from event_data (sent by GTM on purchase/add_to_cart)
+        const productName = eventData.product_name || '(not set)';
+
+        // Chave única para agroupamento (includes productName for variants)
+        const key = `${fid}|${fver}|${pver}|${oid}|${fstg}|${productName}`;
 
         if (!map.has(key)) {
             map.set(key, {
@@ -113,6 +118,7 @@ export async function getFunnelPerformance(
                 pageVersion: pver,
                 offerId: oid,
                 funnelStage: fstg,
+                productName: productName,
                 sessions: new Set(),
                 pageViews: 0,
                 addToCart: 0,
@@ -156,6 +162,7 @@ export async function getFunnelPerformance(
                 pageVersion: m.pageVersion,
                 offerId: m.offerId,
                 funnelStage: m.funnelStage,
+                productName: m.productName,
                 sessions: sessionCount,
                 pageViews: m.pageViews,
                 addToCart: m.addToCart,

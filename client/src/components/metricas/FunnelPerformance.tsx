@@ -15,6 +15,13 @@ interface FunnelPerformanceProps {
     endDate: Date;
 }
 
+interface ProductVariant {
+    name: string;
+    sales: number;
+    revenue: number;
+    sharePercent: number;
+}
+
 interface StageMetrics {
     stage: string;
     sessions: number;
@@ -26,6 +33,7 @@ interface StageMetrics {
     revenue: number;
     conversionRate: number;
     takeRate: number;
+    products: ProductVariant[];
 }
 
 export default function FunnelPerformance({ startDate, endDate }: FunnelPerformanceProps) {
@@ -74,8 +82,17 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
 
         const funnelData = data.filter(d => d.funnelId === selectedFunnelId);
 
-        // Group by funnel stage
-        const stageMap = new Map<string, { sessions: number; pageViews: number; addToCart: number; checkouts: number; leads: number; sales: number; revenue: number }>();
+        // Group by funnel stage with product breakdown
+        const stageMap = new Map<string, {
+            sessions: number;
+            pageViews: number;
+            addToCart: number;
+            checkouts: number;
+            leads: number;
+            sales: number;
+            revenue: number;
+            productMap: Map<string, { sales: number; revenue: number }>;
+        }>();
 
         // Define stage order
         const stageOrder = ['frontend', 'upsell-1', 'downsell-1', 'upsell-2', 'downsell-2', 'upsell-3', 'downsell-3'];
@@ -83,7 +100,16 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
         funnelData.forEach(item => {
             const stage = item.funnelStage || '(not set)';
             if (!stageMap.has(stage)) {
-                stageMap.set(stage, { sessions: 0, pageViews: 0, addToCart: 0, checkouts: 0, leads: 0, sales: 0, revenue: 0 });
+                stageMap.set(stage, {
+                    sessions: 0,
+                    pageViews: 0,
+                    addToCart: 0,
+                    checkouts: 0,
+                    leads: 0,
+                    sales: 0,
+                    revenue: 0,
+                    productMap: new Map()
+                });
             }
             const current = stageMap.get(stage)!;
             current.sessions += item.sessions;
@@ -93,6 +119,17 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
             current.leads += item.leads;
             current.sales += item.sales;
             current.revenue += item.revenue;
+
+            // Track products for this stage (only if has sales/purchases)
+            const productName = item.productName || '(not set)';
+            if (productName !== '(not set)' && item.sales > 0) {
+                if (!current.productMap.has(productName)) {
+                    current.productMap.set(productName, { sales: 0, revenue: 0 });
+                }
+                const product = current.productMap.get(productName)!;
+                product.sales += item.sales;
+                product.revenue += item.revenue;
+            }
         });
 
         // Convert to array and calculate rates
@@ -115,6 +152,16 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                 ? conversionRate
                 : (previousSales > 0 ? (metrics.sales / previousSales) * 100 : 0);
 
+            // Build product variants array with share percentage
+            const products: ProductVariant[] = Array.from(metrics.productMap.entries())
+                .map(([name, p]) => ({
+                    name,
+                    sales: p.sales,
+                    revenue: p.revenue,
+                    sharePercent: metrics.sales > 0 ? (p.sales / metrics.sales) * 100 : 0
+                }))
+                .sort((a, b) => b.sales - a.sales);
+
             stages.push({
                 stage,
                 sessions: metrics.sessions,
@@ -125,7 +172,8 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                 sales: metrics.sales,
                 revenue: metrics.revenue,
                 conversionRate,
-                takeRate
+                takeRate,
+                products
             });
 
             // For frontend, use sales as base for next stage
@@ -314,8 +362,8 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                                             {/* Main Stage Box */}
                                                             <div className="text-center">
                                                                 <div className={`rounded-lg p-4 mb-2 min-w-[130px] ${stage.stage === 'frontend'
-                                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                                        : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                                    : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                                                                     }`}>
                                                                     <ShoppingCart className="h-5 w-5 mx-auto mb-1" />
                                                                     <p className="text-xl font-bold">{stage.sales}</p>
@@ -327,6 +375,19 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                                                 <Badge variant={stage.takeRate > 30 ? "default" : "secondary"} className="text-xs">
                                                                     {stage.stage === 'frontend' ? 'CR' : 'Take'}: {stage.takeRate.toFixed(1)}%
                                                                 </Badge>
+
+                                                                {/* Product Variants Breakdown */}
+                                                                {stage.products.length > 0 && (
+                                                                    <div className="mt-3 w-full border-t pt-2 text-left">
+                                                                        <p className="text-[10px] text-muted-foreground mb-1">Produtos:</p>
+                                                                        {stage.products.map((product) => (
+                                                                            <div key={product.name} className="flex justify-between text-[10px] py-0.5">
+                                                                                <span className="truncate max-w-[80px]" title={product.name}>{product.name}</span>
+                                                                                <span className="font-medium ml-2">{product.sales} ({product.sharePercent.toFixed(0)}%)</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
 
                                                             {/* Downsell Branch (below upsell) */}
