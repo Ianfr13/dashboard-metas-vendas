@@ -10,7 +10,6 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/admin/index";
 import AdminMetas from "./pages/admin/Metas";
-import AdminProdutos from "./pages/admin/Produtos";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import UrlGeneratorPage from "./pages/admin/UrlGeneratorPage";
 import Metricas from "./pages/Metricas";
@@ -51,14 +50,6 @@ function Router() {
         {() => (
           <ProtectedRoute>
             <AdminMetas />
-          </ProtectedRoute>
-        )}
-      </Route>
-
-      <Route path="/admin/produtos">
-        {() => (
-          <ProtectedRoute>
-            <AdminProdutos />
           </ProtectedRoute>
         )}
       </Route>
