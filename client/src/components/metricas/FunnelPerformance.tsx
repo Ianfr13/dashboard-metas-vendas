@@ -443,31 +443,55 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                     </TableHeader>
                                     <TableBody>
                                         {stageData.map((stage) => (
-                                            <TableRow key={stage.stage}>
-                                                <TableCell>
-                                                    <Badge variant={
-                                                        stage.stage === 'frontend' ? 'default' :
-                                                            stage.stage.startsWith('upsell') ? 'secondary' :
-                                                                'outline'
-                                                    } className="capitalize">
-                                                        {stage.stage}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right">{stage.pageViews}</TableCell>
-                                                <TableCell className="text-right">{stage.addToCart}</TableCell>
-                                                <TableCell className="text-right">{stage.checkouts}</TableCell>
-                                                <TableCell className="text-right">{stage.leads}</TableCell>
-                                                <TableCell className="text-right font-medium">{stage.sales}</TableCell>
-                                                <TableCell className="text-right">
-                                                    R$ {stage.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </TableCell>
-                                                <TableCell className="text-right">{stage.conversionRate.toFixed(2)}%</TableCell>
-                                                <TableCell className="text-right">
-                                                    <span className={stage.takeRate > 30 ? "text-green-600 font-bold" : ""}>
-                                                        {stage.takeRate.toFixed(2)}%
-                                                    </span>
-                                                </TableCell>
-                                            </TableRow>
+                                            <>
+                                                <TableRow key={stage.stage}>
+                                                    <TableCell>
+                                                        <Badge variant={
+                                                            stage.stage === 'frontend' ? 'default' :
+                                                                stage.stage.startsWith('upsell') ? 'secondary' :
+                                                                    'outline'
+                                                        } className="capitalize">
+                                                            {stage.stage}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">{stage.pageViews}</TableCell>
+                                                    <TableCell className="text-right">{stage.addToCart}</TableCell>
+                                                    <TableCell className="text-right">{stage.checkouts}</TableCell>
+                                                    <TableCell className="text-right">{stage.leads}</TableCell>
+                                                    <TableCell className="text-right font-medium">{stage.sales}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        R$ {stage.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">{stage.conversionRate.toFixed(2)}%</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <span className={stage.takeRate > 30 ? "text-green-600 font-bold" : ""}>
+                                                            {stage.takeRate.toFixed(2)}%
+                                                        </span>
+                                                    </TableCell>
+                                                </TableRow>
+                                                {/* Product breakdown rows */}
+                                                {stage.products.map((product) => (
+                                                    <TableRow key={`${stage.stage}-${product.name}`} className="bg-muted/30">
+                                                        <TableCell className="pl-8">
+                                                            <span className="text-xs text-muted-foreground">↳ {product.name}</span>
+                                                        </TableCell>
+                                                        <TableCell className="text-right text-muted-foreground">-</TableCell>
+                                                        <TableCell className="text-right text-muted-foreground">-</TableCell>
+                                                        <TableCell className="text-right text-muted-foreground">-</TableCell>
+                                                        <TableCell className="text-right text-muted-foreground">-</TableCell>
+                                                        <TableCell className="text-right text-xs">{product.sales}</TableCell>
+                                                        <TableCell className="text-right text-xs">
+                                                            R$ {product.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </TableCell>
+                                                        <TableCell className="text-right text-xs text-muted-foreground">-</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {product.sharePercent.toFixed(1)}%
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </>
                                         ))}
                                     </TableBody>
                                 </Table>
