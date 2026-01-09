@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Image, ArrowUpDown, ArrowUp, ArrowDown, Smartphone, Laptop, LayoutGrid } from "lucide-react";
+import { Image, ArrowUpDown, ArrowUp, ArrowDown, Smartphone, Laptop, LayoutGrid, Search } from "lucide-react";
 import { CreativeMetrics } from "@/lib/edge-functions";
 
 interface CreativeRankingTableProps {
