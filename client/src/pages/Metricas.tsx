@@ -38,6 +38,7 @@ import VslRetentionChart from "@/components/metrics/VslRetentionChart";
 import VslComparisonDashboard from "@/components/metrics/VslComparisonDashboard";
 import FacebookAdsDashboard from "@/components/metrics/FacebookAdsDashboard";
 import { TrafficSourceMetrics, CreativeMetrics, vturbAnalyticsAPI } from "@/lib/edge-functions";
+import FunnelPerformance from "@/components/metricas/FunnelPerformance";
 
 export default function Metricas() {
   const { user, loading: authLoading } = useAuth();
@@ -622,6 +623,13 @@ export default function Metricas() {
                 startDate={startDate}
                 endDate={endDate}
               />
+
+              <div className="pt-6 border-t">
+                <FunnelPerformance
+                  startDate={startDate}
+                  endDate={endDate}
+                />
+              </div>
             </TabsContent>
           </Tabs>
         )}
