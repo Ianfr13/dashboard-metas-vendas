@@ -205,7 +205,7 @@ export async function getFacebookMetrics(
             let query = supabase
                 .from(table)
                 .select(select)
-                .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+                .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1); // fixed PAGE_SIZE usage
 
             query = filters(query);
 
@@ -226,28 +226,48 @@ export async function getFacebookMetrics(
         return allData;
     }
 
-    // Fetch insights (potentially large dataset)
-    const insights = await fetchAllRows<any>('facebook_insights', '*', (q) => {
-        let query = q.gte('date', startDate).lte('date', endDate);
-        if (accountId) query = query.eq('account_id', accountId);
-        if (campaignId) query = query.eq('campaign_id', campaignId);
-        return query;
-    });
-
-    // Fetch campaigns
-    const campaigns = await fetchAllRows<any>('facebook_campaigns', 'id, account_id, name, status, objective', (q) => {
-        if (accountId) return q.eq('account_id', accountId);
-        return q;
-    });
-    const campaignMap = new Map(campaigns.map(c => [c.id, c]));
-
-    // Fetch accounts
+    // 1. Fetch accounts first to determine validity (Active Only)
     const accounts = await fetchAllRows<any>('facebook_ad_accounts', 'id, name', (q) => {
         let query = q.eq('active', true);
         if (accountId) query = query.eq('id', accountId);
         return query;
     });
     const accountMap = new Map(accounts.map(a => [a.id, a]));
+    const validAccountIds = accounts.map(a => a.id);
+
+    // If no active accounts found, return empty early
+    if (validAccountIds.length === 0) {
+        return {
+            summary: {
+                totalSpend: 0, totalImpressions: 0, totalClicks: 0, totalReach: 0,
+                totalLeads: 0, totalPurchases: 0, totalPurchaseValue: 0,
+                avgCpc: 0, avgCpm: 0, avgCtr: 0, avgCostPerLead: 0, avgCostPerPurchase: 0, roas: 0
+            },
+            byAccount: [], byCampaign: [], byAdSet: [], byAd: [], evolution: []
+        };
+    }
+
+    // 2. Fetch Insights (filtered by valid accounts)
+    const insights = await fetchAllRows<any>('facebook_insights', '*', (q) => {
+        let query = q.gte('date', startDate).lte('date', endDate);
+
+        if (accountId) {
+            query = query.eq('account_id', accountId);
+        } else {
+            // SHOWING ALL: Must filter to only include active accounts
+            query = query.in('account_id', validAccountIds);
+        }
+
+        if (campaignId) query = query.eq('campaign_id', campaignId);
+        return query;
+    });
+
+    // 3. Fetch campaigns (filtered by valid accounts)
+    const campaigns = await fetchAllRows<any>('facebook_campaigns', 'id, account_id, name, status, objective', (q) => {
+        if (accountId) return q.eq('account_id', accountId);
+        return q.in('account_id', validAccountIds);
+    });
+    const campaignMap = new Map(campaigns.map(c => [c.id, c]));
 
     // Fetch ad sets
     const adsets = await fetchAllRows<any>('facebook_adsets', 'id, campaign_id, name, status', (q) => {

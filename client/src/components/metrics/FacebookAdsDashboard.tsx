@@ -181,6 +181,7 @@ export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAds
                             data={metrics?.byCampaign || []}
                             selectedMetrics={selectedMetrics}
                             level="campaign"
+                            onReorder={setSelectedMetrics}
                         />
                     </TabsContent>
 
@@ -189,6 +190,7 @@ export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAds
                             data={metrics?.byAdSet || []}
                             selectedMetrics={selectedMetrics}
                             level="adset"
+                            onReorder={setSelectedMetrics}
                         />
                     </TabsContent>
 
@@ -197,6 +199,7 @@ export default function FacebookAdsDashboard({ startDate, endDate }: FacebookAds
                             data={metrics?.byAd || []}
                             selectedMetrics={selectedMetrics}
                             level="ad"
+                            onReorder={setSelectedMetrics}
                         />
                     </TabsContent>
                 </Tabs>
