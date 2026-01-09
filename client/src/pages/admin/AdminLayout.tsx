@@ -1,14 +1,13 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
-import { 
-  Home as HomeIcon, 
-  BarChart3, 
-  Settings, 
-  Moon, 
-  Sun, 
+import {
+  Home as HomeIcon,
+  BarChart3,
+  Settings,
+  Moon,
+  Sun,
   Target,
-  Package,
   GitBranch,
   Sliders,
   TrendingUp
@@ -41,7 +40,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </p>
             </div>
           </div>
-          
+
           <div className="hidden md:flex items-center gap-4">
             <Link href="/">
               <Button variant="ghost" size="sm">
@@ -79,8 +78,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="container mx-auto px-4">
           <div className="flex gap-2 overflow-x-auto py-2">
             <Link href="/admin">
-              <Button 
-                variant={location === "/admin" ? "default" : "ghost"} 
+              <Button
+                variant={location === "/admin" ? "default" : "ghost"}
                 size="sm"
                 className="whitespace-nowrap"
               >
@@ -89,8 +88,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </Button>
             </Link>
             <Link href="/admin/metas">
-              <Button 
-                variant={location === "/admin/metas" ? "default" : "ghost"} 
+              <Button
+                variant={location === "/admin/metas" ? "default" : "ghost"}
                 size="sm"
                 className="whitespace-nowrap"
               >
@@ -98,19 +97,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 Metas
               </Button>
             </Link>
-            <Link href="/admin/produtos">
-              <Button 
-                variant={location === "/admin/produtos" ? "default" : "ghost"} 
-                size="sm"
-                className="whitespace-nowrap"
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Produtos
-              </Button>
-            </Link>
             <Link href="/admin/funis">
-              <Button 
-                variant={location === "/admin/funis" ? "default" : "ghost"} 
+              <Button
+                variant={location === "/admin/funis" ? "default" : "ghost"}
                 size="sm"
                 className="whitespace-nowrap"
               >
@@ -119,8 +108,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </Button>
             </Link>
             <Link href="/admin/configuracoes">
-              <Button 
-                variant={location === "/admin/configuracoes" ? "default" : "ghost"} 
+              <Button
+                variant={location === "/admin/configuracoes" ? "default" : "ghost"}
                 size="sm"
                 className="whitespace-nowrap"
               >
