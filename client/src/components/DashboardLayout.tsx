@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Trophy, Settings, Target, Package, GitBranch, Sliders } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Trophy, Settings, Target, Package, GitBranch, Sliders, Link as LinkIcon } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -40,6 +40,7 @@ const adminMenuItems = [
   { icon: Package, label: "Produtos", path: "/admin/produtos" },
   { icon: GitBranch, label: "Funis", path: "/admin/funis" },
   { icon: Sliders, label: "Configurações", path: "/admin/configuracoes" },
+  { icon: LinkIcon, label: "Gerador de URL", path: "/admin/url-generator" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -119,7 +120,7 @@ export default function DashboardLayout({
         } as CSSProperties
       }
     >
-      <DashboardLayoutContent 
+      <DashboardLayoutContent
         setSidebarWidth={setSidebarWidth}
         showFilters={showFilters}
         selectedMonth={selectedMonth}
@@ -331,7 +332,7 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset>
-        <DashboardHeader 
+        <DashboardHeader
           showFilters={showFilters}
           selectedMonth={selectedMonth}
           selectedYear={selectedYear}

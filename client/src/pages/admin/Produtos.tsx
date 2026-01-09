@@ -22,12 +22,12 @@ export default function AdminProdutos() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   // Formulário novo produto
   const [novoProduto, setNovoProduto] = useState({
     name: '',
     price: '',
-    channel: 'ambos',
+    channel: 'both',
   });
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function AdminProdutos() {
       if (error) throw error;
 
       toast.success('Produto adicionado!');
-      setNovoProduto({ name: '', price: '', channel: 'ambos' });
+      setNovoProduto({ name: '', price: '', channel: 'both' });
       await loadProdutos();
     } catch (error: any) {
       console.error('Erro ao criar produto:', error);
@@ -106,7 +106,7 @@ export default function AdminProdutos() {
 
   async function removerProduto(id: number) {
     // TODO: Verificar se produto está em algum funil antes de remover
-    
+
     if (!confirm('Tem certeza que deseja remover este produto?')) {
       return;
     }
@@ -192,7 +192,7 @@ export default function AdminProdutos() {
                   <SelectContent>
                     <SelectItem value="marketing">Marketing</SelectItem>
                     <SelectItem value="comercial">Comercial</SelectItem>
-                    <SelectItem value="ambos">Ambos</SelectItem>
+                    <SelectItem value="both">Ambos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -253,7 +253,7 @@ export default function AdminProdutos() {
                           <SelectContent>
                             <SelectItem value="marketing">Marketing</SelectItem>
                             <SelectItem value="comercial">Comercial</SelectItem>
-                            <SelectItem value="ambos">Ambos</SelectItem>
+                            <SelectItem value="both">Ambos</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

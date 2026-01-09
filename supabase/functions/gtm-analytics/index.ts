@@ -7,6 +7,7 @@ import { getTrafficSources } from './handlers/traffic_sources.ts'
 import { getCreativeRanking } from './handlers/creatives.ts'
 import { getPlacementRanking } from './handlers/placements.ts'
 import { getFacebookMetrics, getFacebookAccounts } from './handlers/facebook.ts'
+import { getFunnelPerformance } from './handlers/funnel_performance.ts'
 import { RateLimiter } from './rate-limiter.ts'
 
 // Configurar Rate Limiter: 100 requisições por minuto por IP
@@ -94,40 +95,44 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'funnel':
-        result = await getFunnelMetrics(supabase, startDate, endDate)
+        result = await getFunnelMetrics(supabase, startDate!, endDate!)
         break
 
       case 'evolution':
         const eventName = url.searchParams.get('event_name') || 'purchase'
         const groupBy = (url.searchParams.get('group_by') || 'day') as 'hour' | 'day' | 'week'
-        result = await getEvolutionChart(supabase, startDate, endDate, eventName, groupBy)
+        result = await getEvolutionChart(supabase, startDate!, endDate!, eventName, groupBy)
         break
 
       case 'products':
-        result = await getProductMetrics(supabase, startDate, endDate)
+        result = await getProductMetrics(supabase, startDate!, endDate!)
         break
 
       case 'traffic_sources':
-        result = await getTrafficSources(supabase, startDate, endDate)
+        result = await getTrafficSources(supabase, startDate!, endDate!)
         break
 
       case 'creatives':
-        result = await getCreativeRanking(supabase, startDate, endDate)
+        result = await getCreativeRanking(supabase, startDate!, endDate!)
         break
 
       case 'placements':
-        result = await getPlacementRanking(supabase, startDate, endDate)
+        result = await getPlacementRanking(supabase, startDate!, endDate!)
         break
 
       case 'facebook':
         const fbAccountId = url.searchParams.get('account_id') || undefined
         const fbCampaignId = url.searchParams.get('campaign_id') || undefined
-        result = await getFacebookMetrics(supabase, startDate, endDate, fbAccountId, fbCampaignId)
+        result = await getFacebookMetrics(supabase, startDate!, endDate!, fbAccountId, fbCampaignId)
         break
 
       case 'facebook-accounts':
       case 'fb-accounts': // Alias for debugging/adblock bypass
         result = await getFacebookAccounts(supabase)
+        break
+
+      case 'funnel_performance':
+        result = await getFunnelPerformance(supabase, startDate!, endDate!)
         break
 
       default:

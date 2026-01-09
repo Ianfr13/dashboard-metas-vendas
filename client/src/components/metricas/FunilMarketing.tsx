@@ -302,71 +302,71 @@ export default function FunilMarketing({ startDate, endDate }: FunilMarketingPro
           <CardDescription>Acompanhe o fluxo de leads até a conversão</CardDescription>
         </CardHeader>
         <CardContent>
-          <CardContent>
-            <div className="space-y-6">
 
-              {/* 1. Page View -> View Content */}
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-600 text-white p-4 rounded-lg flex-1 text-center">
-                  <div className="text-2xl font-bold">{metrics.etapas?.pageViews.toLocaleString() || 0}</div>
-                  <div className="text-sm">Visualizações de Página</div>
-                </div>
-                <div className="flex flex-col items-center">
-                  <div className="text-red-500 font-bold text-xs">{metrics.dropOff?.pageViewToViewItem.toFixed(1)}% Drop-off</div>
-                  <div className="h-0.5 w-16 bg-gray-300 my-1 relative">
-                    <div className="absolute right-0 top-1/2 -mt-1 -mr-1 w-2 h-2 border-t-2 border-r-2 border-gray-300 transform rotate-45"></div>
-                  </div>
-                </div>
-                <div className="bg-blue-500 text-white p-4 rounded-lg flex-1 text-center">
-                  <div className="text-2xl font-bold">{metrics.etapas?.viewItem.toLocaleString() || 0}</div>
-                  <div className="text-sm">Visualização de Produto</div>
-                </div>
-              </div>
+          <div className="space-y-6">
 
-              {/* 2. View Content -> Add To Cart */}
-              <div className="flex items-center gap-4 pl-12">
-                <div className="w-0.5 h-8 bg-gray-300 ml-[25%]"></div>
+            {/* 1. Page View -> View Content */}
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-600 text-white p-4 rounded-lg flex-1 text-center">
+                <div className="text-2xl font-bold">{metrics.etapas?.pageViews.toLocaleString() || 0}</div>
+                <div className="text-sm">Visualizações de Página</div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex-1 text-right text-red-500 text-xs font-bold pr-4">
-                  {metrics.dropOff?.viewItemToAddToCart.toFixed(1)}% Drop-off
-                </div>
-                <div className="bg-blue-400 text-white p-4 rounded-lg flex-1 text-center">
-                  <div className="text-2xl font-bold">{metrics.etapas?.addToCart.toLocaleString() || 0}</div>
-                  <div className="text-sm">Adições ao Carrinho</div>
-                </div>
-              </div>
-
-              {/* 3. Add to Cart -> Checkout */}
-              <div className="flex items-center gap-4 pl-12">
-                <div className="w-0.5 h-8 bg-gray-300 ml-[60%]"></div>
-              </div>
-              <div className="flex items-center gap-4 justify-end">
-                <div className="flex-1 text-right text-red-500 text-xs font-bold pr-4">
-                  {metrics.dropOff?.addToCartToCheckout.toFixed(1)}% Drop-off
-                </div>
-                <div className="bg-orange-500 text-white p-4 rounded-lg flex-1 text-center max-w-[50%]">
-                  <div className="text-2xl font-bold">{metrics.etapas?.beginCheckout.toLocaleString() || 0}</div>
-                  <div className="text-sm">Initiate Checkout</div>
+              <div className="flex flex-col items-center">
+                <div className="text-red-500 font-bold text-xs">{metrics.dropOff?.pageViewToViewItem.toFixed(1)}% Drop-off</div>
+                <div className="h-0.5 w-16 bg-gray-300 my-1 relative">
+                  <div className="absolute right-0 top-1/2 -mt-1 -mr-1 w-2 h-2 border-t-2 border-r-2 border-gray-300 transform rotate-45"></div>
                 </div>
               </div>
-
-              {/* 4. Checkout -> Purchase */}
-              <div className="flex items-center gap-4 pl-12">
-                <div className="w-0.5 h-8 bg-gray-300 ml-[75%]"></div>
+              <div className="bg-blue-500 text-white p-4 rounded-lg flex-1 text-center">
+                <div className="text-2xl font-bold">{metrics.etapas?.viewItem.toLocaleString() || 0}</div>
+                <div className="text-sm">Visualização de Produto</div>
               </div>
-              <div className="flex items-center gap-4 justify-end">
-                <div className="flex-1 text-right text-red-500 text-xs font-bold pr-4">
-                  {metrics.dropOff?.checkoutToPurchase.toFixed(1)}% Drop-off
-                </div>
-                <div className="bg-green-600 text-white p-4 rounded-lg flex-1 text-center max-w-[40%]">
-                  <div className="text-2xl font-bold">{metrics.etapas?.purchases.toLocaleString() || 0}</div>
-                  <div className="text-sm">Compras Realizadas</div>
-                </div>
-              </div>
-
             </div>
-          </CardContent>
+
+            {/* 2. View Content -> Add To Cart */}
+            <div className="flex items-center gap-4 pl-12">
+              <div className="w-0.5 h-8 bg-gray-300 ml-[25%]"></div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 text-right text-red-500 text-xs font-bold pr-4">
+                {metrics.dropOff?.viewItemToAddToCart.toFixed(1)}% Drop-off
+              </div>
+              <div className="bg-blue-400 text-white p-4 rounded-lg flex-1 text-center">
+                <div className="text-2xl font-bold">{metrics.etapas?.addToCart.toLocaleString() || 0}</div>
+                <div className="text-sm">Adições ao Carrinho</div>
+              </div>
+            </div>
+
+            {/* 3. Add to Cart -> Checkout */}
+            <div className="flex items-center gap-4 pl-12">
+              <div className="w-0.5 h-8 bg-gray-300 ml-[60%]"></div>
+            </div>
+            <div className="flex items-center gap-4 justify-end">
+              <div className="flex-1 text-right text-red-500 text-xs font-bold pr-4">
+                {metrics.dropOff?.addToCartToCheckout.toFixed(1)}% Drop-off
+              </div>
+              <div className="bg-orange-500 text-white p-4 rounded-lg flex-1 text-center max-w-[50%]">
+                <div className="text-2xl font-bold">{metrics.etapas?.beginCheckout.toLocaleString() || 0}</div>
+                <div className="text-sm">Initiate Checkout</div>
+              </div>
+            </div>
+
+            {/* 4. Checkout -> Purchase */}
+            <div className="flex items-center gap-4 pl-12">
+              <div className="w-0.5 h-8 bg-gray-300 ml-[75%]"></div>
+            </div>
+            <div className="flex items-center gap-4 justify-end">
+              <div className="flex-1 text-right text-red-500 text-xs font-bold pr-4">
+                {metrics.dropOff?.checkoutToPurchase.toFixed(1)}% Drop-off
+              </div>
+              <div className="bg-green-600 text-white p-4 rounded-lg flex-1 text-center max-w-[40%]">
+                <div className="text-2xl font-bold">{metrics.etapas?.purchases.toLocaleString() || 0}</div>
+                <div className="text-sm">Compras Realizadas</div>
+              </div>
+            </div>
+
+          </div>
+        </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

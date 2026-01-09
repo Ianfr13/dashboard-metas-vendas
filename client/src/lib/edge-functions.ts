@@ -375,6 +375,19 @@ export interface PlacementMetrics {
   conversionRate: number;
 }
 
+export interface FunnelPerformanceMetrics {
+  funnelId: string;
+  funnelVersion: string;
+  pageVersion: string;
+  offerId: string;
+  funnelStage: string;
+  sessions: number;
+  leads: number;
+  sales: number;
+  revenue: number;
+  conversionRate: number;
+}
+
 export const gtmAnalyticsAPI = {
   /**
    * Obtém métricas do funil de conversão
@@ -478,6 +491,24 @@ export const gtmAnalyticsAPI = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch placement ranking');
+    }
+
+    return response.json();
+  },
+
+
+  /**
+   * Obtém performance detalhada por funil/versão
+   */
+  getFunnelPerformance: async (startDate: string, endDate: string): Promise<FunnelPerformanceMetrics[]> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/gtm-analytics?action=funnel_performance&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch funnel performance');
     }
 
     return response.json();

@@ -12,6 +12,7 @@ import AdminMetas from "./pages/admin/Metas";
 import AdminProdutos from "./pages/admin/Produtos";
 import AdminFunis from "./pages/admin/Funis";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
+import UrlGeneratorPage from "./pages/admin/UrlGeneratorPage";
 import Metricas from "./pages/Metricas";
 import Ranking from "./pages/Ranking";
 import { LoginPage } from "./components/Auth/LoginPage";
@@ -25,7 +26,7 @@ function Router() {
       {/* Rota pública de landing/login */}
       <Route path="/" component={Home} />
       <Route path="/login" component={LoginPage} />
-      
+
       {/* Rotas protegidas (requer autenticação) */}
       <Route path="/dashboard">
         {() => (
@@ -34,7 +35,7 @@ function Router() {
           </ProtectedRoute>
         )}
       </Route>
-      
+
       {/* Rotas de admin (requer autenticação) */}
       <Route path="/admin">
         {() => (
@@ -43,7 +44,7 @@ function Router() {
           </ProtectedRoute>
         )}
       </Route>
-      
+
       <Route path="/admin/metas">
         {() => (
           <ProtectedRoute>
@@ -51,7 +52,7 @@ function Router() {
           </ProtectedRoute>
         )}
       </Route>
-      
+
       <Route path="/admin/produtos">
         {() => (
           <ProtectedRoute>
@@ -59,7 +60,7 @@ function Router() {
           </ProtectedRoute>
         )}
       </Route>
-      
+
       <Route path="/admin/funis">
         {() => (
           <ProtectedRoute>
@@ -67,7 +68,7 @@ function Router() {
           </ProtectedRoute>
         )}
       </Route>
-      
+
       <Route path="/admin/configuracoes">
         {() => (
           <ProtectedRoute>
@@ -75,7 +76,15 @@ function Router() {
           </ProtectedRoute>
         )}
       </Route>
-      
+
+      <Route path="/admin/url-generator">
+        {() => (
+          <ProtectedRoute>
+            <UrlGeneratorPage />
+          </ProtectedRoute>
+        )}
+      </Route>
+
       <Route path="/metricas">
         {() => (
           <ProtectedRoute>
@@ -83,7 +92,7 @@ function Router() {
           </ProtectedRoute>
         )}
       </Route>
-      
+
       <Route path="/ranking">
         {() => (
           <ProtectedRoute>
@@ -91,9 +100,9 @@ function Router() {
           </ProtectedRoute>
         )}
       </Route>
-      
+
       <Route path="/404" component={NotFound} />
-      
+
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
