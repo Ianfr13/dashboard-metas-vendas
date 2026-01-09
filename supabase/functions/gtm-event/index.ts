@@ -174,6 +174,9 @@ Deno.serve(async (req) => {
     };
 
 
+    // Determine canal based on utm_term
+    const canal = (finalUtms.utm_term?.toLowerCase() === 'comercial') ? 'comercial' : 'marketing';
+
     const userAgent = req.headers.get('user-agent') || null;
 
     const { error: insertError } = await supabaseClient
@@ -194,7 +197,8 @@ Deno.serve(async (req) => {
         browser: browser || null,
         os: os || null,
         screen_resolution: screen_resolution || null,
-        funnel_id: funnel_id || (page_url ? extractFunnelId(page_url) : null)
+        funnel_id: funnel_id || (page_url ? extractFunnelId(page_url) : null),
+        canal: canal
       });
 
     if (insertError) throw insertError;
