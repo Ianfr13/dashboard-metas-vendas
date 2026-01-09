@@ -17,8 +17,8 @@ const plugins = [
     registerType: "autoUpdate",
     includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
     manifest: {
-      name: "Dashboard Metas Vendas",
-      short_name: "Dashboard",
+      name: "Douravita Dashboard",
+      short_name: "Douravita",
       description: "Dashboard de Metas e Vendas em Tempo Real",
       theme_color: "#ffffff",
       icons: [
