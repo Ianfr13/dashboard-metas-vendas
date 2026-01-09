@@ -46,11 +46,12 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const month = parseInt(url.searchParams.get('month') || new Date().getMonth() + 1);
     const year = parseInt(url.searchParams.get('year') || new Date().getFullYear());
+    const canal = url.searchParams.get('canal') as 'comercial' | 'marketing' | null;
 
     // Fetch data in parallel for better performance
     const [metaPrincipal, salesData, products] = await Promise.all([
       getMetaPrincipal(supabase, month, year),
-      aggregateSales(supabase, month, year),
+      aggregateSales(supabase, month, year, canal),
       getProducts(supabase),
     ]);
 

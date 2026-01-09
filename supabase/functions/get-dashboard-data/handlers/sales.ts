@@ -16,21 +16,29 @@ export interface SalesTotals {
 export async function aggregateSales(
   supabase: SupabaseClient,
   month: number,
-  year: number
+  year: number,
+  canal?: 'comercial' | 'marketing' | null
 ): Promise<SalesTotals> {
   // Calculate date range
   const startDate = new Date(year, month - 1, 1).toISOString();
   const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
 
-  console.log('[aggregateSales] Fetching for:', { month, year, startDate, endDate });
+  console.log('[aggregateSales] Fetching for:', { month, year, startDate, endDate, canal });
 
-  // Fetch purchase events
-  const { data: salesEvents, error } = await supabase
+  // Build query
+  let query = supabase
     .from('gtm_events')
     .select('event_data, created_at')
     .eq('event_name', 'purchase')
     .gte('created_at', startDate)
     .lte('created_at', endDate);
+
+  // Filter by canal if specified  
+  if (canal) {
+    query = query.eq('canal', canal);
+  }
+
+  const { data: salesEvents, error } = await query;
 
   console.log('[aggregateSales] Query result:', {
     error: error?.message,
