@@ -21,7 +21,21 @@ self.addEventListener('push', (event) => {
         data: data?.url || '/',
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    sound: '/sounds/cash.mp3', // Try standard sound property
+        vibrate: [200, 100, 200],
+    };
+
+// Broadcast to open windows to play sound
+const broadcastPromise = self.clients.matchAll({ type: 'window' }).then(clients => {
+    clients.forEach(client => {
+        client.postMessage({ type: 'PLAY_SOUND', sound: '/sounds/cash.mp3' });
+    });
+});
+
+event.waitUntil(Promise.all([
+    self.registration.showNotification(title, options),
+    broadcastPromise
+]));
 });
 
 self.addEventListener('notificationclick', (event) => {

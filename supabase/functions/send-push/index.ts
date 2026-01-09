@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
 
         const payload: PushPayload = {
-            title: "💰 Nova Venda!",
+            title: "Nova Venda",
             body: `Venda de ${productName} por ${formattedAmount}`,
             url: "/dashboard", // Deep link
         };
