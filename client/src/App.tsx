@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/admin/index";
 import AdminMetas from "./pages/admin/Metas";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
+import AdminTraffic from "./pages/admin/Trafego";
 import UrlGeneratorPage from "./pages/admin/UrlGeneratorPage";
 import Metricas from "./pages/Metricas";
 import Ranking from "./pages/Ranking";
@@ -58,6 +59,14 @@ function Router() {
         {() => (
           <ProtectedRoute>
             <AdminConfiguracoes />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/admin/trafego">
+        {() => (
+          <ProtectedRoute>
+            <AdminTraffic />
           </ProtectedRoute>
         )}
       </Route>

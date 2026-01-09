@@ -40,9 +40,21 @@ export default {
 
     // 2. HTTP Trigger (Manual/Webhook)
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+        // CORS Headers
+        const corsHeaders = {
+            'Access-Control-Allow-Origin': '*', // Or specific domain if preferred
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+        };
+
+        // Handle CORS Preflight
+        if (request.method === 'OPTIONS') {
+            return new Response(null, { headers: corsHeaders });
+        }
+
         // Only allow POST
         if (request.method !== 'POST') {
-            return new Response('Method not allowed', { status: 405 });
+            return new Response('Method not allowed', { status: 405, headers: corsHeaders });
         }
 
         const url = new URL(request.url);
@@ -51,15 +63,15 @@ export default {
 
         if (action === 'sync_all') {
             await env.FACEBOOK_QUEUE.send({ type: 'sync_all' });
-            return new Response('Sync All Queued', { status: 200 });
+            return new Response('Sync All Queued', { status: 200, headers: corsHeaders });
         }
 
         if (action === 'sync_account' && accountId) {
             await env.FACEBOOK_QUEUE.send({ type: 'sync_account', accountId });
-            return new Response(`Sync Account ${accountId} Queued`, { status: 200 });
+            return new Response(`Sync Account ${accountId} Queued`, { status: 200, headers: corsHeaders });
         }
 
-        return new Response('Invalid action', { status: 400 });
+        return new Response('Invalid action', { status: 400, headers: corsHeaders });
     },
 
     // 3. Queue Consumer
@@ -95,23 +107,60 @@ export default {
 // ============================================
 
 async function handleSyncAll(env: Env, job: FacebookJob) {
-    // 1. Fetch all ad accounts
-    const accounts = await fetchAdAccounts(env.FACEBOOK_ACCESS_TOKEN);
-    console.log(`[facebook-worker] Found ${accounts.length} accounts. Enqueueing jobs...`);
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
-    // 2. Fan-out: Create a job for each account
-    const jobs: FacebookJob[] = accounts.map(acc => ({
-        type: 'sync_account',
-        accountId: acc.id,
-        startDate: job.startDate,
-        endDate: job.endDate
-    }));
+    // 1. Fetch all ad accounts from Facebook (Source of Truth for existence)
+    const fbAccounts = await fetchAdAccounts(env.FACEBOOK_ACCESS_TOKEN);
+    console.log(`[facebook-worker] Found ${fbAccounts.length} accounts on Facebook.`);
 
-    // Batch send to queue (Cloudflare allows sending array)
-    // Note: Queue.send accepts a message or batch.
-    // We send individually or in small batches if allowed. 
-    // `env.FACEBOOK_QUEUE.send` sends ONE message. `sendBatch` creates a batch.
-    // Let's loop and send.
+    // 2. Fetch all known accounts from Supabase (Source of Truth for settings)
+    const { data: dbAccounts } = await supabase
+        .from('facebook_ad_accounts')
+        .select('id, active');
+
+    // Create map for easy lookup: id -> active status
+    const dbAccountMap = new Map(dbAccounts?.map(a => [a.id, a.active]) || []);
+
+    const jobs: FacebookJob[] = [];
+
+    // 3. Process accounts
+    for (const acc of fbAccounts) {
+        let shouldSync = false;
+
+        if (dbAccountMap.has(acc.id)) {
+            // Account exists in DB, check if active
+            if (dbAccountMap.get(acc.id) === true) {
+                shouldSync = true;
+            } else {
+                console.log(`[facebook-worker] Skipping account ${acc.name} (${acc.id}) - Disabled in DB`);
+            }
+        } else {
+            // New account! Insert into DB (default active) and sync
+            console.log(`[facebook-worker] New account discovered: ${acc.name} (${acc.id})`);
+            await supabase.from('facebook_ad_accounts').insert({
+                id: acc.id,
+                name: acc.name,
+                currency: acc.currency,
+                account_status: 1, // Default active status
+                active: true, // Visible by default
+                updated_at: new Date().toISOString()
+            });
+            shouldSync = true;
+        }
+
+        if (shouldSync) {
+            jobs.push({
+                type: 'sync_account',
+                accountId: acc.id,
+                startDate: job.startDate,
+                endDate: job.endDate
+            });
+        }
+    }
+
+    console.log(`[facebook-worker] Enqueueing ${jobs.length} sync jobs.`);
+
+    // 4. Batch send to queue
     for (const subJob of jobs) {
         await env.FACEBOOK_QUEUE.send(subJob);
     }
@@ -185,7 +234,7 @@ async function handleSyncAccount(env: Env, supabase: any, accountId: string, sta
 
     if (insights.length > 0) {
         const records = insights.map(i => parseInsightRecord(i, accountId));
-        const { error } = await supabase.from('facebook_insights').upsert(records, { onConflict: 'campaign_id,date' }); // Note: Logic check, original code used 'campaign_id,date' but insights might be ad level.
+        const { error } = await supabase.from('facebook_insights').upsert(records, { onConflict: 'ad_id,date' });
         // Original code logic: `onConflict: 'campaign_id,date'` - wait, if level is 'ad', this constraint might be wrong if we have multiple ads per campaign.
         // Let's check original code. It used `upsert(record, { onConflict: 'campaign_id,date' })`.
         // If we are syncing at 'ad' level, we should probably upsert based on ad_id + date?

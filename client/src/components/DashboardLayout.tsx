@@ -37,6 +37,7 @@ const menuItems = [
 const adminMenuItems = [
   { icon: Settings, label: "Admin Dashboard", path: "/admin" },
   { icon: Target, label: "Metas", path: "/admin/metas" },
+  { icon: Package, label: "Tráfego Pago", path: "/admin/trafego" },
   { icon: Sliders, label: "Configurações", path: "/admin/configuracoes" },
   { icon: LinkIcon, label: "Gerador de URL", path: "/admin/url-generator" },
 ];
