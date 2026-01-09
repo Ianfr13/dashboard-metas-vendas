@@ -1,3 +1,5 @@
+import webpush from 'web-push';
+
 /**
  * GTM Producer Worker
  * 
@@ -8,6 +10,11 @@
 export interface Env {
     GTM_QUEUE: Queue<GTMEvent>;
     GTM_SECRET: string;
+    SUPABASE_URL: string;
+    SUPABASE_SERVICE_ROLE_KEY: string;
+    VAPID_PUBLIC_KEY: string;
+    VAPID_PRIVATE_KEY: string;
+    VAPID_SUBJECT: string;
 }
 
 interface GTMEvent {
@@ -32,6 +39,10 @@ interface GTMEvent {
     ip_address?: string;
     user_agent?: string;
     timestamp?: string;
+}
+
+interface PushSubscriptionRow {
+    subscription: webpush.PushSubscription;
 }
 
 // Domínios permitidos
@@ -92,7 +103,7 @@ function extractFunnelId(urlStr: string): string | null {
 }
 
 export default {
-    async fetch(request: Request, env: Env): Promise<Response> {
+    async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         // Handle CORS preflight
         if (request.method === 'OPTIONS') {
             return new Response('ok', { headers: corsHeaders });
@@ -159,6 +170,68 @@ export default {
 
             // Enviar para a Queue (batch processing)
             await env.GTM_QUEUE.send(enrichedEvent);
+
+            // Handle Push Notification for purchase events (Immediate)
+            if (enrichedEvent.event_name === 'purchase' && env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY) {
+                ctx.waitUntil((async () => {
+                    try {
+                        webpush.setVapidDetails(
+                            env.VAPID_SUBJECT || 'mailto:admin@example.com',
+                            env.VAPID_PUBLIC_KEY,
+                            env.VAPID_PRIVATE_KEY
+                        );
+
+                        // Fetch subscriptions from Supabase
+                        const subResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/push_subscriptions?select=subscription`, {
+                            headers: {
+                                'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+                                'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+                            }
+                        });
+
+                        if (!subResponse.ok) {
+                            console.error('[gtm-producer] Failed to fetch subscriptions:', await subResponse.text());
+                            return;
+                        }
+
+                        const subscriptions: PushSubscriptionRow[] = await subResponse.json();
+                        const eventData = enrichedEvent.event_data ? (typeof enrichedEvent.event_data === 'string' ? JSON.parse(enrichedEvent.event_data) : enrichedEvent.event_data) : {};
+                        const amount = eventData.value || eventData.transaction_value || 0;
+                        const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+
+                        let productName = "Produto";
+                        if (eventData.items && Array.isArray(eventData.items) && eventData.items.length > 0) {
+                            productName = eventData.items[0].item_name || eventData.items[0].product_name || "Produto";
+                        } else if (eventData.item_name) {
+                            productName = eventData.item_name;
+                        } else if (eventData.product_name) {
+                            productName = eventData.product_name;
+                        }
+
+                        const payload = {
+                            title: "Nova Venda!",
+                            body: `Venda de ${productName} por ${formattedAmount}`,
+                            url: "/dashboard"
+                        };
+
+                        await Promise.allSettled(subscriptions.map(async (sub) => {
+                            try {
+                                await webpush.sendNotification(sub.subscription, JSON.stringify(payload));
+                            } catch (error: any) {
+                                if (error.statusCode === 410) {
+                                    console.log('Subscription expired');
+                                } else {
+                                    console.error('Error sending push:', error);
+                                }
+                            }
+                        }));
+                        console.log('[gtm-producer] Immediate push notification sent');
+
+                    } catch (err) {
+                        console.error('[gtm-producer] Error sending immediate push:', err);
+                    }
+                })());
+            }
 
             return new Response(JSON.stringify({ success: true, queued: true }), {
                 status: 200,

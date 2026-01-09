@@ -119,8 +119,5 @@ export default {
         for (const msg of batch.messages) {
             msg.ack();
         }
-
-        // NOTE: Push notifications are now handled immediately in gtm-producer (Producer) for low latency.
-        // This consumer only handles database inserts.
     }
 };

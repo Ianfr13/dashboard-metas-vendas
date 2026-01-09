@@ -6,50 +6,35 @@ import { getProductMetrics } from './handlers/products.ts'
 import { getTrafficSources } from './handlers/traffic_sources.ts'
 import { getCreativeRanking } from './handlers/creatives.ts'
 import { getPlacementRanking } from './handlers/placements.ts'
-import { getFacebookMetrics, getFacebookAccounts } from './handlers/facebook.ts'
+import { getFacebookMetrics, getFacebookAccounts, getFacebookCampaigns, getFacebookAdSets, getFacebookAds } from './handlers/facebook.ts'
 import { getFunnelPerformance } from './handlers/funnel_performance.ts'
 import { RateLimiter } from './rate-limiter.ts'
 
 // Configurar Rate Limiter: 100 requisições por minuto por IP
 const rateLimiter = new RateLimiter(60000, 100)
 
-// Helper para verificar autenticação manualmente
+// Helper para verificar autenticação
 async function verifyAuth(req: Request) {
   const authHeader = req.headers.get('Authorization')
-
   if (!authHeader) {
     throw new Error('Autenticação necessária: Header Authorization ausente')
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('CRITICAL: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars')
-    throw new Error('Erro de configuração no servidor')
-  }
-
-  // Criar client com SERVICE_ROLE_KEY apenas para validação do token
-  const authClient = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+  // Criar client com ANON KEY e o header de autorização do usuário
+  // Isso permite que o Supabase valide o JWT automaticamente
+  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
   })
 
-  // Extrair o token
-  const token = authHeader.replace(/^Bearer\s+/i, '')
-
-  if (!token || token === 'undefined' || token === 'null') {
-    throw new Error('Token de autenticação inválido ou malformado')
-  }
-
-  // Validar o token JWT via Supabase Auth
-  const { data: { user }, error } = await authClient.auth.getUser(token)
+  // Verificar se o usuário é válido
+  const { data: { user }, error } = await authClient.auth.getUser()
 
   if (error || !user) {
-    console.error('[verifyAuth] Auth error:', error?.message || 'User not found')
-    throw new Error(`Falha na autenticação: ${error?.message || 'Usuário inválido'}`)
+    console.error('[verifyAuth] Auth error:', error?.message)
+    throw new Error(`Falha na autenticação: ${error?.message || 'Token inválido'}`)
   }
 
   return user
@@ -126,9 +111,26 @@ Deno.serve(async (req) => {
         result = await getFacebookMetrics(supabase, startDate!, endDate!, fbAccountId, fbCampaignId)
         break
 
-      case 'facebook-accounts':
       case 'fb-accounts': // Alias for debugging/adblock bypass
         result = await getFacebookAccounts(supabase)
+        break
+
+      case 'fb-campaigns':
+        const campAccId = url.searchParams.get('account_id')
+        if (!campAccId) throw new Error('account_id required')
+        result = await getFacebookCampaigns(supabase, campAccId)
+        break
+
+      case 'fb-adsets':
+        const adsetAccId = url.searchParams.get('account_id')
+        if (!adsetAccId) throw new Error('account_id required')
+        result = await getFacebookAdSets(supabase, adsetAccId)
+        break
+
+      case 'fb-ads':
+        const adsAccId = url.searchParams.get('account_id')
+        if (!adsAccId) throw new Error('account_id required')
+        result = await getFacebookAds(supabase, adsAccId)
         break
 
       case 'funnel_performance':

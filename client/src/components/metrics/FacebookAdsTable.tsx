@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, Filter } from "lucide-react";
 import { FACEBOOK_METRICS, formatMetricValue } from "@/lib/facebook-metrics";
+import { cn } from "@/lib/utils";
 
 interface FacebookAdsTableProps {
     data: any[];
@@ -11,74 +12,64 @@ interface FacebookAdsTableProps {
     onSort?: (key: string) => void;
 }
 
-const MIN_COLUMN_WIDTH = 80;
-const DEFAULT_COLUMN_WIDTH = 120;
+const MIN_COLUMN_WIDTH = 100;
+const DEFAULT_COLUMN_WIDTH = 140;
 
 export default function FacebookAdsTable({ data, selectedMetrics, level, onSort }: FacebookAdsTableProps) {
-    const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+    const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
+        name: 300,
+        status: 100,
+        campaign: 200,
+        adset: 200,
+    });
     const [resizing, setResizing] = useState<string | null>(null);
-
-    const visibleColumns = useMemo(() => {
-        const cols = ['name'];
-        if (level === 'adset' || level === 'ad') cols.push('campaign');
-        if (level === 'ad') cols.push('adset');
-        cols.push('status');
-        selectedMetrics.forEach(key => cols.push(key));
-        return cols;
-    }, [level, selectedMetrics]);
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
     const columns = useMemo(() => {
         return selectedMetrics.map(key => FACEBOOK_METRICS.find(m => m.key === key)!).filter(Boolean);
     }, [selectedMetrics]);
 
+    // Internal sorting
+    const sortedData = useMemo(() => {
+        if (!sortConfig) return data;
+        return [...data].sort((a, b) => {
+            const aValue = a[sortConfig.key];
+            const bValue = b[sortConfig.key];
+
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [data, sortConfig]);
+
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'desc'; // Default to desc for metrics (higher is usually better/more relevant)
+
+        if (sortConfig && sortConfig.key === key) {
+            direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+        } else if (key === 'name' || key === 'status') {
+            direction = 'asc'; // Default to asc for text
+        }
+
+        setSortConfig({ key, direction });
+        onSort?.(key);
+    };
+
     const handleResizeStart = (column: string, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-
         setResizing(column);
+
         const startX = e.clientX;
         const startWidth = columnWidths[column] || DEFAULT_COLUMN_WIDTH;
 
-        // Find neighbor for "Grow" case (Drag Right)
-        const columnIndex = visibleColumns.indexOf(column);
-        const nextColumn = visibleColumns[columnIndex + 1];
-        const startNextWidth = nextColumn ? (columnWidths[nextColumn] || DEFAULT_COLUMN_WIDTH) : 0;
-
         const handleMouseMove = (moveEvent: MouseEvent) => {
             const currentX = moveEvent.clientX;
-            const rawDelta = currentX - startX;
-
-            if (rawDelta < 0) {
-                // Dragging Left (Shrink): Only affect current column
-                // Limit: Cannot shrink below MIN_COLUMN_WIDTH
-                const newWidth = Math.max(MIN_COLUMN_WIDTH, startWidth + rawDelta);
-                setColumnWidths(prev => ({
-                    ...prev,
-                    [column]: newWidth
-                }));
-            } else {
-                // Dragging Right (Grow): Affect current AND neighbor
-                if (!nextColumn) {
-                    // No neighbor to shrink, just grow current (or block it? User said "diminuir o tamanho da caixa do gasto". If no neighbor, maybe just grow?)
-                    // Let's allow growing if it's the last column, just extends the table.
-                    const newWidth = startWidth + rawDelta;
-                    setColumnWidths(prev => ({
-                        ...prev,
-                        [column]: newWidth
-                    }));
-                } else {
-                    // Calculate max expansion allowed by neighbor
-                    // Neighbor cannot go below MIN_COLUMN_WIDTH
-                    const maxDelta = Math.max(0, startNextWidth - MIN_COLUMN_WIDTH);
-                    const constrainedDelta = Math.min(rawDelta, maxDelta);
-
-                    setColumnWidths(prev => ({
-                        ...prev,
-                        [column]: startWidth + constrainedDelta,
-                        [nextColumn]: startNextWidth - constrainedDelta
-                    }));
-                }
-            }
+            const delta = currentX - startX;
+            setColumnWidths(prev => ({
+                ...prev,
+                [column]: Math.max(MIN_COLUMN_WIDTH, startWidth + delta)
+            }));
         };
 
         const handleMouseUp = () => {
@@ -91,185 +82,189 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort 
         document.addEventListener('mouseup', handleMouseUp);
     };
 
-    const getColumnWidth = (key: string) => {
-        return columnWidths[key] || DEFAULT_COLUMN_WIDTH;
-    };
+    const getColumnWidth = (key: string) => columnWidths[key] || DEFAULT_COLUMN_WIDTH;
 
-    const getStatusColor = (status: string) => {
-        switch (status?.toUpperCase()) {
-            case 'ACTIVE':
-                return 'bg-green-500/10 text-green-700 border-green-500/20';
-            case 'PAUSED':
-                return 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20';
-            default:
-                return 'bg-gray-500/10 text-gray-700 border-gray-500/20';
+    // Custom Status Component
+    const StatusCell = ({ status }: { status: string }) => {
+        const s = status?.toUpperCase();
+        let colorClass = "bg-gray-400";
+        let text = "Unknown";
+
+        if (s === 'ACTIVE') {
+            colorClass = "bg-green-500";
+            text = "Active";
+        } else if (s === 'PAUSED') {
+            colorClass = "bg-gray-400";
+            text = "Off";
+        } else if (s === 'ARCHIVED') {
+            colorClass = "bg-slate-300";
+            text = "Archived";
+        } else if (s?.includes('ERROR') || s?.includes('REJECTED')) {
+            colorClass = "bg-red-500";
+            text = "Error";
         }
+
+        return (
+            <div className="flex items-center gap-2">
+                <div className={cn("w-2 h-2 rounded-full", colorClass)} />
+                <span className="text-xs font-medium text-muted-foreground">{text}</span>
+            </div>
+        );
     };
 
     if (data.length === 0) {
         return (
-            <div className="text-center py-12 text-muted-foreground">
-                Nenhum dado disponível para o período selecionado
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground bg-white border border-dashed rounded-lg">
+                <div className="p-4 bg-gray-50 rounded-full mb-3">
+                    <Search className="w-6 h-6 text-gray-400" />
+                </div>
+                <p className="font-medium">Nenhum resultado encontrado</p>
+                <p className="text-sm">Tente ajustar os filtros ou o período de data.</p>
             </div>
         );
     }
 
-    // Styles for resize handle
-    const resizeHandleStyle = "absolute right-0 top-0 bottom-0 w-4 cursor-col-resize flex items-center justify-center z-20 group hover:bg-blue-500/5 select-none touch-none";
-    const resizeLineStyle = "w-0.5 h-full bg-border group-hover:bg-blue-500 transition-colors";
+    const resizeHandleStyle = "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 z-30 transition-colors";
+
+    // Header Cell Common Styles
+    const headerClass = "h-9 px-3 text-xs font-semibold uppercase text-gray-500 bg-gray-50 border-r border-b select-none relative group whitespace-nowrap";
+    const cellClass = "h-10 px-3 text-xs border-r border-b truncate";
 
     return (
-        <div className="border rounded-lg overflow-hidden relative select-none bg-background">
-            <div className="overflow-x-auto">
-                <Table className="w-max min-w-full" style={{ tableLayout: 'fixed' }}>
-                    <TableHeader>
-                        <TableRow className="border-b hover:bg-transparent">
-                            <TableHead
-                                className="sticky left-0 z-10 bg-background border-r p-0 h-10"
-                                style={{ width: getColumnWidth('name'), minWidth: getColumnWidth('name') }}
+        <div className="border rounded shadow-sm bg-white flex flex-col h-[600px] overflow-hidden">
+            <div className="overflow-auto flex-1 w-full relative">
+                <table className="w-max min-w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+                    <thead className="sticky top-0 z-20 shadow-sm">
+                        <tr>
+                            {/* Sticky Name Column */}
+                            <th
+                                className={cn(headerClass, "sticky left-0 z-20 text-left bg-gray-50 shadow-[1px_0_0_0_rgba(0,0,0,0.1)]")}
+                                style={{ width: getColumnWidth('name') }}
+                                onClick={() => handleSort('name')}
                             >
-                                <div className="flex items-center justify-between px-4 h-full relative">
-                                    <span className="truncate font-semibold">Nome</span>
-                                    <div
-                                        className={resizeHandleStyle}
-                                        style={{ right: '-8px' }}
-                                        onMouseDown={(e) => handleResizeStart('name', e)}
-                                    >
-                                        <div className={resizeLineStyle} />
-                                    </div>
+                                <div className="flex items-center justify-between h-full">
+                                    <span>Nome</span>
+                                    {sortConfig?.key === 'name' && (
+                                        sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                                    )}
                                 </div>
-                            </TableHead>
+                                <div className={resizeHandleStyle} onMouseDown={(e) => handleResizeStart('name', e)} />
+                            </th>
 
+                            {/* Sticky Status Column */}
+                            <th
+                                className={cn(headerClass, "sticky z-20 text-left bg-gray-50 shadow-[1px_0_0_0_rgba(0,0,0,0.1)]")}
+                                style={{
+                                    width: getColumnWidth('status'),
+                                    left: getColumnWidth('name')
+                                }}
+                                onClick={() => handleSort('status')}
+                            >
+                                <div className="flex items-center justify-between h-full">
+                                    <span>Veiculação</span>
+                                    {sortConfig?.key === 'status' && (
+                                        sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                                    )}
+                                </div>
+                                <div className={resizeHandleStyle} onMouseDown={(e) => handleResizeStart('status', e)} />
+                            </th>
+
+                            {/* Dynamic Context Columns (Campaign/AdSet) for nested views */}
                             {level === 'adset' && (
-                                <TableHead className="p-0 h-10 border-r relative" style={{ width: getColumnWidth('campaign'), minWidth: getColumnWidth('campaign') }}>
-                                    <div className="flex items-center justify-between px-4 h-full">
-                                        <span className="truncate font-semibold">Campanha</span>
-                                        <div
-                                            className={resizeHandleStyle}
-                                            style={{ right: '-8px' }}
-                                            onMouseDown={(e) => handleResizeStart('campaign', e)}
-                                        >
-                                            <div className={resizeLineStyle} />
-                                        </div>
+                                <th
+                                    className={headerClass + " text-left"}
+                                    style={{ width: getColumnWidth('campaign') }}
+                                    onClick={() => handleSort('campaignName')}
+                                >
+                                    <div className="flex items-center justify-between h-full">
+                                        <span>Campanha</span>
                                     </div>
-                                </TableHead>
+                                    <div className={resizeHandleStyle} onMouseDown={(e) => handleResizeStart('campaign', e)} />
+                                </th>
                             )}
 
                             {level === 'ad' && (
                                 <>
-                                    <TableHead className="p-0 h-10 border-r relative" style={{ width: getColumnWidth('campaign'), minWidth: getColumnWidth('campaign') }}>
-                                        <div className="flex items-center justify-between px-4 h-full">
-                                            <span className="truncate font-semibold">Campanha</span>
-                                            <div
-                                                className={resizeHandleStyle}
-                                                style={{ right: '-8px' }}
-                                                onMouseDown={(e) => handleResizeStart('campaign', e)}
-                                            >
-                                                <div className={resizeLineStyle} />
-                                            </div>
+                                    <th
+                                        className={headerClass + " text-left"}
+                                        style={{ width: getColumnWidth('adset') }}
+                                        onClick={() => handleSort('adsetName')}
+                                    >
+                                        <div className="flex items-center justify-between h-full">
+                                            <span>Conjunto</span>
                                         </div>
-                                    </TableHead>
-                                    <TableHead className="p-0 h-10 border-r relative" style={{ width: getColumnWidth('adset'), minWidth: getColumnWidth('adset') }}>
-                                        <div className="flex items-center justify-between px-4 h-full">
-                                            <span className="truncate font-semibold">Conjunto</span>
-                                            <div
-                                                className={resizeHandleStyle}
-                                                style={{ right: '-8px' }}
-                                                onMouseDown={(e) => handleResizeStart('adset', e)}
-                                            >
-                                                <div className={resizeLineStyle} />
-                                            </div>
-                                        </div>
-                                    </TableHead>
+                                        <div className={resizeHandleStyle} onMouseDown={(e) => handleResizeStart('adset', e)} />
+                                    </th>
                                 </>
                             )}
 
-                            <TableHead className="p-0 h-10 border-r relative" style={{ width: getColumnWidth('status'), minWidth: getColumnWidth('status') }}>
-                                <div className="flex items-center justify-between px-4 h-full">
-                                    <span className="truncate font-semibold">Status</span>
-                                    <div
-                                        className={resizeHandleStyle}
-                                        style={{ right: '-8px' }}
-                                        onMouseDown={(e) => handleResizeStart('status', e)}
-                                    >
-                                        <div className={resizeLineStyle} />
-                                    </div>
-                                </div>
-                            </TableHead>
-
+                            {/* Metric Columns */}
                             {columns.map(col => (
-                                <TableHead
+                                <th
                                     key={col.key}
-                                    className="p-0 h-10 border-r relative cursor-pointer hover:bg-muted/50 transition-colors"
-                                    onClick={() => onSort?.(col.key)}
-                                    style={{ width: getColumnWidth(col.key), minWidth: getColumnWidth(col.key) }}
+                                    className={cn(headerClass, "text-right cursor-pointer hover:bg-gray-100")}
+                                    style={{ width: getColumnWidth(col.key) }}
+                                    onClick={() => handleSort(col.key)}
                                 >
-                                    <div className="flex items-center justify-between px-4 h-full">
-                                        <div className="flex items-center gap-1 truncate font-semibold">
-                                            {col.label}
-                                            <ArrowUpDown className="h-3 w-3 opacity-50" />
-                                        </div>
-                                        <div
-                                            className={resizeHandleStyle}
-                                            style={{ right: '-8px' }}
-                                            onMouseDown={(e) => {
-                                                e.stopPropagation();
-                                                handleResizeStart(col.key, e);
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <div className={resizeLineStyle} />
-                                        </div>
+                                    <div className="flex items-center justify-end gap-1 h-full">
+                                        {col.label}
+                                        {sortConfig?.key === col.key && (
+                                            sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                                        )}
                                     </div>
-                                </TableHead>
+                                    <div className={resizeHandleStyle} onMouseDown={(e) => handleResizeStart(col.key, e)} />
+                                </th>
                             ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {data.map((row, idx) => (
-                            <TableRow key={row.id || idx} className="hover:bg-muted/30">
-                                <TableCell className="sticky left-0 z-10 bg-background border-r py-3 px-4 font-medium">
-                                    <div className="truncate" title={row.name}>
-                                        {row.name}
-                                    </div>
-                                </TableCell>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                        {sortedData.map((row, idx) => (
+                            <tr key={row.id || idx} className="hover:bg-blue-50/30 transition-colors group">
+                                {/* Sticky Name Cell */}
+                                <td
+                                    className={cn(cellClass, "sticky left-0 z-10 bg-white group-hover:bg-blue-50/30 font-medium text-gray-900 border-r-gray-200 shadow-[1px_0_0_0_rgba(0,0,0,0.05)]")}
+                                    title={row.name}
+                                >
+                                    {row.name}
+                                </td>
+
+                                {/* Sticky Status Cell */}
+                                <td
+                                    className={cn(cellClass, "sticky z-10 bg-white group-hover:bg-blue-50/30 border-r-gray-200 shadow-[1px_0_0_0_rgba(0,0,0,0.05)]")}
+                                    style={{ left: getColumnWidth('name') }}
+                                >
+                                    <StatusCell status={row.status} />
+                                </td>
+
+                                {/* Context Cells */}
                                 {level === 'adset' && (
-                                    <TableCell className="border-r py-3 px-4 text-muted-foreground">
-                                        <div className="truncate" title={row.campaignName}>
-                                            {row.campaignName}
-                                        </div>
-                                    </TableCell>
+                                    <td className={cellClass + " text-gray-500"} title={row.campaignName}>
+                                        {row.campaignName}
+                                    </td>
                                 )}
+
                                 {level === 'ad' && (
-                                    <>
-                                        <TableCell className="border-r py-3 px-4 text-muted-foreground">
-                                            <div className="truncate" title={row.campaignName}>
-                                                {row.campaignName}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-sm text-muted-foreground border-r">
-                                            <div className="truncate" title={row.adsetName}>
-                                                {row.adsetName}
-                                            </div>
-                                        </TableCell>
-                                    </>
+                                    <td className={cellClass + " text-gray-500"} title={row.adsetName}>
+                                        {row.adsetName}
+                                    </td>
                                 )}
-                                <TableCell className="border-r py-3 px-4">
-                                    <Badge variant="outline" className={getStatusColor(row.status)}>
-                                        {row.status}
-                                    </Badge>
-                                </TableCell>
+
+                                {/* Metrics Cells */}
                                 {columns.map(col => (
-                                    <TableCell key={col.key} className="text-right border-r py-3 px-4">
-                                        <div className="truncate font-mono text-sm">
-                                            {formatMetricValue(row[col.key], col.format)}
-                                        </div>
-                                    </TableCell>
+                                    <td key={col.key} className={cellClass + " text-right font-mono text-gray-700"}>
+                                        {formatMetricValue(row[col.key], col.format)}
+                                    </td>
                                 ))}
-                            </TableRow>
+                            </tr>
                         ))}
-                    </TableBody>
-                </Table>
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Footer / Summary Row could go here */}
+            <div className="border-t bg-gray-50 p-2 text-xs text-gray-500 flex justify-between items-center">
+                <span>{data.length} items</span>
+                <span>Total Spend: {formatMetricValue(data.reduce((acc, row) => acc + (row.spend || 0), 0), 'currency')}</span>
             </div>
         </div>
     );

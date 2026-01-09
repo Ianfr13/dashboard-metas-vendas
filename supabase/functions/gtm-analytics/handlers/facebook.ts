@@ -34,6 +34,39 @@ export async function getFacebookAccounts(supabase: SupabaseClient) {
     return data
 }
 
+export async function getFacebookCampaigns(supabase: SupabaseClient, accountId: string) {
+    const { data, error } = await supabase
+        .from('facebook_campaigns')
+        .select('id, name, status, objective')
+        .eq('account_id', accountId)
+        .order('name')
+
+    if (error) throw new Error(`Failed to fetch campaigns: ${error.message}`)
+    return data
+}
+
+export async function getFacebookAdSets(supabase: SupabaseClient, accountId: string) {
+    const { data, error } = await supabase
+        .from('facebook_adsets')
+        .select('id, campaign_id, name, status')
+        .eq('account_id', accountId)
+        .order('name')
+
+    if (error) throw new Error(`Failed to fetch adsets: ${error.message}`)
+    return data
+}
+
+export async function getFacebookAds(supabase: SupabaseClient, accountId: string) {
+    const { data, error } = await supabase
+        .from('facebook_ads')
+        .select('id, adset_id, campaign_id, name, status')
+        .eq('account_id', accountId)
+        .order('name')
+
+    if (error) throw new Error(`Failed to fetch ads: ${error.message}`)
+    return data
+}
+
 interface AccountMetrics {
     id: string
     name: string
