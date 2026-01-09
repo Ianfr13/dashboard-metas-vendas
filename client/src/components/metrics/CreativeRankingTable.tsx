@@ -114,13 +114,24 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                             {sortedData.map((item, index) => (
                                 <TableRow key={index} className="hover:bg-muted/50 transition-colors">
                                     <TableCell className="font-medium">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 group/link">
                                             <div className="p-2 bg-muted rounded-full text-indigo-500">
                                                 <Image className="h-4 w-4" />
                                             </div>
                                             <span className="font-mono text-xs truncate max-w-[150px]" title={item.creativeId}>
                                                 {item.creativeId}
                                             </span>
+                                            {item.creativeId && /^\d+$/.test(item.creativeId) && (
+                                                <a
+                                                    href={`https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=BR&q=${item.creativeId}&search_type=keyword_unordered&media_type=all`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1 hover:bg-indigo-50 rounded text-indigo-600 ml-auto"
+                                                    title="Ver na Biblioteca de Anúncios"
+                                                >
+                                                    <Search className="w-3 h-3" />
+                                                </a>
+                                            )}
                                         </div>
                                     </TableCell>
                                     <TableCell>

@@ -272,14 +272,14 @@ export async function getFacebookMetrics(
     // Fetch ad sets
     const adsets = await fetchAllRows<any>('facebook_adsets', 'id, campaign_id, name, status', (q) => {
         if (accountId) return q.eq('account_id', accountId);
-        return q;
+        return q.in('account_id', validAccountIds);
     });
     // const adsetMap = new Map(adsets.map(a => [a.id, a])); // Unused in this scope but good to have if needed
 
     // Fetch ads
     const ads = await fetchAllRows<any>('facebook_ads', 'id, adset_id, campaign_id, name, status, creative_thumbnail_url', (q) => {
         if (accountId) return q.eq('account_id', accountId);
-        return q;
+        return q.in('account_id', validAccountIds);
     });
     const adsetMap = new Map(adsets?.map(a => [a.id, a]) || []); // Re-instantiated here for aggregateByAd
 

@@ -277,12 +277,27 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort,
                         {sortedData.map((row, i) => (
                             <tr key={i} className="hover:bg-gray-50/50 transition-colors group">
                                 <td
-                                    className={cn(cellClass, "sticky left-0 bg-white group-hover:bg-gray-50/50 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] font-medium text-gray-900")}
+                                    className={cn(cellClass, "sticky left-0 bg-white group-hover:bg-gray-50/50 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] font-medium text-gray-900", level === 'ad' ? "pr-8" : "")}
                                     style={{ width: getColumnWidth('name') }}
                                     title={row.name}
                                 >
-                                    {row.name}
+                                    <div className="flex items-center justify-between group/link">
+                                        <span className="truncate">{row.name}</span>
+                                        {level === 'ad' && row.id && (
+                                            <a
+                                                href={`https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=BR&q=${row.id}&search_type=keyword_unordered&media_type=all`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1 hover:bg-blue-50 rounded text-blue-600"
+                                                title="Ver na Biblioteca de Anúncios"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <Search className="w-3 h-3" />
+                                            </a>
+                                        )}
+                                    </div>
                                 </td>
+
                                 <td
                                     className={cn(cellClass, "sticky bg-white group-hover:bg-gray-50/50 shadow-[1px_0_0_0_rgba(0,0,0,0.05)]")}
                                     style={{
