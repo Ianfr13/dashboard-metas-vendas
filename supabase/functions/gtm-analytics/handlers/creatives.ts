@@ -60,8 +60,8 @@ export async function getCreativeRanking(
         return allData;
     }
 
-    // Include event_data to extract page_location and ftype
-    const events = await fetchAllRows<any>('gtm_analytics_view', 'traffic_source, traffic_medium, utm_content, utm_term, event_name, value, event_data', (q) => {
+    // Include event_data_json to extract page_location and ftype
+    const events = await fetchAllRows<any>('gtm_analytics_view', 'traffic_source, traffic_medium, utm_content, utm_term, event_name, value, event_data_json', (q) => {
         return q.gte('timestamp', startDate).lte('timestamp', end).not('utm_content', 'is', null);
     });
 
@@ -85,12 +85,12 @@ export async function getCreativeRanking(
         const creativeId = event.utm_content || '(not set)'
         const medium = event.traffic_medium || '(not set)'
 
-        // Extract funnelType from event_data.page_location
+        // Extract funnelType from event_data_json.page_location
         let ftype: 'compra' | 'leads' = 'compra';
         try {
-            const eventData = typeof event.event_data === 'string'
-                ? JSON.parse(event.event_data)
-                : (event.event_data || {});
+            const eventData = typeof event.event_data_json === 'string'
+                ? JSON.parse(event.event_data_json)
+                : (event.event_data_json || {});
 
             const location = eventData.page_location || '';
             const ftypeMatch = location.match(/ftype=([^/&?]+)/);
