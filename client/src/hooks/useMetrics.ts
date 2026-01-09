@@ -155,3 +155,32 @@ export function useFacebookMetrics({ startDate, endDate, enabled = true }: UseMe
         enabled: false, // Disabled for now as it wasn't in the main fetch
     });
 }
+
+/**
+ * Hook para buscar múltiplas métricas em uma única requisição
+ * Otimização: Reduz de 7 requests para 1 (economia de Edge Function invocations)
+ */
+export interface UseBatchMetricsParams {
+    startDate: Date;
+    endDate: Date;
+    actions?: string[];
+    enabled?: boolean;
+}
+
+export function useBatchMetrics({
+    startDate,
+    endDate,
+    actions = ['funnel', 'products', 'traffic_sources', 'creatives', 'placements', 'funnel_performance'],
+    enabled = true
+}: UseBatchMetricsParams) {
+    const { startIso, endIso } = getIsoDates(startDate, endDate);
+    return useQuery({
+        queryKey: ['metrics', 'batch', startIso, endIso, actions.join(',')],
+        queryFn: () => gtmAnalyticsAPI.getBatchMetrics(startIso, endIso, actions),
+        enabled,
+        staleTime: 15 * 60 * 1000, // 15 minutes - longer cache to reduce requests
+        gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+        refetchOnWindowFocus: false, // Don't refetch on tab focus
+    });
+}
+

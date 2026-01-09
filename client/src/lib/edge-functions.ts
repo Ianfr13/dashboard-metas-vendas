@@ -530,6 +530,36 @@ export const gtmAnalyticsAPI = {
 
     return response.json();
   },
+
+  /**
+   * Obtém múltiplas métricas em uma única requisição (otimização)
+   * Reduz de 7 requests para 1
+   */
+  getBatchMetrics: async (
+    startDate: string,
+    endDate: string,
+    actions: string[] = ['funnel', 'products', 'traffic_sources', 'creatives', 'placements']
+  ): Promise<{
+    funnel?: FunnelMetrics;
+    products?: ProductMetricsGTM[];
+    traffic_sources?: TrafficSourceMetrics[];
+    creatives?: CreativeMetrics[];
+    placements?: PlacementMetrics[];
+    funnel_performance?: FunnelPerformanceMetrics[];
+    [key: string]: any;
+  }> => {
+    const response = await fetch(
+      `${FUNCTIONS_URL}/gtm-analytics?action=batch&actions=${actions.join(',')}&start_date=${startDate}&end_date=${endDate}`,
+      { method: 'GET', headers: await getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch batch metrics');
+    }
+
+    return response.json();
+  },
 };
 
 // ============================================

@@ -135,9 +135,47 @@ Deno.serve(async (req) => {
         result = await getFunnelPerformance(supabase, startDate!, endDate!)
         break
 
+      case 'batch':
+        // Fetch multiple actions in parallel (reduces 7 requests to 1)
+        const actionsParam = url.searchParams.get('actions') || 'funnel,products,traffic_sources'
+        const actions = actionsParam.split(',').map(a => a.trim())
+
+        const batchResults: Record<string, any> = {}
+
+        const promises = actions.map(async (actionName) => {
+          try {
+            switch (actionName) {
+              case 'funnel':
+                batchResults.funnel = await getFunnelMetrics(supabase, startDate!, endDate!)
+                break
+              case 'products':
+                batchResults.products = await getProductMetrics(supabase, startDate!, endDate!)
+                break
+              case 'traffic_sources':
+                batchResults.traffic_sources = await getTrafficSources(supabase, startDate!, endDate!)
+                break
+              case 'creatives':
+                batchResults.creatives = await getCreativeRanking(supabase, startDate!, endDate!)
+                break
+              case 'placements':
+                batchResults.placements = await getPlacementRanking(supabase, startDate!, endDate!)
+                break
+              case 'funnel_performance':
+                batchResults.funnel_performance = await getFunnelPerformance(supabase, startDate!, endDate!)
+                break
+            }
+          } catch (e: any) {
+            batchResults[actionName] = { error: e.message }
+          }
+        })
+
+        await Promise.all(promises)
+        result = batchResults
+        break
+
       default:
         return new Response(
-          JSON.stringify({ error: 'Invalid action. Use: funnel, evolution, products, traffic_sources, creatives, placements, facebook' }),
+          JSON.stringify({ error: 'Invalid action. Use: funnel, evolution, products, traffic_sources, creatives, placements, facebook, batch' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
     }

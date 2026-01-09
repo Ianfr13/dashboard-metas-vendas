@@ -1,0 +1,22 @@
+{
+    "name": "gtm-consumer",
+    "main": "gtm-consumer.ts",
+    "compatibility_date": "2025-12-24",
+    "compatibility_flags": [
+        "nodejs_compat"
+    ],
+    "queues": {
+        "consumers": [
+            {
+                "queue": "gtm-events-queue",
+                "max_batch_size": 100,
+                "max_batch_timeout": 60,
+                "max_retries": 3,
+                "dead_letter_queue": "gtm-events-dlq"
+            }
+        ]
+    },
+    "vars": {
+        "ENVIRONMENT": "production"
+    }
+}

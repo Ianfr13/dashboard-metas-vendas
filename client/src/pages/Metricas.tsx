@@ -24,7 +24,8 @@ import {
   useTrafficMetrics,
   useCreativeMetrics,
   usePlacementMetrics,
-  useVturbMetrics
+  useVturbMetrics,
+  useBatchMetrics
 } from "@/hooks/useMetrics";
 import FunilMarketing from "@/components/metricas/FunilMarketing";
 import FunilComercial from "@/components/metricas/FunilComercial";
@@ -106,17 +107,27 @@ export default function Metricas() {
     loadCommercialMetrics()
   }, [selectedRole, selectedSeller, selectedPeriod, user, authLoading])
 
-  // React Query Hooks
-  const { data: funnelData, isLoading: funnelLoading, error: funnelError } = useFunnelMetrics({ startDate, endDate, enabled: !!user });
+  // React Query Hooks - Using batch for optimization (1 request instead of 6)
+  const { data: batchData, isLoading: batchLoading, error: batchError } = useBatchMetrics({
+    startDate,
+    endDate,
+    actions: ['funnel', 'products', 'traffic_sources', 'creatives', 'placements', 'funnel_performance'],
+    enabled: !!user
+  });
+
+  // Evolution and Vturb need separate calls (have dynamic params)
   const { data: evolutionData = [], isLoading: evolutionLoading } = useEvolutionMetrics({ startDate, endDate, selectedEvent, groupBy, enabled: !!user });
-  const { data: productData = [], isLoading: productLoading } = useProductMetrics({ startDate, endDate, enabled: !!user });
-  const { data: trafficData = [], isLoading: trafficLoading } = useTrafficMetrics({ startDate, endDate, enabled: !!user });
-  const { data: creativeData = [], isLoading: creativeLoading } = useCreativeMetrics({ startDate, endDate, enabled: !!user });
-  const { data: placementData = [], isLoading: placementLoading } = usePlacementMetrics({ startDate, endDate, enabled: !!user });
   const { data: vturbData = [], isLoading: vturbLoading } = useVturbMetrics({ startDate, endDate, enabled: !!user });
 
+  // Extract data from batch response
+  const funnelData = batchData?.funnel;
+  const productData = batchData?.products || [];
+  const trafficData = batchData?.traffic_sources || [];
+  const creativeData = batchData?.creatives || [];
+  const placementData = batchData?.placements || [];
+
   // Combine loading states
-  const loading = funnelLoading || evolutionLoading || productLoading || trafficLoading || creativeLoading || placementLoading || vturbLoading;
+  const loading = batchLoading || evolutionLoading || vturbLoading;
 
   // Helper para obter dados do funil ativo (Compra ou Leads)
   const activeFunnelData = useMemo(() => {
@@ -128,7 +139,7 @@ export default function Metricas() {
   }, [funnelData, marketingFunnelType]);
 
   // Combine error states
-  const error = funnelError || null; // Only blocking error is funnel, others are partials usually
+  const error = batchError || null; // Only blocking error is batch fetch
 
   // Realtime Subscription (Simplified to just invalidate queries if needed, or keep existing logic but manual refetch is now queryClient.invalidateQueries)
   // For now, let's disable the manual realtime debounce that called fetchMetrics.
