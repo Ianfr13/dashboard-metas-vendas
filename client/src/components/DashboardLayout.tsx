@@ -38,7 +38,6 @@ const adminMenuItems = [
   { icon: Settings, label: "Admin Dashboard", path: "/admin" },
   { icon: Target, label: "Metas", path: "/admin/metas" },
   { icon: Package, label: "Produtos", path: "/admin/produtos" },
-  { icon: GitBranch, label: "Funis", path: "/admin/funis" },
   { icon: Sliders, label: "Configurações", path: "/admin/configuracoes" },
   { icon: LinkIcon, label: "Gerador de URL", path: "/admin/url-generator" },
 ];
