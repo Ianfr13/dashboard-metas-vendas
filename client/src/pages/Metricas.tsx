@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +44,7 @@ import FunnelPerformance from "@/components/metricas/FunnelPerformance";
 
 export default function Metricas() {
   const { user, loading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [marketingFunnelType, setMarketingFunnelType] = useState<'compra' | 'leads'>('compra');
@@ -144,12 +146,13 @@ export default function Metricas() {
   // Realtime Subscription (Simplified to just invalidate queries if needed, or keep existing logic but manual refetch is now queryClient.invalidateQueries)
   // For now, let's disable the manual realtime debounce that called fetchMetrics.
   // Ideally we import queryClient and invalidate.
+  // Realtime Subscription
   useEffect(() => {
     const channel = supabase.channel('realtime-metrics')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gtm_events' }, () => {
         setIsLive(true);
-        // In a full implementation, we would use queryClient.invalidateQueries(['metrics']) here.
-        // For now, we just indicate it's live. React Query 'staleTime' will handle background updates on window focus.
+        // Force refetch of all metrics
+        queryClient.invalidateQueries({ queryKey: ['metrics'] });
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') setIsLive(true);
@@ -158,7 +161,7 @@ export default function Metricas() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [queryClient]);
 
   // Preparar dados para gráfico de funil
   const funnelChartData = funnelData ? [
