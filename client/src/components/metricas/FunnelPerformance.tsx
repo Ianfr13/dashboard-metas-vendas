@@ -280,39 +280,82 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                         </Card>
                     </div>
 
-                    {/* Visual Funnel Flow */}
+                    {/* Visual Funnel Flow - Branched Layout */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Fluxo do Funil</CardTitle>
-                            <CardDescription>Visualização das etapas e taxas de conversão</CardDescription>
+                            <CardDescription>
+                                Upsells na linha principal • Downsells ramificados abaixo
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex flex-col md:flex-row items-center justify-center gap-4 py-6 flex-wrap">
-                                {stageData.map((stage, index) => (
-                                    <div key={stage.stage} className="flex items-center gap-4">
-                                        {index > 0 && (
-                                            <ArrowRight className="h-6 w-6 text-muted-foreground hidden md:block" />
-                                        )}
-                                        <div className="text-center">
-                                            <div className={`rounded-lg p-4 mb-2 min-w-[120px] ${stage.stage === 'frontend' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                stage.stage.startsWith('upsell') ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                    stage.stage.startsWith('downsell') ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                                        'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                                                }`}>
-                                                <ShoppingCart className="h-6 w-6 mx-auto mb-2" />
-                                                <p className="text-2xl font-bold">{stage.sales}</p>
-                                                <p className="text-sm font-medium capitalize">{stage.stage}</p>
-                                                <p className="text-xs mt-1">
-                                                    R$ {stage.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </p>
-                                            </div>
-                                            <Badge variant={stage.takeRate > 30 ? "default" : "secondary"} className="text-xs">
-                                                {stage.stage === 'frontend' ? 'CR' : 'Take'}: {stage.takeRate.toFixed(1)}%
-                                            </Badge>
+                            {(() => {
+                                // Separate upsells and downsells
+                                const mainFlow = stageData.filter(s => s.stage === 'frontend' || s.stage.startsWith('upsell'));
+                                const downsells = stageData.filter(s => s.stage.startsWith('downsell'));
+
+                                return (
+                                    <div className="space-y-8">
+                                        {/* Main Flow Row (Frontend + Upsells) */}
+                                        <div className="flex flex-wrap items-start justify-center gap-4">
+                                            {mainFlow.map((stage, index) => {
+                                                // Find corresponding downsell for this upsell
+                                                const upsellNum = stage.stage.match(/upsell-(\d+)/)?.[1];
+                                                const correspondingDownsell = upsellNum
+                                                    ? downsells.find(d => d.stage === `downsell-${upsellNum}`)
+                                                    : null;
+
+                                                return (
+                                                    <div key={stage.stage} className="flex items-start gap-4">
+                                                        {index > 0 && (
+                                                            <ArrowRight className="h-6 w-6 text-muted-foreground mt-8 hidden md:block" />
+                                                        )}
+                                                        <div className="flex flex-col items-center">
+                                                            {/* Main Stage Box */}
+                                                            <div className="text-center">
+                                                                <div className={`rounded-lg p-4 mb-2 min-w-[130px] ${stage.stage === 'frontend'
+                                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                                        : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                                                    }`}>
+                                                                    <ShoppingCart className="h-5 w-5 mx-auto mb-1" />
+                                                                    <p className="text-xl font-bold">{stage.sales}</p>
+                                                                    <p className="text-xs font-medium capitalize">{stage.stage}</p>
+                                                                    <p className="text-xs mt-1">
+                                                                        R$ {stage.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                                                                    </p>
+                                                                </div>
+                                                                <Badge variant={stage.takeRate > 30 ? "default" : "secondary"} className="text-xs">
+                                                                    {stage.stage === 'frontend' ? 'CR' : 'Take'}: {stage.takeRate.toFixed(1)}%
+                                                                </Badge>
+                                                            </div>
+
+                                                            {/* Downsell Branch (below upsell) */}
+                                                            {correspondingDownsell && (
+                                                                <div className="mt-4 flex flex-col items-center">
+                                                                    <div className="h-6 w-px bg-orange-300 dark:bg-orange-600" />
+                                                                    <span className="text-xs text-muted-foreground mb-1">Não comprou</span>
+                                                                    <div className="text-center">
+                                                                        <div className="rounded-lg p-3 mb-2 min-w-[110px] bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                                                                            <p className="text-lg font-bold">{correspondingDownsell.sales}</p>
+                                                                            <p className="text-xs font-medium capitalize">{correspondingDownsell.stage}</p>
+                                                                            <p className="text-xs">
+                                                                                R$ {correspondingDownsell.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                                                                            </p>
+                                                                        </div>
+                                                                        <Badge variant="outline" className="text-xs">
+                                                                            Take: {correspondingDownsell.takeRate.toFixed(1)}%
+                                                                        </Badge>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                );
+                            })()}
                         </CardContent>
                     </Card>
 
