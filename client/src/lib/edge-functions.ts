@@ -924,7 +924,7 @@ export const facebookAdsAPI = {
     accountId?: string
   ): Promise<FacebookSyncResult> => {
     // Cloudflare Worker URL
-    let url = 'https://facebook-worker.ian-rogers.workers.dev/?action=sync_all';
+    let url = 'https://facebook-worker.ferramentas-bce.workers.dev/?action=sync_all';
 
     // Note: The Worker handles 'sync_all' or 'sync_account'. 
     // If accountId is present, we might want 'sync_account'.
@@ -932,7 +932,7 @@ export const facebookAdsAPI = {
     // fetch: action=sync_all | action=sync_account&account_id=...
 
     if (accountId) {
-      url = `https://facebook-worker.ian-rogers.workers.dev/?action=sync_account&account_id=${accountId}`;
+      url = `https://facebook-worker.ferramentas-bce.workers.dev/?action=sync_account&account_id=${accountId}`;
     }
 
     // Call Worker directly (No Supabase Auth needed for public worker, but we implemented secret check in worker? 
