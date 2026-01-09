@@ -13,17 +13,47 @@ interface FunnelStep {
 interface AdvancedFunnelProps {
     data: {
         pageViews: number;
-        addToCart: number; // We need to ensure we have this data
+        addToCart: number;
         checkouts: number;
         purchases: number;
+        leads: number;
     };
+    funnelType?: 'compra' | 'leads';
 }
 
-export default function AdvancedFunnel({ data }: AdvancedFunnelProps) {
+export default function AdvancedFunnel({ data, funnelType = 'compra' }: AdvancedFunnelProps) {
     // Calculate relative percentages for visual bars
     const maxValue = Math.max(data.pageViews, 1);
 
-    const steps: FunnelStep[] = [
+    const steps: FunnelStep[] = funnelType === 'leads' ? [
+        {
+            label: "Visualizações",
+            value: data.pageViews,
+            icon: Eye,
+            color: "bg-blue-500",
+            dropOff: data.pageViews > 0 ? ((data.pageViews - data.leads) / data.pageViews) * 100 : 0
+        },
+        {
+            label: "Leads",
+            value: data.leads,
+            icon: Heart,
+            color: "bg-pink-500",
+            dropOff: data.leads > 0 ? ((data.leads - data.checkouts) / data.leads) * 100 : 0
+        },
+        {
+            label: "Iniciou Checkout",
+            value: data.checkouts,
+            icon: CreditCard,
+            color: "bg-orange-500",
+            dropOff: data.checkouts > 0 ? ((data.checkouts - data.purchases) / data.checkouts) * 100 : 0
+        },
+        {
+            label: "Comprou",
+            value: data.purchases,
+            icon: CheckCircle,
+            color: "bg-green-500"
+        },
+    ] : [
         {
             label: "Visualizações",
             value: data.pageViews,

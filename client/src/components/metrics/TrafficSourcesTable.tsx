@@ -1,59 +1,57 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Youtube, Facebook, Instagram, Linkedin, Globe, MousePointer2, Search, Share2, Twitter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { TrafficSourceMetrics } from "@/lib/edge-functions";
 
 interface TrafficSourcesTableProps {
     data: TrafficSourceMetrics[];
+    selectedFunnelType: 'compra' | 'leads';
 }
 
 type SortKey = keyof TrafficSourceMetrics;
 
-export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) {
+export default function TrafficSourcesTable({ data, selectedFunnelType }: TrafficSourcesTableProps) {
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
-    const [filterType, setFilterType] = useState<'all' | 'paid' | 'organic' | 'direct'>('all'); // State for filter
-    const [selectedFunnelType, setSelectedFunnelType] = useState<'compra' | 'leads'>('compra');
+    const [filterSource, setFilterSource] = useState('todos');
 
-    const filteredData = data.filter(item => {
-        // First filter by funnel type
-        if ((item.funnelType || 'compra') !== selectedFunnelType) return false;
+    const filteredData = useMemo(() => {
+        return data.filter(item => {
+            // First filter by funnel type
+            if ((item.funnelType || 'compra') !== selectedFunnelType) return false;
 
-        if (filterType === 'all') return true;
+            if (filterSource === 'todos') return true;
+            return item.source === filterSource;
+        });
+    }, [data, filterSource, selectedFunnelType]);
 
-        const m = (item.medium || '').toLowerCase();
-        const s = (item.source || '').toLowerCase();
+    const sortedData = useMemo(() => {
+        if (!sortConfig) return filteredData;
 
-        if (filterType === 'paid') {
-            return m.includes('cpc') || m.includes('paid') || m.includes('ppc') || m.includes('ad') || s.includes('meta_ads') || s.includes('meta ads');
-        }
-        if (filterType === 'organic') {
-            return m.includes('organic') || m.includes('referral') || m.includes('email') || m.includes('social');
-        }
-        if (filterType === 'direct') {
-            return s.includes('direct') || m.includes('none') || m === '';
-        }
-        return true;
-    });
+        return [...filteredData].sort((a, b) => {
+            const aValue = a[sortConfig.key];
+            const bValue = b[sortConfig.key];
 
-    const sortedData = [...filteredData].sort((a, b) => {
-        if (!sortConfig) return 0;
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                return sortConfig.direction === 'asc'
+                    ? aValue.localeCompare(bValue)
+                    : bValue.localeCompare(aValue);
+            }
 
-        const { key, direction } = sortConfig;
+            if (typeof aValue === 'number' && typeof bValue === 'number') {
+                return sortConfig.direction === 'asc'
+                    ? aValue - bValue
+                    : bValue - aValue;
+            }
 
-        if (a[key] < b[key]) {
-            return direction === 'asc' ? -1 : 1;
-        }
-        if (a[key] > b[key]) {
-            return direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-    });
+            return 0;
+        });
+    }, [filteredData, sortConfig]);
 
     const requestSort = (key: SortKey) => {
-        let direction: 'asc' | 'desc' = 'desc'; // Default to desc for metrics usually
+        let direction: 'asc' | 'desc' = 'desc'; // Default to desc for metrics
         if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
             direction = 'asc';
         }
@@ -98,35 +96,34 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
         return source.charAt(0).toUpperCase() + source.slice(1);
     };
 
+    // Get unique sources
+    const uniqueSources = useMemo(() => {
+        return Array.from(new Set(data.map(item => item.source))).sort();
+    }, [data]);
+
     return (
         <Card>
             <CardHeader>
-                <div className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Fontes de Tráfego</CardTitle>
-                            <CardDescription>Origem dos seus visitantes e conversões</CardDescription>
-                        </div>
-                        <Tabs value={selectedFunnelType} onValueChange={(v) => setSelectedFunnelType(v as 'compra' | 'leads')} className="w-[300px]">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="compra">Compra</TabsTrigger>
-                                <TabsTrigger value="leads">Leads</TabsTrigger>
-                            </TabsList>
-                        </Tabs>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle>Fontes de Tráfego</CardTitle>
+                        <CardDescription>
+                            Análise de performance ({selectedFunnelType === 'leads' ? 'Leads' : 'Vendas'})
+                        </CardDescription>
                     </div>
-                </div>
-                <div className="flex items-center justify-between mt-4">
-                    <div className="w-[180px]">
-                        <select
-                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value as any)}
-                        >
-                            <option value="all">Todos os Canais</option>
-                            <option value="paid">Tráfego Pago</option>
-                            <option value="organic">Orgânico / Referral</option>
-                            <option value="direct">Direto</option>
-                        </select>
+                    {/* Source Filter */}
+                    <div className="w-[200px]">
+                        <Select value={filterSource} onValueChange={setFilterSource}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Filtrar por source..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="todos">Todas as fontes</SelectItem>
+                                {uniqueSources.map(source => (
+                                    <SelectItem key={source} value={source}>{source}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </CardHeader>
@@ -152,15 +149,15 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
                                         <div className="flex items-center justify-end">Receita {getSortIcon('revenue')}</div>
                                     </TableHead>
                                     <TableHead onClick={() => requestSort('conversionRate')} className="sticky top-0 z-20 bg-card cursor-pointer text-right hover:bg-muted/50 transition-colors shadow-sm">
-                                        <div className="flex items-center justify-end">Conv. Venda {getSortIcon('conversionRate')}</div>
+                                        <div className="flex items-center justify-end">Conv. {selectedFunnelType === 'leads' ? 'Lead' : 'Venda'} {getSortIcon('conversionRate')}</div>
                                     </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {sortedData.map((item, index) => {
                                     const isMetaAds = item.source.toLowerCase().includes('meta_ads') || item.source.toLowerCase().includes('meta ads');
-                                    const displaySource = isMetaAds ? item.medium : item.source; // Se for meta ads, mostra o medium (posicionamento) como título
-                                    const displayMedium = isMetaAds ? "Ads" : item.medium; // Se for meta ads, mostra "Ads" como subtítulo
+                                    const displaySource = isMetaAds ? item.medium : item.source;
+                                    const displayMedium = isMetaAds ? "Ads" : item.medium;
 
                                     return (
                                         <TableRow key={index} className="hover:bg-muted/50 transition-colors">
@@ -181,7 +178,7 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
                                             <TableCell className="text-right">
                                                 <div className="flex flex-col items-end">
                                                     <span className="font-mono text-sm">{formatNumber(item.leads)}</span>
-                                                    {item.sessions > 0 && (
+                                                    {item.sessions > 0 && selectedFunnelType === 'leads' && (
                                                         <span className="text-[10px] text-muted-foreground">
                                                             {(((item.leads || 0) / (item.sessions || 1)) * 100).toFixed(1)}%
                                                         </span>

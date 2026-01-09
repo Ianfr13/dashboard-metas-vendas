@@ -1,6 +1,6 @@
-import { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-export interface FunnelMetrics {
+export interface FunnelStageMetrics {
   etapas: {
     pageViews: number
     viewItem: number
@@ -13,13 +13,13 @@ export interface FunnelMetrics {
     purchases: number
   }
   conversao: {
-    viewToCart: number // view_item -> add_to_cart
-    cartToCheckout: number // add_to_cart -> begin_checkout
-    checkoutToPurchase: number // begin_checkout -> purchase
-    endToEnd: number // page_view -> purchase
-    viewsParaLeads: number // page_view -> generate_lead
-    leadsParaCheckout: number // generate_lead -> begin_checkout
-    checkoutParaVenda: number // begin_checkout -> purchase
+    viewToCart: number
+    cartToCheckout: number
+    checkoutToPurchase: number
+    endToEnd: number
+    viewsParaLeads: number
+    leadsParaCheckout: number
+    checkoutParaVenda: number
   }
   dropOff: {
     pageViewToViewItem: number
@@ -30,6 +30,13 @@ export interface FunnelMetrics {
   financeiro: {
     receitaTotal: number
     ticketMedio: number
+  }
+}
+
+export interface FunnelMetrics extends FunnelStageMetrics {
+  breakdown: {
+    compra: FunnelStageMetrics
+    leads: FunnelStageMetrics
   }
 }
 
@@ -81,110 +88,148 @@ export async function getFunnelMetrics(
     return q.gte('timestamp', startDate).lte('timestamp', endDateWithTime);
   });
 
-  // Contar eventos por tipo
-  let pageViews = 0
-  let viewItem = 0
-  let addToWishlist = 0
-  let addToCart = 0
-  let viewCart = 0
-  let beginCheckout = 0
-  let leads = 0
-  let purchases = 0
-  let receitaTotal = 0
+  type Counts = {
+    pageViews: number
+    viewItem: number
+    addToWishlist: number
+    addToCart: number
+    viewCart: number
+    beginCheckout: number
+    leads: number
+    purchases: number
+    receitaTotal: number
+  }
+
+  const newCounts = (): Counts => ({
+    pageViews: 0,
+    viewItem: 0,
+    addToWishlist: 0,
+    addToCart: 0,
+    viewCart: 0,
+    beginCheckout: 0,
+    leads: 0,
+    purchases: 0,
+    receitaTotal: 0
+  })
+
+  const counts = {
+    total: newCounts(),
+    compra: newCounts(),
+    leads: newCounts()
+  }
 
   events?.forEach((event: { event_name: string; event_data: string | object }) => {
     const eventData = typeof event.event_data === 'string'
       ? JSON.parse(event.event_data || '{}')
       : event.event_data || {}
 
-    switch (event.event_name) {
-      case 'page_view':
-        pageViews++
-        break
-      case 'view_item':
-        viewItem++
-        break
-      case 'add_to_wishlist':
-        addToWishlist++
-        break
-      case 'add_to_cart':
-        addToCart++
-        break
-      case 'view_cart':
-        viewCart++
-        break
-      case 'begin_checkout':
-        beginCheckout++
-        break
-      case 'generate_lead':
-        leads++
-        break
-      case 'purchase':
-        purchases++
-        const value = parseFloat(eventData.value || eventData.transaction_value || '0')
-        receitaTotal += value
-        break
+    // Extract funnel type
+    const location = (eventData.page_location || '') as string;
+    const ftypeMatch = location.match(/ftype=([^/&?]+)/);
+    // Default to 'compra' if not specified or invalid
+    const ftypeRaw = ftypeMatch?.[1] || 'compra';
+    const ftype = (ftypeRaw === 'leads') ? 'leads' : 'compra';
+
+    // Helper to update specific counts
+    const updateCounts = (c: Counts) => {
+      switch (event.event_name) {
+        case 'page_view': c.pageViews++; break;
+        case 'view_item': c.viewItem++; break;
+        case 'add_to_wishlist': c.addToWishlist++; break;
+        case 'add_to_cart': c.addToCart++; break;
+        case 'view_cart': c.viewCart++; break;
+        case 'begin_checkout': c.beginCheckout++; break;
+        case 'generate_lead': c.leads++; break;
+        case 'purchase':
+          c.purchases++;
+          c.receitaTotal += parseFloat(eventData.value || eventData.transaction_value || '0');
+          break;
+      }
     }
+
+    // Update specific bucket and total
+    updateCounts(counts[ftype]);
+    updateCounts(counts.total);
   })
 
-  // Hack: Se viewItem for 0 mas tiver addToCart, assumir que viewItem >= addToCart
-  if (viewItem < addToCart) viewItem = addToCart
-  if (addToCart < beginCheckout) addToCart = beginCheckout // Simplificação para funis lineares
-
-  // Calcular taxas de conversão
-  const viewToCart = viewItem > 0 ? (addToCart / viewItem) * 100 : 0
-  const cartToCheckout = addToCart > 0 ? (beginCheckout / addToCart) * 100 : 0
-  const checkoutToPurchase = beginCheckout > 0 ? (purchases / beginCheckout) * 100 : 0
-  const endToEnd = pageViews > 0 ? (purchases / pageViews) * 100 : 0
-  const viewsParaLeads = pageViews > 0 ? (leads / pageViews) * 100 : 0
-  const leadsParaCheckout = leads > 0 ? (beginCheckout / leads) * 100 : 0
-  const checkoutParaVenda = beginCheckout > 0 ? (purchases / beginCheckout) * 100 : 0
-
-  // Calculate Drop-off Rates (Inverse of Conversion)
-  const calculateDropOff = (from: number, to: number) => {
-    if (from === 0) return 0;
-    return Math.max(0, ((from - to) / from) * 100);
+  // Hack: Fix logic for linear funnels (if viewItem < addToCart, etc)
+  const fixCounts = (c: Counts) => {
+    if (c.viewItem < c.addToCart) c.viewItem = c.addToCart
+    if (c.addToCart < c.beginCheckout) c.addToCart = c.beginCheckout
   }
 
-  const dropOff = {
-    pageViewToViewItem: calculateDropOff(pageViews, viewItem),
-    viewItemToAddToCart: calculateDropOff(viewItem, addToCart),
-    addToCartToCheckout: calculateDropOff(addToCart, beginCheckout),
-    checkoutToPurchase: calculateDropOff(beginCheckout, purchases)
+  fixCounts(counts.total);
+  fixCounts(counts.compra);
+  fixCounts(counts.leads);
+
+  // Helper to calculate metrics object from counts
+  const calculateMetrics = (c: Counts): FunnelStageMetrics => {
+    const viewToCart = c.viewItem > 0 ? (c.addToCart / c.viewItem) * 100 : 0
+    const cartToCheckout = c.addToCart > 0 ? (c.beginCheckout / c.addToCart) * 100 : 0
+    const checkoutToPurchase = c.beginCheckout > 0 ? (c.purchases / c.beginCheckout) * 100 : 0
+    const endToEnd = c.pageViews > 0 ? (c.purchases / c.pageViews) * 100 : 0
+    const viewsParaLeads = c.pageViews > 0 ? (c.leads / c.pageViews) * 100 : 0
+    const leadsParaCheckout = c.leads > 0 ? (c.beginCheckout / c.leads) * 100 : 0
+    const checkoutParaVenda = c.beginCheckout > 0 ? (c.purchases / c.beginCheckout) * 100 : 0
+
+    const calculateDropOff = (from: number, to: number) => {
+      if (from === 0) return 0;
+      return Math.max(0, ((from - to) / from) * 100);
+    }
+
+    const dropOff = {
+      pageViewToViewItem: calculateDropOff(c.pageViews, c.viewItem),
+      viewItemToAddToCart: calculateDropOff(c.viewItem, c.addToCart),
+      addToCartToCheckout: calculateDropOff(c.addToCart, c.beginCheckout),
+      checkoutToPurchase: calculateDropOff(c.beginCheckout, c.purchases)
+    }
+
+    const ticketMedio = c.purchases > 0 ? c.receitaTotal / c.purchases : 0
+
+    return {
+      etapas: {
+        pageViews: c.pageViews,
+        viewItem: c.viewItem,
+        addToWishlist: c.addToWishlist,
+        addToCart: c.addToCart,
+        viewCart: c.viewCart,
+        beginCheckout: c.beginCheckout,
+        leads: c.leads,
+        checkouts: c.beginCheckout,
+        purchases: c.purchases
+      },
+      conversao: {
+        viewToCart: Math.round(viewToCart * 100) / 100,
+        cartToCheckout: Math.round(cartToCheckout * 100) / 100,
+        checkoutToPurchase: Math.round(checkoutToPurchase * 100) / 100,
+        endToEnd: Math.round(endToEnd * 100) / 100,
+        viewsParaLeads: Math.round(viewsParaLeads * 100) / 100,
+        leadsParaCheckout: Math.round(leadsParaCheckout * 100) / 100,
+        checkoutParaVenda: Math.round(checkoutParaVenda * 100) / 100
+      },
+      dropOff: {
+        pageViewToViewItem: Math.round(dropOff.pageViewToViewItem * 100) / 100,
+        viewItemToAddToCart: Math.round(dropOff.viewItemToAddToCart * 100) / 100,
+        addToCartToCheckout: Math.round(dropOff.addToCartToCheckout * 100) / 100,
+        checkoutToPurchase: Math.round(dropOff.checkoutToPurchase * 100) / 100
+      },
+      financeiro: {
+        receitaTotal: Math.round(c.receitaTotal * 100) / 100,
+        ticketMedio: Math.round(ticketMedio * 100) / 100
+      }
+    }
   }
 
-  const ticketMedio = purchases > 0 ? receitaTotal / purchases : 0
+  // Construct final response
+  const totalMetrics = calculateMetrics(counts.total);
+  const compraMetrics = calculateMetrics(counts.compra);
+  const leadsMetrics = calculateMetrics(counts.leads);
 
   return {
-    etapas: {
-      pageViews,
-      viewItem,
-      addToWishlist,
-      addToCart,
-      viewCart,
-      beginCheckout,
-      leads,
-      checkouts: beginCheckout, // Alias for frontend compatibility
-      purchases
-    },
-    conversao: {
-      viewToCart: Math.round(viewToCart * 100) / 100,
-      cartToCheckout: Math.round(cartToCheckout * 100) / 100,
-      checkoutToPurchase: Math.round(checkoutToPurchase * 100) / 100,
-      endToEnd: Math.round(endToEnd * 100) / 100,
-      viewsParaLeads: Math.round(viewsParaLeads * 100) / 100,
-      leadsParaCheckout: Math.round(leadsParaCheckout * 100) / 100,
-      checkoutParaVenda: Math.round(checkoutParaVenda * 100) / 100
-    },
-    dropOff: {
-      pageViewToViewItem: Math.round(dropOff.pageViewToViewItem * 100) / 100,
-      viewItemToAddToCart: Math.round(dropOff.viewItemToAddToCart * 100) / 100,
-      addToCartToCheckout: Math.round(dropOff.addToCartToCheckout * 100) / 100,
-      checkoutToPurchase: Math.round(dropOff.checkoutToPurchase * 100) / 100
-    },
-    financeiro: {
-      receitaTotal: Math.round(receitaTotal * 100) / 100,
-      ticketMedio: Math.round(ticketMedio * 100) / 100
+    ...totalMetrics,
+    breakdown: {
+      compra: compraMetrics,
+      leads: leadsMetrics
     }
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import DashboardLayout from "@/components/DashboardLayout";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { rankingAPI } from "@/lib/ranking-api";
@@ -44,6 +44,7 @@ export default function Metricas() {
   const { user, loading: authLoading } = useAuth();
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
+  const [marketingFunnelType, setMarketingFunnelType] = useState<'compra' | 'leads'>('compra');
 
   // View States
   const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
@@ -116,6 +117,15 @@ export default function Metricas() {
 
   // Combine loading states
   const loading = funnelLoading || evolutionLoading || productLoading || trafficLoading || creativeLoading || placementLoading || vturbLoading;
+
+  // Helper para obter dados do funil ativo (Compra ou Leads)
+  const activeFunnelData = useMemo(() => {
+    if (!funnelData) return null;
+    if (funnelData.breakdown && funnelData.breakdown[marketingFunnelType]) {
+      return funnelData.breakdown[marketingFunnelType];
+    }
+    return funnelData;
+  }, [funnelData, marketingFunnelType]);
 
   // Combine error states
   const error = funnelError || null; // Only blocking error is funnel, others are partials usually
@@ -241,19 +251,34 @@ export default function Metricas() {
 
             {/* Marketing - Funil de Conversão e Tráfego */}
             <TabsContent value="marketing" className="space-y-6">
+              {/* Seletor de Tipo de Funil (Global para a aba) */}
+              <div className="flex justify-end">
+                <Tabs value={marketingFunnelType} onValueChange={(v) => setMarketingFunnelType(v as 'compra' | 'leads')} className="w-[300px]">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="compra">Compra</TabsTrigger>
+                    <TabsTrigger value="leads">Leads</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Novo Funil Avançado */}
                 <AdvancedFunnel
                   data={{
-                    pageViews: funnelData?.etapas?.pageViews || 0,
-                    addToCart: funnelData?.etapas?.addToCart || 0,
-                    checkouts: funnelData?.etapas?.beginCheckout || funnelData?.etapas?.checkouts || 0,
-                    purchases: funnelData?.etapas?.purchases || 0
+                    pageViews: activeFunnelData?.etapas?.pageViews || 0,
+                    addToCart: activeFunnelData?.etapas?.addToCart || 0,
+                    checkouts: activeFunnelData?.etapas?.beginCheckout || activeFunnelData?.etapas?.checkouts || 0,
+                    purchases: activeFunnelData?.etapas?.purchases || 0,
+                    leads: activeFunnelData?.etapas?.leads || 0
                   }}
+                  funnelType={marketingFunnelType}
                 />
 
                 {/* Nova Tabela de Tráfego */}
-                <TrafficSourcesTable data={trafficData} />
+                <TrafficSourcesTable
+                  data={trafficData}
+                  selectedFunnelType={marketingFunnelType}
+                />
               </div>
 
               {/* Cards de Métricas */}
@@ -265,7 +290,7 @@ export default function Metricas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.pageViews || 0}</div>
+                    <div className="text-3xl font-bold">{activeFunnelData?.etapas.pageViews || 0}</div>
                   </CardContent>
                 </Card>
 
@@ -276,9 +301,9 @@ export default function Metricas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas.leads || 0}</div>
+                    <div className="text-3xl font-bold">{activeFunnelData?.etapas.leads || 0}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {(funnelData?.conversao?.viewsParaLeads || 0).toFixed(1)}% conversão
+                      {(activeFunnelData?.conversao?.viewsParaLeads || 0).toFixed(1)}% conversão
                     </p>
                   </CardContent>
                 </Card>
@@ -290,9 +315,9 @@ export default function Metricas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas?.checkouts || 0}</div>
+                    <div className="text-3xl font-bold">{activeFunnelData?.etapas?.checkouts || 0}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {(funnelData?.conversao?.leadsParaCheckout || 0).toFixed(1)}% conversão
+                      {(activeFunnelData?.conversao?.leadsParaCheckout || 0).toFixed(1)}% conversão
                     </p>
                   </CardContent>
                 </Card>
@@ -304,9 +329,9 @@ export default function Metricas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{funnelData?.etapas?.purchases || 0}</div>
+                    <div className="text-3xl font-bold">{activeFunnelData?.etapas?.purchases || 0}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {(funnelData?.conversao?.checkoutParaVenda || 0).toFixed(1)}% conversão
+                      {(activeFunnelData?.conversao?.checkoutParaVenda || 0).toFixed(1)}% conversão
                     </p>
                   </CardContent>
                 </Card>

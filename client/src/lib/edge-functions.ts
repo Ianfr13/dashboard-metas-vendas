@@ -298,7 +298,7 @@ export const dashboardAPI = {
 // API de Analytics do GTM (Edge Functions)
 // ============================================
 
-export interface FunnelMetrics {
+export interface FunnelStageMetrics {
   etapas: {
     pageViews: number;
     viewItem: number;
@@ -311,6 +311,9 @@ export interface FunnelMetrics {
     purchases: number;
   };
   conversao: {
+    viewToCart?: number;
+    cartToCheckout?: number;
+    checkoutToPurchase?: number;
     viewsParaLeads: number;
     leadsParaCheckout: number;
     checkoutParaVenda: number;
@@ -325,6 +328,13 @@ export interface FunnelMetrics {
   financeiro: {
     receitaTotal: number;
     ticketMedio: number;
+  };
+}
+
+export interface FunnelMetrics extends FunnelStageMetrics {
+  breakdown?: {
+    compra: FunnelStageMetrics;
+    leads: FunnelStageMetrics;
   };
 }
 
