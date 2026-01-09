@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Image, ArrowUpDown, ArrowUp, ArrowDown, Smartphone, Laptop, LayoutGrid } from "lucide-react";
 import { CreativeMetrics } from "@/lib/edge-functions";
@@ -13,8 +14,11 @@ type SortKey = keyof CreativeMetrics;
 
 export default function CreativeRankingTable({ data }: CreativeRankingTableProps) {
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
+    const [selectedType, setSelectedType] = useState<'compra' | 'leads'>('compra');
 
-    const sortedData = [...data].sort((a, b) => {
+    const filteredData = data.filter(item => (item.funnelType || 'compra') === selectedType);
+
+    const sortedData = [...filteredData].sort((a, b) => {
         if (!sortConfig) return 0;
         const { key, direction } = sortConfig;
         if (a[key] < b[key]) return direction === 'asc' ? -1 : 1;
@@ -61,8 +65,18 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
     return (
         <Card className="col-span-1 lg:col-span-2">
             <CardHeader>
-                <CardTitle>Ranking de Criativos</CardTitle>
-                <CardDescription>Performance detalhada por criativo (utm_content)</CardDescription>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle>Ranking de Criativos</CardTitle>
+                        <CardDescription>Performance detalhada por criativo (utm_content)</CardDescription>
+                    </div>
+                    <Tabs value={selectedType} onValueChange={(v) => setSelectedType(v as 'compra' | 'leads')} className="w-[300px]">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="compra">Compra</TabsTrigger>
+                            <TabsTrigger value="leads">Leads</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">

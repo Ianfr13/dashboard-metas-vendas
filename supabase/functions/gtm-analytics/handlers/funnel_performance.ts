@@ -1,8 +1,9 @@
 
-import { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 export interface FunnelPerformanceMetrics {
     funnelId: string
+    funnelType: 'compra' | 'leads'
     funnelVersion: string
     pageVersion: string
     offerId: string
@@ -71,6 +72,7 @@ export async function getFunnelPerformance(
     // Key: fid|fver|pver|oid
     const map = new Map<string, {
         funnelId: string,
+        funnelType: 'compra' | 'leads',
         funnelVersion: string,
         pageVersion: string,
         offerId: string,
@@ -91,29 +93,32 @@ export async function getFunnelPerformance(
             : event.event_data || {};
 
         // Extract Tracking Parameters from page_location
-        // Structure: /fid=.../fver=.../pver=.../oid=.../fstg=...
+        // Structure: /fid=.../fver=.../pver=.../oid=.../fstg=.../ftype=...
         const location = eventData.page_location || '';
         const fidMatch = location.match(/fid=([^/&?]+)/);
         const fverMatch = location.match(/fver=([^/&?]+)/);
         const pverMatch = location.match(/pver=([^/&?]+)/);
         const oidMatch = location.match(/oid=([^/&?]+)/);
         const fstgMatch = location.match(/fstg=([^/&?]+)/);
+        const ftypeMatch = location.match(/ftype=([^/&?]+)/);
 
         const fid = fidMatch?.[1] || '(not set)';
         const fver = fverMatch?.[1] || '(not set)';
         const pver = pverMatch?.[1] || '(not set)';
         const oid = oidMatch?.[1] || '(not set)';
         const fstg = fstgMatch?.[1] || '(not set)';
+        const ftype = (ftypeMatch?.[1] || 'compra') as 'compra' | 'leads';
 
         // Extract product name from event_data (sent by GTM on purchase/add_to_cart)
         const productName = eventData.product_name || '(not set)';
 
-        // Chave única para agroupamento (includes productName for variants)
-        const key = `${fid}|${fver}|${pver}|${oid}|${fstg}|${productName}`;
+        // Chave única para agroupamento (includes productName and funnelType)
+        const key = `${fid}|${ftype}|${fver}|${pver}|${oid}|${fstg}|${productName}`;
 
         if (!map.has(key)) {
             map.set(key, {
                 funnelId: fid,
+                funnelType: ftype,
                 funnelVersion: fver,
                 pageVersion: pver,
                 offerId: oid,
@@ -158,6 +163,7 @@ export async function getFunnelPerformance(
 
             return {
                 funnelId: m.funnelId,
+                funnelType: m.funnelType,
                 funnelVersion: m.funnelVersion,
                 pageVersion: m.pageVersion,
                 offerId: m.offerId,
@@ -170,7 +176,9 @@ export async function getFunnelPerformance(
                 leads: m.leads,
                 sales: m.sales,
                 revenue: Math.round(m.revenue * 100) / 100,
-                conversionRate: Math.round((m.sales / sessionCount) * 100 * 100) / 100
+                conversionRate: m.funnelType === 'leads'
+                    ? Math.round((m.leads / sessionCount) * 100 * 100) / 100
+                    : Math.round((m.sales / sessionCount) * 100 * 100) / 100
             }
         })
         .sort((a, b) => b.revenue - a.revenue);

@@ -6,6 +6,7 @@ export interface UrlParams {
     pver?: string; // Page Version
     oid?: string; // Offer ID
     fstg?: string; // Funnel Stage (New)
+    ftype?: 'compra' | 'leads'; // Funnel Type (New)
     utm_source?: string;
     utm_medium?: string;
     utm_campaign?: string;
@@ -41,6 +42,7 @@ export function generateTrackingUrl(params: UrlParams): string {
     };
 
     appendPath('fid', params.fid);
+    appendPath('ftype', params.ftype);
     appendPath('fver', params.fver);
     appendPath('pver', params.pver);
     appendPath('oid', params.oid);

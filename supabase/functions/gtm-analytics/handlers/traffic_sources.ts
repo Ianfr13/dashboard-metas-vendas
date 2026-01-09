@@ -1,8 +1,9 @@
-import { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 export interface TrafficSourceMetrics {
     source: string
     medium: string
+    funnelType: 'compra' | 'leads'
     sessions: number
     leads: number
     sales: number
@@ -106,6 +107,9 @@ export async function getTrafficSources(
 
     // Agrupar
     const sourceMap = new Map<string, {
+        source: string,
+        medium: string,
+        funnelType: 'compra' | 'leads',
         sessions: Set<string>,
         pageViews: number,
         leads: number,
@@ -114,13 +118,21 @@ export async function getTrafficSources(
     }>()
 
     events.forEach(event => {
-        // Parse value for purchase
+        // Parse value for purchase and extracting ftype
         let revenueValue = 0;
+        let ftype: 'compra' | 'leads' = 'compra';
+        const eventData = typeof event.event_data === 'string'
+            ? JSON.parse(event.event_data || '{}')
+            : event.event_data || {};
+
         if (event.event_name === 'purchase') {
-            const eventData = typeof event.event_data === 'string'
-                ? JSON.parse(event.event_data || '{}')
-                : event.event_data || {};
             revenueValue = parseFloat(eventData.value || eventData.transaction_value || '0');
+        }
+
+        const location = eventData.page_location || '';
+        const ftypeMatch = location.match(/ftype=([^/&?]+)/);
+        if (ftypeMatch && ftypeMatch[1] === 'leads') {
+            ftype = 'leads';
         }
 
         // Determine Attribution
@@ -130,10 +142,14 @@ export async function getTrafficSources(
         // Normalize
         const normalized = normalizeSource(rawSource, rawMedium, event.referrer);
 
-        const key = `${normalized.source}|${normalized.medium}`;
+        // Group by Source|Medium|FunnelType
+        const key = `${normalized.source}|${normalized.medium}|${ftype}`;
 
         if (!sourceMap.has(key)) {
             sourceMap.set(key, {
+                source: normalized.source,
+                medium: normalized.medium,
+                funnelType: ftype,
                 sessions: new Set(),
                 pageViews: 0,
                 leads: 0,
@@ -164,9 +180,8 @@ export async function getTrafficSources(
     })
 
     // Converter para array
-    const trafficMetrics: TrafficSourceMetrics[] = Array.from(sourceMap.entries())
-        .map(([key, metrics]) => {
-            const [source, medium] = key.split('|')
+    const trafficMetrics: TrafficSourceMetrics[] = Array.from(sourceMap.values())
+        .map((metrics) => {
             // Se tiver session_id, usa o size. Se não, usa pageViews como proxy.
             const sessionCount = metrics.sessions.size > 0
                 ? metrics.sessions.size
@@ -175,13 +190,16 @@ export async function getTrafficSources(
             const safeSessions = sessionCount || 1
 
             return {
-                source,
-                medium,
+                source: metrics.source,
+                medium: metrics.medium,
+                funnelType: metrics.funnelType,
                 sessions: sessionCount,
                 leads: metrics.leads,
                 sales: metrics.sales,
                 revenue: Math.round(metrics.revenue * 100) / 100,
-                conversionRate: Math.round((metrics.sales / safeSessions) * 100 * 100) / 100
+                conversionRate: metrics.funnelType === 'leads'
+                    ? Math.round((metrics.leads / safeSessions) * 100 * 100) / 100
+                    : Math.round((metrics.sales / safeSessions) * 100 * 100) / 100
             }
         })
         .sort((a, b) => b.revenue - a.revenue) // Ordernar por receita

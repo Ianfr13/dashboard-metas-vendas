@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Filter, Download, ArrowRight, Users, ShoppingCart, DollarSign, TrendingUp } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { gtmAnalyticsAPI, FunnelPerformanceMetrics } from "@/lib/edge-functions";
@@ -42,6 +43,7 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
+    const [selectedType, setSelectedType] = useState<'compra' | 'leads'>('compra');
 
     useEffect(() => {
         async function loadData() {
@@ -71,34 +73,46 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
         loadData();
     }, [startDate, endDate, user, authLoading]);
 
-    // Get unique funnel IDs for selector
+    // Get unique funnel IDs for selector based on selected Type
     const funnelIds = useMemo(() => {
-        return Array.from(new Set(data.map(r => r.funnelId).filter(f => f && f !== '(not set)')));
-    }, [data]);
+        return Array.from(new Set(
+            data
+                .filter(r => (r.funnelType || 'compra') === selectedType)
+                .map(r => r.funnelId)
+                .filter(f => f && f !== '(not set)')
+        ));
+    }, [data, selectedType]);
+
+    // Reset selected funnel when type changes if current selection invalid
+    useEffect(() => {
+        if (selectedFunnelId && !funnelIds.includes(selectedFunnelId)) {
+            setSelectedFunnelId(funnelIds[0] || null);
+        }
+    }, [selectedType, funnelIds, selectedFunnelId]);
 
     // Filter data by selected funnel and aggregate by stage
     const stageData = useMemo((): StageMetrics[] => {
         if (!selectedFunnelId) return [];
 
-        const funnelData = data.filter(d => d.funnelId === selectedFunnelId);
+        const funnelData = data.filter(d =>
+            d.funnelId === selectedFunnelId &&
+            (d.funnelType || 'compra') === selectedType
+        );
 
         // Group by funnel stage with product breakdown
         const stageMap = new Map<string, {
-            sessions: number;
-            pageViews: number;
-            addToCart: number;
-            checkouts: number;
-            leads: number;
-            sales: number;
-            revenue: number;
-            productMap: Map<string, { sales: number; revenue: number }>;
+            sessions: number,
+            pageViews: number,
+            addToCart: number,
+            checkouts: number,
+            leads: number,
+            sales: number,
+            revenue: number,
+            productMap: Map<string, { sales: number, revenue: number }>
         }>();
 
-        // Define stage order
-        const stageOrder = ['frontend', 'upsell-1', 'downsell-1', 'upsell-2', 'downsell-2', 'upsell-3', 'downsell-3'];
-
         funnelData.forEach(item => {
-            const stage = item.funnelStage || '(not set)';
+            const stage = item.funnelStage || '(not set)'; // Ensure stage is not null/undefined
             if (!stageMap.has(stage)) {
                 stageMap.set(stage, {
                     sessions: 0,
@@ -120,7 +134,7 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
             current.sales += item.sales;
             current.revenue += item.revenue;
 
-            // Track products for this stage (only if has sales/purchases)
+            // Aggregate products
             const productName = item.productName || '(not set)';
             if (productName !== '(not set)' && item.sales > 0) {
                 if (!current.productMap.has(productName)) {
@@ -132,9 +146,12 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
             }
         });
 
+        // Define stage order
+        const stageOrder = ['frontend', 'upsell-1', 'downsell-1', 'upsell-2', 'downsell-2', 'upsell-3', 'downsell-3'];
+
         // Convert to array and calculate rates
         const stages: StageMetrics[] = [];
-        let previousSales = 0;
+        let previousSales = 0; // This variable is not used in the new takeRate logic, but kept for context if needed later.
 
         // Sort stages by predefined order
         const sortedStages = Array.from(stageMap.entries()).sort((a, b) => {
@@ -146,13 +163,19 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
             return orderA - orderB;
         });
 
-        sortedStages.forEach(([stage, metrics], index) => {
-            const conversionRate = metrics.sessions > 0 ? (metrics.sales / metrics.sessions) * 100 : 0;
-            const takeRate = index === 0
-                ? conversionRate
-                : (previousSales > 0 ? (metrics.sales / previousSales) * 100 : 0);
+        sortedStages.forEach(([stage, metrics]) => {
+            const conversionRate = selectedType === 'leads'
+                ? metrics.sessions > 0 ? (metrics.leads / metrics.sessions) * 100 : 0
+                : metrics.sessions > 0 ? (metrics.sales / metrics.sessions) * 100 : 0;
 
-            // Build product variants array with share percentage
+            // For upsells/downsells, it's relative to previous stage typically,
+            // but for simplicity here we keep logical flow or use absolute take rate of session
+            // Logic: Upsell Take Rate = Sales / Main Frontend Sales ( APPROXIMATION )
+            // Better: Sales / Unique Sessions of THIS stage
+            const takeRate = selectedType === 'leads'
+                ? conversionRate // Capture rate
+                : metrics.sessions > 0 ? (metrics.sales / metrics.sessions) * 100 : 0;
+
             const products: ProductVariant[] = Array.from(metrics.productMap.entries())
                 .map(([name, p]) => ({
                     name,
@@ -175,11 +198,6 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                 takeRate,
                 products
             });
-
-            // For frontend, use sales as base for next stage
-            if (stage === 'frontend') {
-                previousSales = metrics.sales;
-            }
         });
 
         return stages;
@@ -229,26 +247,38 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
             {/* Funnel Selector */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Performance por Funil (URL Tracking)</CardTitle>
-                    <CardDescription>
-                        Selecione um funil para visualizar as métricas detalhadas por etapa
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Performance por Funil (URL Tracking)</CardTitle>
+                            <CardDescription>
+                                Seletor de funis baseados nos parâmetros de URL
+                            </CardDescription>
+                        </div>
+                        <Tabs value={selectedType} onValueChange={(v) => setSelectedType(v as 'compra' | 'leads')} className="w-[300px]">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="compra">Compra</TabsTrigger>
+                                <TabsTrigger value="leads">Leads</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                        <div className="w-full md:w-[300px]">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex-1">
+                            <label className="text-sm font-medium mb-2 block">
+                                Selecionar Funil ({selectedType === 'compra' ? 'Vendas' : 'Captura'})
+                            </label>
                             <Select
                                 value={selectedFunnelId || ''}
-                                onValueChange={(value) => setSelectedFunnelId(value)}
+                                onValueChange={setSelectedFunnelId}
+                                disabled={funnelIds.length === 0}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Selecione um Funnel ID" />
+                                    <SelectValue placeholder={funnelIds.length === 0 ? "Nenhum funil encontrado" : "Selecione um funil"} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {funnelIds.map((fid) => (
-                                        <SelectItem key={fid} value={fid}>
-                                            {fid}
-                                        </SelectItem>
+                                    {funnelIds.map(fid => (
+                                        <SelectItem key={fid} value={fid}>{fid}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -284,13 +314,13 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                         <Card>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                                    Vendas Totais
+                                    {selectedType === 'leads' ? 'Leads Totais' : 'Vendas Totais'}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center gap-2">
-                                    <ShoppingCart className="h-5 w-5 text-green-500" />
-                                    <span className="text-3xl font-bold">{totals.sales}</span>
+                                    {selectedType === 'leads' ? <Users className="h-5 w-5 text-green-500" /> : <ShoppingCart className="h-5 w-5 text-green-500" />}
+                                    <span className="text-3xl font-bold">{selectedType === 'leads' ? totals.leads : totals.sales}</span>
                                 </div>
                             </CardContent>
                         </Card>
@@ -298,34 +328,39 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                         <Card>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                                    Receita Total
+                                    {selectedType === 'leads' ? 'Taxa de Conversão' : 'Receita Total'}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center gap-2">
-                                    <DollarSign className="h-5 w-5 text-emerald-500" />
+                                    {selectedType === 'leads' ? <TrendingUp className="h-5 w-5 text-emerald-500" /> : <DollarSign className="h-5 w-5 text-emerald-500" />}
                                     <span className="text-3xl font-bold">
-                                        R$ {totals.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        {selectedType === 'leads'
+                                            ? `${(totals.sessions > 0 ? (totals.leads / totals.sessions) * 100 : 0).toFixed(2)}%`
+                                            : `R$ ${totals.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                        }
                                     </span>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        <Card>
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
-                                    Ticket Médio
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center gap-2">
-                                    <TrendingUp className="h-5 w-5 text-purple-500" />
-                                    <span className="text-3xl font-bold">
-                                        R$ {(totals.sales > 0 ? totals.revenue / totals.sales : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        {selectedType === 'compra' && (
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                                        Ticket Médio
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex items-center gap-2">
+                                        <TrendingUp className="h-5 w-5 text-purple-500" />
+                                        <span className="text-3xl font-bold">
+                                            R$ {(totals.sales > 0 ? totals.revenue / totals.sales : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
 
                     {/* Visual Funnel Flow - Branched Layout */}
@@ -353,6 +388,9 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                                     ? downsells.find(d => d.stage === `downsell-${upsellNum}`)
                                                     : null;
 
+                                                const displayValue = selectedType === 'leads' ? stage.leads : stage.sales;
+                                                const displayLabel = selectedType === 'leads' ? 'Leads' : 'Vendas';
+
                                                 return (
                                                     <div key={stage.stage} className="flex items-start gap-4">
                                                         {index > 0 && (
@@ -365,19 +403,21 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                                                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                                                     : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                                                                     }`}>
-                                                                    <ShoppingCart className="h-5 w-5 mx-auto mb-1" />
-                                                                    <p className="text-xl font-bold">{stage.sales}</p>
+                                                                    <div className="flex justify-center mb-1">
+                                                                        {selectedType === 'leads' ? <Users className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
+                                                                    </div>
+                                                                    <p className="text-xl font-bold">{displayValue}</p>
                                                                     <p className="text-xs font-medium capitalize">{stage.stage}</p>
                                                                     <p className="text-xs mt-1">
-                                                                        R$ {stage.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                                                                        {selectedType !== 'leads' && `R$ ${stage.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`}
                                                                     </p>
                                                                 </div>
                                                                 <Badge variant={stage.takeRate > 30 ? "default" : "secondary"} className="text-xs">
-                                                                    {stage.stage === 'frontend' ? 'CR' : 'Take'}: {stage.takeRate.toFixed(1)}%
+                                                                    {stage.stage === 'frontend' ? (selectedType === 'leads' ? 'Conv.' : 'CR') : 'Take'}: {stage.takeRate.toFixed(1)}%
                                                                 </Badge>
 
                                                                 {/* Product Variants Breakdown */}
-                                                                {stage.products.length > 0 && (
+                                                                {stage.products.length > 0 && selectedType !== 'leads' && (
                                                                     <div className="mt-3 w-full border-t pt-2 text-left">
                                                                         <p className="text-[10px] text-muted-foreground mb-1">Produtos:</p>
                                                                         {stage.products.map((product) => (
@@ -391,7 +431,7 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                                             </div>
 
                                                             {/* Downsell Branch (below upsell) */}
-                                                            {correspondingDownsell && (
+                                                            {correspondingDownsell && selectedType !== 'leads' && (
                                                                 <div className="mt-4 flex flex-col items-center">
                                                                     <div className="h-6 w-px bg-orange-300 dark:bg-orange-600" />
                                                                     <span className="text-xs text-muted-foreground mb-1">Não comprou</span>
@@ -432,13 +472,13 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                         <TableRow>
                                             <TableHead>Etapa</TableHead>
                                             <TableHead className="text-right">PageViews</TableHead>
-                                            <TableHead className="text-right">Add Cart</TableHead>
-                                            <TableHead className="text-right">Checkout</TableHead>
-                                            <TableHead className="text-right">Leads</TableHead>
-                                            <TableHead className="text-right">Vendas</TableHead>
-                                            <TableHead className="text-right">Receita</TableHead>
-                                            <TableHead className="text-right">Conv. %</TableHead>
-                                            <TableHead className="text-right">Take Rate</TableHead>
+                                            {selectedType !== 'leads' && <TableHead className="text-right">Add Cart</TableHead>}
+                                            {selectedType !== 'leads' && <TableHead className="text-right">Checkout</TableHead>}
+                                            <TableHead className="text-right">{selectedType === 'leads' ? 'Leads' : 'Leads'}</TableHead>
+                                            {selectedType !== 'leads' && <TableHead className="text-right">Vendas</TableHead>}
+                                            {selectedType !== 'leads' && <TableHead className="text-right">Receita</TableHead>}
+                                            <TableHead className="text-right">{selectedType === 'leads' ? 'Lead Rate' : 'Conv. %'}</TableHead>
+                                            {selectedType !== 'leads' && <TableHead className="text-right">Take Rate</TableHead>}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -455,19 +495,23 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-right">{stage.pageViews}</TableCell>
-                                                    <TableCell className="text-right">{stage.addToCart}</TableCell>
-                                                    <TableCell className="text-right">{stage.checkouts}</TableCell>
+                                                    {selectedType !== 'leads' && <TableCell className="text-right">{stage.addToCart}</TableCell>}
+                                                    {selectedType !== 'leads' && <TableCell className="text-right">{stage.checkouts}</TableCell>}
                                                     <TableCell className="text-right">{stage.leads}</TableCell>
-                                                    <TableCell className="text-right font-medium">{stage.sales}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        R$ {stage.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </TableCell>
+                                                    {selectedType !== 'leads' && <TableCell className="text-right font-medium">{stage.sales}</TableCell>}
+                                                    {selectedType !== 'leads' && (
+                                                        <TableCell className="text-right">
+                                                            R$ {stage.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </TableCell>
+                                                    )}
                                                     <TableCell className="text-right">{stage.conversionRate.toFixed(2)}%</TableCell>
-                                                    <TableCell className="text-right">
-                                                        <span className={stage.takeRate > 30 ? "text-green-600 font-bold" : ""}>
-                                                            {stage.takeRate.toFixed(2)}%
-                                                        </span>
-                                                    </TableCell>
+                                                    {selectedType !== 'leads' && (
+                                                        <TableCell className="text-right">
+                                                            <span className={stage.takeRate > 30 ? "text-green-600 font-bold" : ""}>
+                                                                {stage.takeRate.toFixed(2)}%
+                                                            </span>
+                                                        </TableCell>
+                                                    )}
                                                 </TableRow>
                                                 {/* Product breakdown rows */}
                                                 {stage.products.map((product) => (
@@ -476,19 +520,23 @@ export default function FunnelPerformance({ startDate, endDate }: FunnelPerforma
                                                             <span className="text-xs text-muted-foreground">↳ {product.name}</span>
                                                         </TableCell>
                                                         <TableCell className="text-right text-muted-foreground">-</TableCell>
+                                                        {selectedType !== 'leads' && <TableCell className="text-right text-muted-foreground">-</TableCell>}
+                                                        {selectedType !== 'leads' && <TableCell className="text-right text-muted-foreground">-</TableCell>}
                                                         <TableCell className="text-right text-muted-foreground">-</TableCell>
-                                                        <TableCell className="text-right text-muted-foreground">-</TableCell>
-                                                        <TableCell className="text-right text-muted-foreground">-</TableCell>
-                                                        <TableCell className="text-right text-xs">{product.sales}</TableCell>
-                                                        <TableCell className="text-right text-xs">
-                                                            R$ {product.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                        </TableCell>
+                                                        {selectedType !== 'leads' && <TableCell className="text-right text-xs">{product.sales}</TableCell>}
+                                                        {selectedType !== 'leads' && (
+                                                            <TableCell className="text-right text-xs">
+                                                                R$ {product.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </TableCell>
+                                                        )}
                                                         <TableCell className="text-right text-xs text-muted-foreground">-</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {product.sharePercent.toFixed(1)}%
-                                                            </Badge>
-                                                        </TableCell>
+                                                        {selectedType !== 'leads' && (
+                                                            <TableCell className="text-right">
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    {product.sharePercent.toFixed(1)}%
+                                                                </Badge>
+                                                            </TableCell>
+                                                        )}
                                                     </TableRow>
                                                 ))}
                                             </>

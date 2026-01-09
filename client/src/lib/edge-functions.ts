@@ -343,6 +343,7 @@ export interface ProductMetricsGTM {
 export interface TrafficSourceMetrics {
   source: string;
   medium: string;
+  funnelType: 'compra' | 'leads';
   sessions: number;
   leads: number;
   sales: number;
@@ -352,6 +353,7 @@ export interface TrafficSourceMetrics {
 
 export interface CreativeMetrics {
   creativeId: string;
+  funnelType: 'compra' | 'leads';
   adName: string;
   source: string;
   medium: string;
@@ -377,6 +379,7 @@ export interface PlacementMetrics {
 
 export interface FunnelPerformanceMetrics {
   funnelId: string;
+  funnelType: 'compra' | 'leads';
   funnelVersion: string;
   pageVersion: string;
   offerId: string;

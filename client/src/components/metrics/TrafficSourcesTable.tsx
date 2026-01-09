@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Youtube, Facebook, Instagram, Linkedin, Globe, MousePointer2, Search, Share2, Twitter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { TrafficSourceMetrics } from "@/lib/edge-functions";
@@ -14,8 +15,12 @@ type SortKey = keyof TrafficSourceMetrics;
 export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) {
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
     const [filterType, setFilterType] = useState<'all' | 'paid' | 'organic' | 'direct'>('all'); // State for filter
+    const [selectedFunnelType, setSelectedFunnelType] = useState<'compra' | 'leads'>('compra');
 
     const filteredData = data.filter(item => {
+        // First filter by funnel type
+        if ((item.funnelType || 'compra') !== selectedFunnelType) return false;
+
         if (filterType === 'all') return true;
 
         const m = (item.medium || '').toLowerCase();
@@ -96,11 +101,21 @@ export default function TrafficSourcesTable({ data }: TrafficSourcesTableProps) 
     return (
         <Card>
             <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle>Fontes de Tráfego</CardTitle>
-                        <CardDescription>Origem dos seus visitantes e conversões</CardDescription>
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Fontes de Tráfego</CardTitle>
+                            <CardDescription>Origem dos seus visitantes e conversões</CardDescription>
+                        </div>
+                        <Tabs value={selectedFunnelType} onValueChange={(v) => setSelectedFunnelType(v as 'compra' | 'leads')} className="w-[300px]">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="compra">Compra</TabsTrigger>
+                                <TabsTrigger value="leads">Leads</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
                     </div>
+                </div>
+                <div className="flex items-center justify-between mt-4">
                     <div className="w-[180px]">
                         <select
                             className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"

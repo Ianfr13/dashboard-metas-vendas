@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { generateTrackingUrl, UrlParams } from '@/lib/urlGenerator';
 import { Copy, Check, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,6 +17,8 @@ export default function UrlGenerator() {
         fver: '',
         pver: '',
         oid: '',
+        fstg: '',
+        ftype: 'compra',
         utm_source: '',
         utm_medium: '',
         utm_campaign: '',
@@ -35,6 +38,10 @@ export default function UrlGenerator() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+        setParams(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSelectChange = (name: string, value: string) => {
         setParams(prev => ({ ...prev, [name]: value }));
     };
 
@@ -93,6 +100,21 @@ export default function UrlGenerator() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="ftype">Funnel Type (ftype)</Label>
+                                <Select
+                                    value={params.ftype || 'compra'}
+                                    onValueChange={(v) => handleSelectChange('ftype', v)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o tipo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="compra">Compra (Padrão)</SelectItem>
+                                        <SelectItem value="leads">Leads (Captura)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <div className="space-y-2">
                                 <Label htmlFor="fid">Funnel ID (fid)</Label>
                                 <Input

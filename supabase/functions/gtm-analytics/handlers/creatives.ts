@@ -1,7 +1,8 @@
-import { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 export interface CreativeMetrics {
     creativeId: string
+    funnelType: 'compra' | 'leads'
     adName: string
     source: string
     medium: string
@@ -59,7 +60,8 @@ export async function getCreativeRanking(
         return allData;
     }
 
-    const events = await fetchAllRows<any>('gtm_analytics_view', 'traffic_source, traffic_medium, utm_content, utm_term, event_name, value', (q) => {
+    // Include event_data to extract page_location and ftype
+    const events = await fetchAllRows<any>('gtm_analytics_view', 'traffic_source, traffic_medium, utm_content, utm_term, event_name, value, event_data', (q) => {
         return q.gte('timestamp', startDate).lte('timestamp', end).not('utm_content', 'is', null);
     });
 
@@ -76,15 +78,35 @@ export async function getCreativeRanking(
         pageViews: number
     }
 
+    // Key: creativeId|funnelType
     const creativeMap = new Map<string, CreativeMetrics & { placements: Map<string, PlacementStats> }>()
 
     events.forEach(event => {
         const creativeId = event.utm_content || '(not set)'
         const medium = event.traffic_medium || '(not set)'
 
-        if (!creativeMap.has(creativeId)) {
-            creativeMap.set(creativeId, {
+        // Extract funnelType from event_data.page_location
+        let ftype: 'compra' | 'leads' = 'compra';
+        try {
+            const eventData = typeof event.event_data === 'string'
+                ? JSON.parse(event.event_data)
+                : (event.event_data || {});
+
+            const location = eventData.page_location || '';
+            const ftypeMatch = location.match(/ftype=([^/&?]+)/);
+            if (ftypeMatch && ftypeMatch[1] === 'leads') {
+                ftype = 'leads';
+            }
+        } catch (e) {
+            // ignore parse error, default to compra
+        }
+
+        const key = `${creativeId}|${ftype}`;
+
+        if (!creativeMap.has(key)) {
+            creativeMap.set(key, {
                 creativeId,
+                funnelType: ftype,
                 adName: event.utm_term || '',
                 source: event.traffic_source || '',
                 medium: event.traffic_medium || '',
@@ -101,7 +123,7 @@ export async function getCreativeRanking(
             })
         }
 
-        const metrics = creativeMap.get(creativeId)!
+        const metrics = creativeMap.get(key)!
 
         // Init placement stats if needed
         if (!metrics.placements.has(medium)) {
