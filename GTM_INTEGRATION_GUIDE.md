@@ -11,8 +11,10 @@ O script abaixo captura e envia automaticamente:
 ## 2. Configurações Iniciais (Variáveis)
 Crie estas variáveis no GTM (**Variáveis > Definidas pelo Usuário > Constante**):
 
--   **Metas - Endpoint URL**: `https://auvvrewlbpyymekonilv.supabase.co/functions/v1/gtm-event`
+-   **Metas - Endpoint URL**: `https://gtm-producer.ferramentas-bce.workers.dev/`
+    > ⚠️ **Atualizado em Jan/2026**: Agora usa Cloudflare Queue para batching (reduz custos em 90%)
 -   **Metas - Secret Token**: `b646bc7e395f08aa2ee33001fbd6056874c3e0b732e6ed1b62dd251825d4f276`
+
 
 ---
 
