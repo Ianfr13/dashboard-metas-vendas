@@ -35,7 +35,6 @@ export default function Pages() {
         pver: "",
         oid: "",
         fstg: "",
-        utm_source: "fb",
         utm_medium: "",
         utm_campaign: "",
         utm_term: "",
@@ -248,11 +247,6 @@ export default function Pages() {
                                             <option value="compra">Compra</option>
                                             <option value="leads">Leads</option>
                                         </select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label>UTM Source</Label>
-                                        <Input value={genParams.utm_source} onChange={e => setGenParams({ ...genParams, utm_source: e.target.value })} />
                                     </div>
 
                                     <div className="pt-4 border-t">
