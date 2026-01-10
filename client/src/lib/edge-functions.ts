@@ -376,6 +376,7 @@ export interface CreativeMetrics {
   revenue: number;
   conversionRate: number;
   bestPlacement: string;
+  preview_shareable_link?: string;
 }
 
 export interface PlacementMetrics {

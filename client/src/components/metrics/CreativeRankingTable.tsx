@@ -121,13 +121,13 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                                             <span className="font-mono text-xs truncate max-w-[150px]" title={item.creativeId}>
                                                 {item.creativeId}
                                             </span>
-                                            {item.creativeId && /^\d+$/.test(item.creativeId) && (
+                                            {(item.preview_shareable_link || (item.creativeId && /^\d+$/.test(item.creativeId))) && (
                                                 <a
-                                                    href={`https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=BR&q=${item.creativeId}&search_type=keyword_unordered&media_type=all`}
+                                                    href={item.preview_shareable_link || `https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=BR&q=${item.creativeId}&search_type=keyword_unordered&media_type=all`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1 hover:bg-indigo-50 rounded text-indigo-600 ml-auto"
-                                                    title="Ver na Biblioteca de Anúncios"
+                                                    title={item.preview_shareable_link ? "Ver Prévia do Anúncio" : "Buscar na Biblioteca de Anúncios"}
                                                 >
                                                     <Search className="w-3 h-3" />
                                                 </a>

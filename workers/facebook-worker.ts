@@ -218,6 +218,7 @@ async function handleSyncAccount(env: Env, supabase: any, accountId: string, sta
             status: ad.status,
             creative_id: ad.creative?.id,
             creative_thumbnail_url: ad.creative?.thumbnail_url,
+            preview_shareable_link: ad.preview_shareable_link,
             updated_at: new Date().toISOString()
         }, { onConflict: 'id' });
     }
@@ -275,7 +276,7 @@ async function fetchAllWithPagination<T>(initialUrl: string): Promise<T[]> {
 interface FBAdAccount { id: string; name: string; currency: string; }
 interface FBCampaign { id: string; name: string; status: string; effective_status: string; objective: string; buying_type: string; daily_budget?: string; lifetime_budget?: string; }
 interface FBAdSet { id: string; campaign_id: string; name: string; status: string; }
-interface FBAd { id: string; adset_id: string; campaign_id: string; name: string; status: string; creative?: { id: string; thumbnail_url?: string; }; }
+interface FBAd { id: string; adset_id: string; campaign_id: string; name: string; status: string; creative?: { id: string; thumbnail_url?: string; }; preview_shareable_link?: string; }
 
 async function fetchAdAccounts(token: string) {
     return fetchAllWithPagination<FBAdAccount>(`${FB_GRAPH_API}/me/adaccounts?fields=id,name,currency&limit=100&access_token=${token}`);
@@ -292,7 +293,7 @@ async function fetchAdSets(token: string, accountId: string) {
 }
 
 async function fetchAds(token: string, accountId: string) {
-    const fields = 'id,adset_id,campaign_id,name,status,creative{id,thumbnail_url}';
+    const fields = 'id,adset_id,campaign_id,name,status,creative{id,thumbnail_url},preview_shareable_link';
     return fetchAllWithPagination<FBAd>(`${FB_GRAPH_API}/${accountId}/ads?fields=${fields}&limit=500&access_token=${token}`);
 }
 

@@ -65,6 +65,10 @@ export async function getCreativeRanking(
         return q.gte('timestamp', startDate).lte('timestamp', end).not('utm_content', 'is', null);
     });
 
+    // Fetch Facebook Ads links
+    const { data: adsData } = await supabase.from('facebook_ads').select('id, preview_shareable_link');
+    const adLinkMap = new Map(adsData?.map((a: any) => [a.id, a.preview_shareable_link]) || []);
+
     if (!events || events.length === 0) {
         return [];
     }
@@ -182,7 +186,8 @@ export async function getCreativeRanking(
                 revenue: Math.round(m.revenue * 100) / 100,
                 conversionRate: m.pageViews > 0
                     ? Math.round((m.sales / m.pageViews) * 100 * 100) / 100
-                    : 0
+                    : 0,
+                preview_shareable_link: adLinkMap.get(m.creativeId)
             }
         })
         // Sorting by weight: Purchase > IC > AddToCart > Wishlist > PageView

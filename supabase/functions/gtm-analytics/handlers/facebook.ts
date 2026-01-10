@@ -277,7 +277,7 @@ export async function getFacebookMetrics(
     // const adsetMap = new Map(adsets.map(a => [a.id, a])); // Unused in this scope but good to have if needed
 
     // Fetch ads
-    const ads = await fetchAllRows<any>('facebook_ads', 'id, adset_id, campaign_id, name, status, creative_thumbnail_url', (q) => {
+    const ads = await fetchAllRows<any>('facebook_ads', 'id, adset_id, campaign_id, name, status, creative_thumbnail_url, preview_shareable_link', (q) => {
         if (accountId) return q.eq('account_id', accountId);
         return q.in('account_id', validAccountIds);
     });

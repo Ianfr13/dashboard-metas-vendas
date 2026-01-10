@@ -283,13 +283,13 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort,
                                 >
                                     <div className="flex items-center justify-between group/link">
                                         <span className="truncate">{row.name}</span>
-                                        {level === 'ad' && row.id && (
+                                        {level === 'ad' && (
                                             <a
-                                                href={`https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=BR&q=${row.id}&search_type=keyword_unordered&media_type=all`}
+                                                href={row.preview_shareable_link || `https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=BR&q=${row.id}&search_type=keyword_unordered&media_type=all`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="opacity-0 group-hover/link:opacity-100 transition-opacity p-1 hover:bg-blue-50 rounded text-blue-600"
-                                                title="Ver na Biblioteca de Anúncios"
+                                                title={row.preview_shareable_link ? "Ver Prévia do Anúncio" : "Buscar na Biblioteca de Anúncios"}
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 <Search className="w-3 h-3" />
