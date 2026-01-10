@@ -32,6 +32,8 @@ export default function Pages() {
         fid: "",
         ftype: "compra",
         fver: "",
+        pver: "",
+        oid: "",
         fstg: "",
         utm_source: "fb",
         utm_medium: "",
@@ -216,20 +218,36 @@ export default function Pages() {
 
                                     <div className="grid grid-cols-2 gap-2">
                                         <div className="space-y-2">
-                                            <Label>Tipo (ftype)</Label>
-                                            <select
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                                value={genParams.ftype}
-                                                onChange={e => setGenParams({ ...genParams, ftype: e.target.value })}
-                                            >
-                                                <option value="compra">Compra</option>
-                                                <option value="leads">Leads</option>
-                                            </select>
+                                            <Label>Funnel Ver (fver)</Label>
+                                            <Input value={genParams.fver} onChange={e => setGenParams({ ...genParams, fver: e.target.value })} placeholder="v1" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Page Ver (pver)</Label>
+                                            <Input value={genParams.pver} onChange={e => setGenParams({ ...genParams, pver: e.target.value })} placeholder="v2" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-2">
+                                            <Label>Offer ID (oid)</Label>
+                                            <Input value={genParams.oid} onChange={e => setGenParams({ ...genParams, oid: e.target.value })} placeholder="off_123" />
                                         </div>
                                         <div className="space-y-2">
                                             <Label>Estágio (fstg)</Label>
                                             <Input value={genParams.fstg} onChange={e => setGenParams({ ...genParams, fstg: e.target.value })} placeholder="vsl" />
                                         </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Tipo (ftype)</Label>
+                                        <select
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                            value={genParams.ftype}
+                                            onChange={e => setGenParams({ ...genParams, ftype: e.target.value })}
+                                        >
+                                            <option value="compra">Compra</option>
+                                            <option value="leads">Leads</option>
+                                        </select>
                                     </div>
 
                                     <div className="space-y-2">
