@@ -178,8 +178,8 @@ export default {
             // Validar Token no Supabase
             const userResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
                 headers: {
-                    'Authorization': authHeader, // Passa o token do usuário (Bearer ...)
-                    'apikey': env.SUPABASE_SERVICE_ROLE_KEY // Precisamos da key para falar com a API, mas ela está SÓ aqui no Worker (seguro)
+                    'Authorization': authHeader,
+                    'apikey': env.SUPABASE_SERVICE_ROLE_KEY
                 }
             });
 
@@ -190,10 +190,39 @@ export default {
             const slugToPurge = url.searchParams.get('slug');
             if (slugToPurge) {
                 const cacheKey = `ab:${slugToPurge}`;
+                const pageKey = `page:${slugToPurge}`;
                 await env.AB_CACHE.delete(cacheKey);
+                await env.AB_CACHE.delete(pageKey);
                 return new Response(`Cache purged for ${slugToPurge}`, { status: 200 });
             }
             return new Response('Missing slug param', { status: 400 });
+        }
+
+        // Rota de Admin para Publicar Página (CMS)
+        // POST /admin/pages
+        // Body: { slug: "...", html: "..." }
+        if (url.pathname === '/admin/pages' && request.method === 'POST') {
+            const authHeader = request.headers.get('Authorization');
+            if (!authHeader) return new Response('Missing Authorization header', { status: 401 });
+
+            const userResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+                headers: {
+                    'Authorization': authHeader,
+                    'apikey': env.SUPABASE_SERVICE_ROLE_KEY
+                }
+            });
+
+            if (!userResponse.ok) return new Response('Unauthorized', { status: 401 });
+
+            try {
+                const body = await request.json() as { slug: string, html: string };
+                if (!body.slug || !body.html) return new Response('Missing slug or html', { status: 400 });
+
+                await env.AB_CACHE.put(`page:${body.slug}`, body.html);
+                return new Response('Page published', { status: 200 });
+            } catch (e) {
+                return new Response('Invalid JSON', { status: 400 });
+            }
         }
 
         // Extract slug from path (e.g., /x7k9m2p1 -> x7k9m2p1)
@@ -203,6 +232,16 @@ export default {
             return new Response('Not Found', { status: 404 });
         }
 
+        // 1. TENTATIVA: PÁGINA ESTÁTICA (CMS)
+        // Verifica se é uma página publicada pelo painel
+        const pageHtml = await env.AB_CACHE.get(`page:${slug}`);
+        if (pageHtml) {
+            return new Response(pageHtml, {
+                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+            });
+        }
+
+        // 2. TENTATIVA: TESTE A/B
         // Try to get from cache first
         const cacheKey = `ab:${slug}`;
         let test: ABTest | null = null;
