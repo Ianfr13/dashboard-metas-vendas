@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { generateTrackingUrl } from "@/lib/urlGenerator";
 
-const WORKER_URL = "https://ab-redirect.ferramentas-bce.workers.dev";
+const WORKER_URL = "https://ab.douravita.com.br";
 
 interface Page {
     id: number;

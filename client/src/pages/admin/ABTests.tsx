@@ -23,7 +23,7 @@ interface ABTest {
     variants: Variant[];
 }
 
-const WORKER_URL = "https://ab-redirect.ferramentas-bce.workers.dev";
+const WORKER_URL = "https://ab.douravita.com.br";
 
 export default function ABTests() {
     const [tests, setTests] = useState<ABTest[]>([]);
