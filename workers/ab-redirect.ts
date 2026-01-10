@@ -166,13 +166,38 @@ export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
 
+        // CORS Headers
+        const corsHeaders = {
+            'Access-Control-Allow-Origin': '*', // Or 'https://dashboard.douravita.com.br' for strictness
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        };
+
+        // Handle CORS Preflight (OPTIONS)
+        if (request.method === 'OPTIONS') {
+            return new Response(null, {
+                headers: corsHeaders
+            });
+        }
+
+        // Helper to add CORS to any response
+        const cors = (res: Response) => {
+            const newHeaders = new Headers(res.headers);
+            Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
+            return new Response(res.body, {
+                status: res.status,
+                statusText: res.statusText,
+                headers: newHeaders
+            });
+        };
+
         // Rota de Admin para limpar cache (Purge)
         // Ex: POST /admin/purge?slug=xxx
         // Header: Authorization: Bearer <jwt>
         if (url.pathname === '/admin/purge' && request.method === 'POST') {
             const authHeader = request.headers.get('Authorization');
             if (!authHeader) {
-                return new Response('Missing Authorization header', { status: 401 });
+                return cors(new Response('Missing Authorization header', { status: 401 }));
             }
 
             // Validar Token no Supabase
@@ -184,7 +209,7 @@ export default {
             });
 
             if (!userResponse.ok) {
-                return new Response('Unauthorized', { status: 401 });
+                return cors(new Response('Unauthorized', { status: 401 }));
             }
 
             const slugToPurge = url.searchParams.get('slug');
@@ -193,9 +218,9 @@ export default {
                 const pageKey = `page:${slugToPurge}`;
                 await env.AB_CACHE.delete(cacheKey);
                 await env.AB_CACHE.delete(pageKey);
-                return new Response(`Cache purged for ${slugToPurge}`, { status: 200 });
+                return cors(new Response(`Cache purged for ${slugToPurge}`, { status: 200 }));
             }
-            return new Response('Missing slug param', { status: 400 });
+            return cors(new Response('Missing slug param', { status: 400 }));
         }
 
         // Rota de Admin para Publicar Página (CMS)
@@ -203,7 +228,7 @@ export default {
         // Body: { slug: "...", html: "..." }
         if (url.pathname === '/admin/pages' && request.method === 'POST') {
             const authHeader = request.headers.get('Authorization');
-            if (!authHeader) return new Response('Missing Authorization header', { status: 401 });
+            if (!authHeader) return cors(new Response('Missing Authorization header', { status: 401 }));
 
             const userResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
                 headers: {
@@ -212,16 +237,16 @@ export default {
                 }
             });
 
-            if (!userResponse.ok) return new Response('Unauthorized', { status: 401 });
+            if (!userResponse.ok) return cors(new Response('Unauthorized', { status: 401 }));
 
             try {
                 const body = await request.json() as { slug: string, html: string };
-                if (!body.slug || !body.html) return new Response('Missing slug or html', { status: 400 });
+                if (!body.slug || !body.html) return cors(new Response('Missing slug or html', { status: 400 }));
 
                 await env.AB_CACHE.put(`page:${body.slug}`, body.html);
-                return new Response('Page published', { status: 200 });
+                return cors(new Response('Page published', { status: 200 }));
             } catch (e) {
-                return new Response('Invalid JSON', { status: 400 });
+                return cors(new Response('Invalid JSON', { status: 400 }));
             }
         }
 
