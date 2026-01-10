@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { generateTrackingUrl } from "@/lib/urlGenerator";
@@ -146,6 +147,8 @@ export default function Pages() {
         ...genParams
     } as any) : "";
 
+
+
     async function copyLink() {
         if (!generatedLink) return toast.error("Link vazio");
         try {
@@ -153,6 +156,33 @@ export default function Pages() {
             toast.success("Link copiado para a área de transferência!");
         } catch (err) {
             toast.error("Erro ao copiar link manually");
+        }
+    }
+
+    const [isTestingSpeed, setIsTestingSpeed] = useState(false);
+    const [speedResult, setSpeedResult] = useState<number | null>(null);
+
+    async function runSpeedTest() {
+        if (!editingPage?.slug) return toast.error("Precisa de uma URL");
+
+        setIsTestingSpeed(true);
+        setSpeedResult(null);
+
+        try {
+            const start = performance.now();
+            await fetch(`${WORKER_URL}/${editingPage.slug}`, { cache: 'no-store' });
+            const end = performance.now();
+            const duration = Math.round(end - start);
+            setSpeedResult(duration);
+
+            if (duration < 100) toast.success(`Incrível! ${duration}ms ⚡`);
+            else if (duration < 500) toast.success(`Rápido! ${duration}ms 🚀`);
+            else toast("Teste concluído: " + duration + "ms");
+
+        } catch (e) {
+            toast.error("Erro ao testar velocidade");
+        } finally {
+            setIsTestingSpeed(false);
         }
     }
 
@@ -171,6 +201,78 @@ export default function Pages() {
                             <Button onClick={handleDeploy} className="bg-green-600 hover:bg-green-700">
                                 <Rocket className="h-4 w-4 mr-2" /> Publicar (Live)
                             </Button>
+
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" title="Testar Velocidade Global">
+                                        <Gauge className="h-4 w-4 mr-2" /> Speed Test
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Teste de Performance (Turbo)</DialogTitle>
+                                        <DialogDescription>
+                                            Verifique a velocidade da sua página no Edge.
+                                        </DialogDescription>
+                                    </DialogHeader>
+
+                                    <div className="space-y-6 py-4">
+                                        {/* Local Test */}
+                                        <div className="space-y-2 border p-4 rounded-md">
+                                            <h3 className="font-medium flex items-center gap-2">
+                                                <Zap className="h-4 w-4 text-yellow-500" /> Teste Local (Você)
+                                            </h3>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm text-muted-foreground">Latência Real (TTFB):</span>
+                                                <span className="text-2xl font-bold font-mono">
+                                                    {speedResult ? `${speedResult}ms` : "---"}
+                                                </span>
+                                            </div>
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                className="w-full mt-2"
+                                                onClick={runSpeedTest}
+                                                disabled={!editingPage?.slug}
+                                            >
+                                                {isTestingSpeed ? "Testando..." : "Medir Agora"}
+                                            </Button>
+                                        </div>
+
+                                        {/* Global External Tests */}
+                                        <div className="space-y-2">
+                                            <h3 className="font-medium flex items-center gap-2">
+                                                <Globe className="h-4 w-4 text-blue-500" /> Teste Global (Ferramentas)
+                                            </h3>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Button variant="outline" className="w-full justify-start" asChild>
+                                                    <a
+                                                        href={`https://tools.keycdn.com/performance?url=${encodeURIComponent(`${WORKER_URL}/${editingPage?.slug}`)}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
+                                                        <Activity className="h-4 w-4 mr-2" />
+                                                        KeyCDN (10 Países)
+                                                    </a>
+                                                </Button>
+                                                <Button variant="outline" className="w-full justify-start" asChild>
+                                                    <a
+                                                        href={`https://pagespeed.web.dev/analysis?url=${encodeURIComponent(`${WORKER_URL}/${editingPage?.slug}`)}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
+                                                        <Zap className="h-4 w-4 mr-2" />
+                                                        Google Pagespeed
+                                                    </a>
+                                                </Button>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-2">
+                                                *O KeyCDN testa sua página a partir de 10 locais diferentes do mundo simultaneamente. Ideal para verificar a CDN.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
                         </div>
                     </div>
 
