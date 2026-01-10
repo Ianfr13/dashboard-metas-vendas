@@ -121,3 +121,134 @@ Crie uma nova tag do tipo **HTML Personalizado**. Este script captura o **Títul
 
 ## 5. Acionamento
 Use um acionador de **Evento Personalizado** com o nome `.*` (marcando "Usar correspondência de expressão regular") para capturar todos os eventos automaticamente.
+
+---
+
+## 6. VTurb Conversion Tracking (Atribuição de Vendas)
+
+Este tag envia dados de conversão (compra) para o VTurb para rastrear de qual VSL veio cada venda. O VTurb usa os parâmetros `sck`, `src` ou `vtid` da URL para fazer a atribuição.
+
+### 6.1 Criar a Tag no GTM
+
+Crie uma nova tag do tipo **HTML Personalizado** com o nome `VTurb - Conversion Tracking`:
+
+```html
+<script>
+(function() {
+  // === CONFIGURAÇÃO ===
+  var VTURB_TOKEN = 'd00bfb43-9236-4007-9091-94480bcd326e';
+  var VTURB_ENDPOINT = 'https://tracker.vturb.com/conversions/payt?t=' + VTURB_TOKEN;
+  
+  // === CAPTURA DE DADOS ===
+  var urlParams = new URLSearchParams(window.location.search);
+  
+  // Busca a conversion_key (sck, src ou vtid) - necessário para atribuição do VTurb
+  var conversionKey = urlParams.get('sck') || urlParams.get('src') || urlParams.get('vtid') || '';
+  
+  if (!conversionKey) {
+    // Tenta buscar de cookies ou localStorage (caso tenha sido salvo antes)
+    conversionKey = localStorage.getItem('vturb_conversion_key') || 
+                    document.cookie.split('; ').find(row => row.startsWith('vturb_key='))?.split('=')[1] || '';
+  }
+  
+  // Se ainda não tiver a key, aborta (não tem como atribuir)
+  if (!conversionKey) {
+    console.warn('[VTurb] Nenhuma conversion_key encontrada. Conversão não será rastreada.');
+    return;
+  }
+  
+  // === DADOS DO E-COMMERCE (DataLayer) ===
+  var orderAmount = 0;
+  var currency = 'BRL';
+  var productName = '';
+  var transactionId = '';
+  
+  try {
+    var ecommerce = window.google_tag_manager[{{Container ID}}].dataLayer.get('ecommerce');
+    if (ecommerce) {
+      orderAmount = Math.round((ecommerce.value || 0) * 100); // Converte para centavos
+      currency = ecommerce.currency || 'BRL';
+      transactionId = ecommerce.transaction_id || '';
+      
+      if (ecommerce.items && ecommerce.items.length > 0) {
+        productName = ecommerce.items[0].item_name || ecommerce.items[0].name || '';
+      }
+    }
+  } catch(e) {
+    console.warn('[VTurb] Erro ao ler DataLayer:', e);
+  }
+  
+  // === PAYLOAD PARA O VTURB ===
+  var payload = {
+    order_amount_cents: orderAmount,
+    currency: currency,
+    conversion_key: conversionKey,
+    product_name: productName,
+    category: "initial_sale",
+    order_created_at: new Date().toISOString(),
+    order_ip: "" // O VTurb pega automaticamente do request, deixe vazio
+  };
+  
+  // === ENVIO ===
+  fetch(VTURB_ENDPOINT, {
+    method: 'POST',
+    mode: 'cors',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(function(response) {
+    if (response.ok) {
+      console.log('[VTurb] Conversão enviada com sucesso:', payload);
+    } else {
+      console.error('[VTurb] Erro ao enviar conversão:', response.status);
+    }
+  })
+  .catch(function(error) {
+    console.error('[VTurb] Erro de rede:', error);
+  });
+})();
+</script>
+```
+
+### 6.2 Acionador da Tag
+
+Configure um acionador de **Evento Personalizado** com:
+- **Nome do evento**: `purchase`
+- **Este acionador dispara em**: Todos os eventos personalizados
+
+### 6.3 Salvar a Conversion Key (Opcional)
+
+Se quiser garantir que a `conversion_key` seja preservada mesmo se o usuário navegar entre páginas antes de comprar, adicione esta tag para rodar em **Todas as Páginas**:
+
+```html
+<script>
+(function() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var key = urlParams.get('sck') || urlParams.get('src') || urlParams.get('vtid');
+  
+  if (key) {
+    // Salva no localStorage por 7 dias
+    localStorage.setItem('vturb_conversion_key', key);
+    
+    // Também salva em cookie (fallback)
+    var expires = new Date();
+    expires.setDate(expires.getDate() + 7);
+    document.cookie = 'vturb_key=' + key + ';expires=' + expires.toUTCString() + ';path=/';
+  }
+})();
+</script>
+```
+
+### 6.4 Campos Enviados
+
+| Campo | Descrição | Exemplo |
+|-------|-----------|---------|
+| `order_amount_cents` | Valor em centavos | `19900` (R$ 199,00) |
+| `currency` | Moeda | `BRL` |
+| `conversion_key` | Parâmetro de atribuição (sck/src/vtid) | `abc123xyz` |
+| `product_name` | Nome do produto | `Curso XYZ` |
+| `category` | Tipo da conversão | `initial_sale` |
+| `order_created_at` | Data/hora da compra (ISO) | `2026-01-10T15:30:00.000Z` |
+| `order_ip` | IP do cliente | (Capturado pelo VTurb) |
