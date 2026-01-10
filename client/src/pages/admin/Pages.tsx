@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -305,57 +305,13 @@ export default function Pages() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <Tabs defaultValue="html" className="w-full">
-                                        <TabsList className="grid w-full grid-cols-2 mb-4">
-                                            <TabsTrigger value="html">Principal (HTML)</TabsTrigger>
-                                            <TabsTrigger value="scripts">Scripts (Injeção)</TabsTrigger>
-                                        </TabsList>
-
-                                        <TabsContent value="html">
-                                            <Label className="mb-2 block">Código HTML Principal</Label>
-                                            <Textarea
-                                                className="font-mono text-xs min-h-[500px]"
-                                                value={editingPage?.html_content || ""}
-                                                onChange={e => setEditingPage(prev => ({ ...prev!, html_content: e.target.value }))}
-                                                placeholder="<html>... Cole o código do Atomicat aqui ...</html>"
-                                            />
-                                        </TabsContent>
-
-                                        <TabsContent value="scripts" className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label>Header (Antes de &lt;/head&gt;)</Label>
-                                                <p className="text-xs text-muted-foreground">Ideal para Meta Pixel, GTM (Head), Preloads</p>
-                                                <Textarea
-                                                    className="font-mono text-xs min-h-[150px]"
-                                                    value={editingPage?.head_code || ""}
-                                                    onChange={e => setEditingPage(prev => ({ ...prev!, head_code: e.target.value }))}
-                                                    placeholder="<script>...</script>"
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label>Começo do Body (Depois de &lt;body&gt;)</Label>
-                                                <p className="text-xs text-muted-foreground">Ideal para GTM (NoScript)</p>
-                                                <Textarea
-                                                    className="font-mono text-xs min-h-[100px]"
-                                                    value={editingPage?.body_code || ""}
-                                                    onChange={e => setEditingPage(prev => ({ ...prev!, body_code: e.target.value }))}
-                                                    placeholder="<noscript>...</noscript>"
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label>Fim do Body (Antes de &lt;/body&gt;)</Label>
-                                                <p className="text-xs text-muted-foreground">Ideal para Scripts de fechamento, Utilitários</p>
-                                                <Textarea
-                                                    className="font-mono text-xs min-h-[100px]"
-                                                    value={editingPage?.footer_code || ""}
-                                                    onChange={e => setEditingPage(prev => ({ ...prev!, footer_code: e.target.value }))}
-                                                    placeholder="<script>...</script>"
-                                                />
-                                            </div>
-                                        </TabsContent>
-                                    </Tabs>
+                                    <Label className="mb-2 block">Código HTML</Label>
+                                    <Textarea
+                                        className="font-mono text-xs min-h-[500px]"
+                                        value={editingPage?.html_content || ""}
+                                        onChange={e => setEditingPage(prev => ({ ...prev!, html_content: e.target.value }))}
+                                        placeholder="<html>... Cole o código do Atomicat aqui ...</html>"
+                                    />
                                 </CardContent>
                             </Card>
                         </div>
