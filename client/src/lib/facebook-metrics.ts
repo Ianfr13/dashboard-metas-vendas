@@ -50,6 +50,7 @@ export const METRIC_GROUPS = {
     conversions: 'Conversões',
     value: 'Valores e ROI',
     video: 'Métricas de Vídeo',
+    calculated: 'Métricas Calculadas',
 };
 
 export function formatMetricValue(value: number | null | undefined, format: MetricConfig['format']): string {
@@ -68,3 +69,70 @@ export function formatMetricValue(value: number | null | undefined, format: Metr
             return String(safeValue);
     }
 }
+
+// ============================================
+// CALCULATED METRICS (Frontend-only)
+// ============================================
+
+export interface CalculatedMetric {
+    key: string;
+    label: string;
+    formula: string; // e.g., "spend / purchases" or "(clicks / impressions) * 100"
+    format: 'currency' | 'number' | 'percent' | 'decimal';
+    group: 'calculated';
+}
+
+// Built-in calculated metrics - can be extended by user later
+export const CALCULATED_METRICS: CalculatedMetric[] = [
+    { key: 'costPerResult', label: 'Custo/Resultado', formula: 'spend / (leads + purchases)', format: 'currency', group: 'calculated' },
+    { key: 'conversionRate', label: 'Taxa Conversão', formula: '(purchases / clicks) * 100', format: 'percent', group: 'calculated' },
+    { key: 'cartToCheckoutRate', label: 'Carrinho→Checkout', formula: '(initiateCheckout / addToCart) * 100', format: 'percent', group: 'calculated' },
+    { key: 'checkoutToPurchaseRate', label: 'Checkout→Compra', formula: '(purchases / initiateCheckout) * 100', format: 'percent', group: 'calculated' },
+    { key: 'avgOrderValue', label: 'Ticket Médio', formula: 'purchaseValue / purchases', format: 'currency', group: 'calculated' },
+    { key: 'leadToSaleRate', label: 'Lead→Venda', formula: '(purchases / leads) * 100', format: 'percent', group: 'calculated' },
+];
+
+/**
+ * Safely evaluate a formula string using cached metric data
+ * @param formula - Formula string like "spend / purchases" 
+ * @param data - Object with metric values, e.g., { spend: 100, purchases: 5 }
+ * @returns Calculated value or 0 if error/division by zero
+ */
+export function evaluateFormula(formula: string, data: Record<string, number>): number {
+    try {
+        // Replace metric keys with their values
+        let expression = formula;
+
+        // Sort keys by length (longest first) to avoid partial replacements
+        const sortedKeys = Object.keys(data).sort((a, b) => b.length - a.length);
+
+        for (const key of sortedKeys) {
+            const value = data[key] || 0;
+            expression = expression.replace(new RegExp(`\\b${key}\\b`, 'g'), String(value));
+        }
+
+        // Check for division by zero scenarios (replace /0 patterns)
+        if (/\/\s*0(?![.\d])/.test(expression) || /\/\s*\(0\)/.test(expression)) {
+            return 0;
+        }
+
+        // Safe evaluation using Function constructor (no eval)
+        const result = Function(`"use strict"; return (${expression})`)();
+
+        // Handle NaN, Infinity
+        if (!isFinite(result) || isNaN(result)) {
+            return 0;
+        }
+
+        return result;
+    } catch {
+        return 0;
+    }
+}
+
+// All metrics combined for selectors
+export const ALL_METRICS = [
+    ...FACEBOOK_METRICS,
+    ...CALCULATED_METRICS.map(m => ({ ...m, group: 'calculated' as const }))
+];
+

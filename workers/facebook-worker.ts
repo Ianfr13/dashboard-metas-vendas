@@ -24,8 +24,14 @@ interface FacebookJob {
 // Facebook API Constants
 const FB_GRAPH_API = 'https://graph.facebook.com/v21.0';
 const DEFAULT_METRICS = [
-    'spend', 'impressions', 'reach', 'clicks', 'ctr', 'cpc', 'cpm',
-    'actions', 'action_values', 'cost_per_action_type'
+    // Core metrics
+    'spend', 'impressions', 'reach', 'frequency', 'clicks', 'unique_clicks',
+    'ctr', 'unique_ctr', 'cpc', 'cpm', 'cpp',
+    // Action & value arrays
+    'actions', 'action_values', 'cost_per_action_type',
+    // Video metrics
+    'video_p25_watched_actions', 'video_p50_watched_actions',
+    'video_p75_watched_actions', 'video_p100_watched_actions'
 ];
 
 export default {
@@ -326,16 +332,35 @@ function parseInsightRecord(insight: any, accountId: string): any {
     const actions = insight.actions || [];
     const actionValues = insight.action_values || [];
     const costPerAction = insight.cost_per_action_type || [];
+    const videoP25 = insight.video_p25_watched_actions || [];
+    const videoP50 = insight.video_p50_watched_actions || [];
+    const videoP75 = insight.video_p75_watched_actions || [];
+    const videoP100 = insight.video_p100_watched_actions || [];
 
     const getVal = (arr: any[], type: string) => {
         const item = arr.find(a => a.action_type === type);
         return item ? parseFloat(item.value) : 0;
     };
 
+    const getVideoVal = (arr: any[]) => {
+        // Video arrays usually just have one entry with 'video_view' type
+        const item = arr.find(a => a.action_type === 'video_view') || arr[0];
+        return item ? parseInt(item.value) : 0;
+    };
+
+    // Core conversions
     const leads = getVal(actions, 'lead') || getVal(actions, 'offsite_conversion.fb_pixel_lead');
     const purchases = getVal(actions, 'purchase') || getVal(actions, 'offsite_conversion.fb_pixel_purchase');
     const purchaseValue = getVal(actionValues, 'purchase') || getVal(actionValues, 'offsite_conversion.fb_pixel_purchase');
+    const leadValue = getVal(actionValues, 'lead') || getVal(actionValues, 'offsite_conversion.fb_pixel_lead');
     const spend = parseFloat(insight.spend || '0');
+
+    // Additional conversion actions
+    const addToCart = getVal(actions, 'add_to_cart') || getVal(actions, 'offsite_conversion.fb_pixel_add_to_cart');
+    const initiateCheckout = getVal(actions, 'initiate_checkout') || getVal(actions, 'offsite_conversion.fb_pixel_initiate_checkout');
+    const landingPageViews = getVal(actions, 'landing_page_view');
+    const linkClicks = getVal(actions, 'link_click');
+    const videoViews = getVal(actions, 'video_view');
 
     return {
         account_id: accountId,
@@ -345,13 +370,28 @@ function parseInsightRecord(insight: any, accountId: string): any {
         date: insight.date_start,
         spend,
         impressions: parseInt(insight.impressions || '0'),
+        reach: parseInt(insight.reach || '0'),
+        frequency: parseFloat(insight.frequency || '0'),
         clicks: parseInt(insight.clicks || '0'),
+        unique_clicks: parseInt(insight.unique_clicks || '0'),
         cpc: parseFloat(insight.cpc || '0'),
         cpm: parseFloat(insight.cpm || '0'),
+        cpp: parseFloat(insight.cpp || '0'),
         ctr: parseFloat(insight.ctr || '0'),
+        unique_ctr: parseFloat(insight.unique_ctr || '0'),
         leads,
+        lead_value: leadValue,
         purchases,
         purchase_value: purchaseValue,
+        add_to_cart: Math.round(addToCart),
+        initiate_checkout: Math.round(initiateCheckout),
+        landing_page_views: Math.round(landingPageViews),
+        link_clicks: Math.round(linkClicks),
+        video_views: Math.round(videoViews),
+        video_p25_watched: getVideoVal(videoP25),
+        video_p50_watched: getVideoVal(videoP50),
+        video_p75_watched: getVideoVal(videoP75),
+        video_p100_watched: getVideoVal(videoP100),
         roas: spend > 0 ? purchaseValue / spend : 0,
         updated_at: new Date().toISOString()
     };
