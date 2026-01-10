@@ -53,15 +53,26 @@ export default function ABTests() {
     // Clean Cache
     async function purgeCache(slug: string) {
         try {
-            // Tenta usar a chave do ambiente, se não existir, usa uma placeholder (que vai falhar se não configurada, mas não quebra o app)
-            // O ideal é o usuário colocar VITE_AB_ADMIN_KEY no .env
-            const adminKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "SUA_CHAVE_AQUI";
+            // Pegar sessão atual do usuário
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                console.error("Usuário não autenticado");
+                toast.error("Erro ao limpar cache: Usuário não logado");
+                return;
+            }
 
-            await fetch(`${WORKER_URL}/admin/purge?slug=${slug}`, {
+            const response = await fetch(`${WORKER_URL}/admin/purge?slug=${slug}`, {
                 method: "POST",
-                headers: { "x-admin-key": adminKey }
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
+                }
             });
-            toast.success("Cache limpo (Edge)");
+
+            if (response.ok) {
+                toast.success("Cache limpo instantaneamente (Edge)");
+            } else {
+                console.error("Erro ao limpar cache:", await response.text());
+            }
         } catch (e) {
             console.error("Erro ao limpar cache", e);
         }
