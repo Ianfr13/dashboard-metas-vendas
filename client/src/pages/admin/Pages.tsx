@@ -19,6 +19,9 @@ interface Page {
     name: string;
     slug: string;
     html_content: string;
+    head_code?: string;
+    body_code?: string;
+    footer_code?: string;
     updated_at: string;
 }
 
@@ -72,6 +75,9 @@ export default function Pages() {
                         name: editingPage.name,
                         slug: editingPage.slug,
                         html_content: editingPage.html_content,
+                        head_code: editingPage.head_code,
+                        body_code: editingPage.body_code,
+                        footer_code: editingPage.footer_code,
                         updated_at: new Date().toISOString()
                     })
                     .eq("id", editingPage.id)
@@ -84,7 +90,10 @@ export default function Pages() {
                     .insert({
                         name: editingPage.name,
                         slug: editingPage.slug,
-                        html_content: editingPage.html_content
+                        html_content: editingPage.html_content,
+                        head_code: editingPage.head_code,
+                        body_code: editingPage.body_code,
+                        footer_code: editingPage.footer_code
                     })
                     .select()
                     .single();
@@ -114,7 +123,40 @@ export default function Pages() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.access_token) return toast.error("Sua sessão expirou. Faça login novamente.");
 
-            const toastId = toast.loading("Publicando...");
+            const toastId = toast.loading("Preparando e Publicando...");
+
+            // --- INJECTION LOGIC ---
+            let finalHtml = editingPage.html_content;
+
+            // Inject Head Code
+            if (editingPage.head_code) {
+                if (finalHtml.includes("</head>")) {
+                    finalHtml = finalHtml.replace("</head>", `\n${editingPage.head_code}\n</head>`);
+                } else {
+                    // Fallback
+                    finalHtml = `${editingPage.head_code}\n${finalHtml}`;
+                }
+            }
+
+            // Inject Body Start Code
+            if (editingPage.body_code) {
+                const bodyMatch = finalHtml.match(/<body[^>]*>/);
+                if (bodyMatch) {
+                    finalHtml = finalHtml.replace(bodyMatch[0], `${bodyMatch[0]}\n${editingPage.body_code}\n`);
+                } else {
+                    finalHtml = `${editingPage.body_code}\n${finalHtml}`;
+                }
+            }
+
+            // Inject Footer Code (Body End)
+            if (editingPage.footer_code) {
+                if (finalHtml.includes("</body>")) {
+                    finalHtml = finalHtml.replace("</body>", `\n${editingPage.footer_code}\n</body>`);
+                } else {
+                    finalHtml = `${finalHtml}\n${editingPage.footer_code}`;
+                }
+            }
+            // -----------------------
 
             const response = await fetch(`${WORKER_URL}/admin/pages`, {
                 method: "POST",
@@ -124,7 +166,7 @@ export default function Pages() {
                 },
                 body: JSON.stringify({
                     slug: editingPage.slug,
-                    html: editingPage.html_content
+                    html: finalHtml
                 })
             });
 
@@ -305,13 +347,57 @@ export default function Pages() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <Label className="mb-2 block">Código HTML</Label>
-                                    <Textarea
-                                        className="font-mono text-xs min-h-[500px]"
-                                        value={editingPage?.html_content || ""}
-                                        onChange={e => setEditingPage(prev => ({ ...prev!, html_content: e.target.value }))}
-                                        placeholder="<html>... Cole o código do Atomicat aqui ...</html>"
-                                    />
+                                    <Tabs defaultValue="html" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-2 mb-4">
+                                            <TabsTrigger value="html">Principal (HTML)</TabsTrigger>
+                                            <TabsTrigger value="scripts">Scripts (Injeção)</TabsTrigger>
+                                        </TabsList>
+
+                                        <TabsContent value="html">
+                                            <Label className="mb-2 block">Código HTML Principal</Label>
+                                            <Textarea
+                                                className="font-mono text-xs min-h-[500px]"
+                                                value={editingPage?.html_content || ""}
+                                                onChange={e => setEditingPage(prev => ({ ...prev!, html_content: e.target.value }))}
+                                                placeholder="<html>... Cole o código do Atomicat aqui ...</html>"
+                                            />
+                                        </TabsContent>
+
+                                        <TabsContent value="scripts" className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label>Header (Antes de &lt;/head&gt;)</Label>
+                                                <p className="text-xs text-muted-foreground">Ideal para Meta Pixel, GTM (Head), Preloads</p>
+                                                <Textarea
+                                                    className="font-mono text-xs min-h-[150px]"
+                                                    value={editingPage?.head_code || ""}
+                                                    onChange={e => setEditingPage(prev => ({ ...prev!, head_code: e.target.value }))}
+                                                    placeholder="<script>...</script>"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label>Começo do Body (Depois de &lt;body&gt;)</Label>
+                                                <p className="text-xs text-muted-foreground">Ideal para GTM (NoScript)</p>
+                                                <Textarea
+                                                    className="font-mono text-xs min-h-[100px]"
+                                                    value={editingPage?.body_code || ""}
+                                                    onChange={e => setEditingPage(prev => ({ ...prev!, body_code: e.target.value }))}
+                                                    placeholder="<noscript>...</noscript>"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label>Fim do Body (Antes de &lt;/body&gt;)</Label>
+                                                <p className="text-xs text-muted-foreground">Ideal para Scripts de fechamento, Utilitários</p>
+                                                <Textarea
+                                                    className="font-mono text-xs min-h-[100px]"
+                                                    value={editingPage?.footer_code || ""}
+                                                    onChange={e => setEditingPage(prev => ({ ...prev!, footer_code: e.target.value }))}
+                                                    placeholder="<script>...</script>"
+                                                />
+                                            </div>
+                                        </TabsContent>
+                                    </Tabs>
                                 </CardContent>
                             </Card>
                         </div>
@@ -395,7 +481,7 @@ export default function Pages() {
                         <p className="text-muted-foreground">Hospedagem de páginas de alta performance</p>
                     </div>
                     <Button onClick={() => {
-                        setEditingPage({ id: 0, name: "", slug: "", html_content: "", updated_at: "" });
+                        setEditingPage({ id: 0, name: "", slug: "", html_content: "", head_code: "", body_code: "", footer_code: "", updated_at: "" });
                         setShowForm(true);
                     }}>
                         <Plus className="h-4 w-4 mr-2" /> Nova Página
