@@ -26,7 +26,7 @@ export function Header() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Dashboard Metas Vendas
+              DouraVita Dashboard
             </h1>
           </div>
         </div>

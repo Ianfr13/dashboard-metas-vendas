@@ -14,7 +14,7 @@ export function LoginPage() {
       if (session) {
         const email = session.user.email || '';
         const domain = email.split('@')[1];
-        
+
         if (domain === 'douravita.com.br') {
           setLocation('/');
         } else {
@@ -29,7 +29,7 @@ export function LoginPage() {
     // Listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth event:', event, session);
-      
+
       if (event === 'SIGNED_IN' && session) {
         const email = session.user.email || '';
         const domain = email.split('@')[1];
@@ -76,7 +76,7 @@ export function LoginPage() {
       <div className="max-w-md w-full space-y-8 p-10 bg-white rounded-xl shadow-2xl">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Dashboard Metas Vendas
+            DouraVita Dashboard
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Faça login com sua conta Google
