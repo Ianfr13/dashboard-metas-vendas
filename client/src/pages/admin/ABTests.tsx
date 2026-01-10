@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Play, Pause } from "lucide-react";
+import { Plus, Trash2, Copy, Play, Pause, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -50,6 +50,23 @@ export default function ABTests() {
         setLoading(false);
     }
 
+    // Clean Cache
+    async function purgeCache(slug: string) {
+        try {
+            // Tenta usar a chave do ambiente, se não existir, usa uma placeholder (que vai falhar se não configurada, mas não quebra o app)
+            // O ideal é o usuário colocar VITE_AB_ADMIN_KEY no .env
+            const adminKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "SUA_CHAVE_AQUI";
+
+            await fetch(`${WORKER_URL}/admin/purge?slug=${slug}`, {
+                method: "POST",
+                headers: { "x-admin-key": adminKey }
+            });
+            toast.success("Cache limpo (Edge)");
+        } catch (e) {
+            console.error("Erro ao limpar cache", e);
+        }
+    }
+
     // Create test
     async function createTest() {
         if (!newTest.name || newTest.variants.some(v => !v.url)) {
@@ -64,6 +81,9 @@ export default function ABTests() {
         );
 
         toast.success("Teste criado!");
+        // Não precisa limpar cache na criação (slug novo), mas mal não faz
+        purgeCache(test.slug);
+
         setShowForm(false);
         setNewTest({ name: "", variants: [{ name: "A", url: "", weight: 50, visits: 0 }, { name: "B", url: "", weight: 50, visits: 0 }] });
         fetchTests();
@@ -73,13 +93,21 @@ export default function ABTests() {
     async function toggleStatus(test: ABTest) {
         const newStatus = test.status === "active" ? "paused" : "active";
         await supabase.from("ab_tests").update({ status: newStatus }).eq("id", test.id);
+
+        // Limpa cache automaticamente
+        purgeCache(test.slug);
+
         fetchTests();
     }
 
     // Delete test
-    async function deleteTest(id: number) {
+    async function deleteTest(test: ABTest) {
         if (!confirm("Deletar este teste?")) return;
-        await supabase.from("ab_tests").delete().eq("id", id);
+        await supabase.from("ab_tests").delete().eq("id", test.id);
+
+        // Limpa cache para garantir que suma da edge
+        purgeCache(test.slug);
+
         toast.success("Teste deletado");
         fetchTests();
     }
@@ -170,13 +198,16 @@ export default function ABTests() {
                                 <code className="text-xs text-muted-foreground">{WORKER_URL}/{test.slug}</code>
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => copyUrl(test.slug)}>
+                                <Button variant="ghost" size="icon" onClick={() => copyUrl(test.slug)} title="Copiar URL">
                                     <Copy className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => toggleStatus(test)}>
+                                <Button variant="ghost" size="icon" onClick={() => purgeCache(test.slug)} title="Limpar Cache (Forçar)">
+                                    <Zap className="h-4 w-4 text-yellow-500" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => toggleStatus(test)} title={test.status === "active" ? "Pausar" : "Ativar"}>
                                     {test.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => deleteTest(test.id)}>
+                                <Button variant="ghost" size="icon" onClick={() => deleteTest(test)} title="Deletar">
                                     <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                             </div>

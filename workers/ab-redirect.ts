@@ -166,6 +166,36 @@ export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
 
+        // Rota de Admin para limpar cache (Purge)
+        // Ex: POST /admin/purge?slug=xxx
+        // Header: Authorization: Bearer <jwt>
+        if (url.pathname === '/admin/purge' && request.method === 'POST') {
+            const authHeader = request.headers.get('Authorization');
+            if (!authHeader) {
+                return new Response('Missing Authorization header', { status: 401 });
+            }
+
+            // Validar Token no Supabase
+            const userResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+                headers: {
+                    'Authorization': authHeader, // Passa o token do usuário (Bearer ...)
+                    'apikey': env.SUPABASE_SERVICE_ROLE_KEY // Precisamos da key para falar com a API, mas ela está SÓ aqui no Worker (seguro)
+                }
+            });
+
+            if (!userResponse.ok) {
+                return new Response('Unauthorized', { status: 401 });
+            }
+
+            const slugToPurge = url.searchParams.get('slug');
+            if (slugToPurge) {
+                const cacheKey = `ab:${slugToPurge}`;
+                await env.AB_CACHE.delete(cacheKey);
+                return new Response(`Cache purged for ${slugToPurge}`, { status: 200 });
+            }
+            return new Response('Missing slug param', { status: 400 });
+        }
+
         // Extract slug from path (e.g., /x7k9m2p1 -> x7k9m2p1)
         const slug = url.pathname.slice(1).split('/')[0];
 
