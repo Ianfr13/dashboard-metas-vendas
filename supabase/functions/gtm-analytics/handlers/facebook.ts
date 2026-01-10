@@ -263,7 +263,7 @@ export async function getFacebookMetrics(
     });
 
     // 3. Fetch campaigns (filtered by valid accounts)
-    const campaigns = await fetchAllRows<any>('facebook_campaigns', 'id, account_id, name, status, objective', (q) => {
+    const campaigns = await fetchAllRows<any>('facebook_campaigns', 'id, account_id, name, status, objective, daily_budget', (q) => {
         if (accountId) return q.eq('account_id', accountId);
         return q.in('account_id', validAccountIds);
     });
@@ -429,6 +429,7 @@ function aggregateByCampaign(insights: any[], campaignMap: Map<string, any>, acc
             name: meta?.name || camp.id,
             status: meta?.status || 'UNKNOWN',
             objective: meta?.objective || '',
+            dailyBudget: meta?.daily_budget || 0,
             spend: camp.spend,
             impressions: camp.impressions,
             reach: camp.reach,

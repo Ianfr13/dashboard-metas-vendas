@@ -19,6 +19,7 @@ export const FACEBOOK_METRICS: MetricConfig[] = [
     { key: 'cpc', label: 'CPC', format: 'currency', group: 'basic' },
     { key: 'cpm', label: 'CPM', format: 'currency', group: 'basic' },
     { key: 'cpp', label: 'CPP', format: 'currency', group: 'basic' },
+    { key: 'dailyBudget', label: 'Orçamento Diário', format: 'currency', group: 'basic' },
 
     // Conversion Metrics
     { key: 'leads', label: 'Leads', format: 'number', group: 'conversions' },
