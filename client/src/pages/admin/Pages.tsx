@@ -19,9 +19,6 @@ interface Page {
     name: string;
     slug: string;
     html_content: string;
-    head_code?: string;
-    body_code?: string;
-    footer_code?: string;
     updated_at: string;
 }
 
@@ -75,9 +72,6 @@ export default function Pages() {
                         name: editingPage.name,
                         slug: editingPage.slug,
                         html_content: editingPage.html_content,
-                        head_code: editingPage.head_code,
-                        body_code: editingPage.body_code,
-                        footer_code: editingPage.footer_code,
                         updated_at: new Date().toISOString()
                     })
                     .eq("id", editingPage.id)
@@ -90,10 +84,7 @@ export default function Pages() {
                     .insert({
                         name: editingPage.name,
                         slug: editingPage.slug,
-                        html_content: editingPage.html_content,
-                        head_code: editingPage.head_code,
-                        body_code: editingPage.body_code,
-                        footer_code: editingPage.footer_code
+                        html_content: editingPage.html_content
                     })
                     .select()
                     .single();
@@ -125,39 +116,6 @@ export default function Pages() {
 
             const toastId = toast.loading("Preparando e Publicando...");
 
-            // --- INJECTION LOGIC ---
-            let finalHtml = editingPage.html_content;
-
-            // Inject Head Code
-            if (editingPage.head_code) {
-                if (finalHtml.includes("</head>")) {
-                    finalHtml = finalHtml.replace("</head>", `\n${editingPage.head_code}\n</head>`);
-                } else {
-                    // Fallback
-                    finalHtml = `${editingPage.head_code}\n${finalHtml}`;
-                }
-            }
-
-            // Inject Body Start Code
-            if (editingPage.body_code) {
-                const bodyMatch = finalHtml.match(/<body[^>]*>/);
-                if (bodyMatch) {
-                    finalHtml = finalHtml.replace(bodyMatch[0], `${bodyMatch[0]}\n${editingPage.body_code}\n`);
-                } else {
-                    finalHtml = `${editingPage.body_code}\n${finalHtml}`;
-                }
-            }
-
-            // Inject Footer Code (Body End)
-            if (editingPage.footer_code) {
-                if (finalHtml.includes("</body>")) {
-                    finalHtml = finalHtml.replace("</body>", `\n${editingPage.footer_code}\n</body>`);
-                } else {
-                    finalHtml = `${finalHtml}\n${editingPage.footer_code}`;
-                }
-            }
-            // -----------------------
-
             const response = await fetch(`${WORKER_URL}/admin/pages`, {
                 method: "POST",
                 headers: {
@@ -166,7 +124,7 @@ export default function Pages() {
                 },
                 body: JSON.stringify({
                     slug: editingPage.slug,
-                    html: finalHtml
+                    html: editingPage.html_content
                 })
             });
 
@@ -481,7 +439,7 @@ export default function Pages() {
                         <p className="text-muted-foreground">Hospedagem de páginas de alta performance</p>
                     </div>
                     <Button onClick={() => {
-                        setEditingPage({ id: 0, name: "", slug: "", html_content: "", head_code: "", body_code: "", footer_code: "", updated_at: "" });
+                        setEditingPage({ id: 0, name: "", slug: "", html_content: "", updated_at: "" });
                         setShowForm(true);
                     }}>
                         <Plus className="h-4 w-4 mr-2" /> Nova Página
