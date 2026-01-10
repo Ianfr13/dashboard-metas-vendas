@@ -150,18 +150,30 @@ Cole este código em uma tag **HTML Personalizado**:
 <script>
 (function() {
   var TOKEN = 'd00bfb43-9236-4007-9091-94480bcd326e';
-  var URL = 'https://tracker.vturb.com/conversions/payt?t=' + TOKEN;
+  var URL_ENDPOINT = 'https://tracker.vturb.com/conversions/payt?t=' + TOKEN;
   
-  // Busca dados no dataLayer
-  var vtid = null, ecom = null;
-  for (var i = dataLayer.length - 1; i >= 0; i--) {
-    if (dataLayer[i].vtid) vtid = dataLayer[i].vtid;
-    if (dataLayer[i].ecommerce) ecom = dataLayer[i].ecommerce;
-    if (vtid && ecom) break;
+  // Busca vtid da URL (query params)
+  var urlParams = new URLSearchParams(window.location.search);
+  var vtid = urlParams.get('vtid');
+  
+  if (!vtid) { 
+    console.warn('[VTurb] vtid não encontrado na URL'); 
+    return; 
   }
   
-  if (!vtid) { console.warn('[VTurb] vtid não encontrado'); return; }
-  if (!ecom) { console.warn('[VTurb] ecommerce não encontrado'); return; }
+  // Busca ecommerce no dataLayer
+  var ecom = null;
+  for (var i = dataLayer.length - 1; i >= 0; i--) {
+    if (dataLayer[i].ecommerce) {
+      ecom = dataLayer[i].ecommerce;
+      break;
+    }
+  }
+  
+  if (!ecom) { 
+    console.warn('[VTurb] ecommerce não encontrado no dataLayer'); 
+    return; 
+  }
   
   var data = {
     order_amount_cents: Math.round((ecom.value || 0) * 100),
@@ -175,7 +187,7 @@ Cole este código em uma tag **HTML Personalizado**:
   
   console.log('[VTurb] Enviando:', data);
   
-  fetch(URL, {
+  fetch(URL_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
