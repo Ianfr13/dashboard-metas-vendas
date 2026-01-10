@@ -140,11 +140,10 @@ Crie estas **Variáveis de Camada de Dados** no GTM:
 
 | Nome da Variável GTM | Nome no DataLayer | Descrição |
 |---------------------|-------------------|-----------|
-| `DL - Order Amount` | `order_amount_cents` | Valor em centavos |
-| `DL - Currency` | `currency` | Moeda (BRL, USD) |
-| `DL - VTID` | `vtid` | ID de rastreamento VTurb |
-| `DL - Product Name` | `product_name` | Nome do produto |
-| `DL - Order Date` | `order_created_at` | Data da compra |
+| `DL - ecommerce` | `ecommerce` | Objeto completo do e-commerce |
+| `DL - vtid` | `vtid` | ID de rastreamento VTurb ⚠️ |
+
+> ⚠️ **IMPORTANTE:** O checkout precisa enviar o `vtid` no DataLayer. Se não estiver enviando, você precisa configurar o checkout para passar esse parâmetro.
 
 ### 6.3 Criar a Tag no GTM
 
@@ -157,23 +156,35 @@ Crie uma nova tag do tipo **HTML Personalizado** com o nome `VTurb - Conversion 
   var VTURB_TOKEN = 'd00bfb43-9236-4007-9091-94480bcd326e';
   var VTURB_ENDPOINT = 'https://tracker.vturb.com/conversions/payt?t=' + VTURB_TOKEN;
   
-  // === DADOS DO DATALAYER (vindo do checkout) ===
-  var vtid = {{DL - VTID}};
+  // === DADOS DO ECOMMERCE (estrutura do checkout) ===
+  var ecommerce = {{DL - ecommerce}} || {};
   
-  // Se não tiver vtid, não podemos atribuir
+  // Busca o vtid do DataLayer (o checkout precisa enviar isso)
+  var vtid = {{DL - vtid}} || '';
+  
+  // Se não tiver vtid, não podemos atribuir ao VTurb
   if (!vtid) {
     console.warn('[VTurb] vtid não encontrado no DataLayer. Conversão não será rastreada.');
     return;
   }
   
+  // Extrai dados do ecommerce
+  var value = ecommerce.value || 0;
+  var currency = ecommerce.currency || 'BRL';
+  var productName = '';
+  
+  if (ecommerce.items && ecommerce.items.length > 0) {
+    productName = ecommerce.items[0].item_name || ecommerce.items[0].name || '';
+  }
+  
   // === PAYLOAD PARA O VTURB ===
   var payload = {
-    order_amount_cents: {{DL - Order Amount}} || 0,
-    currency: {{DL - Currency}} || 'BRL',
+    order_amount_cents: Math.round(value * 100), // Converte para centavos
+    currency: currency,
     conversion_key: vtid,
-    product_name: {{DL - Product Name}} || '',
+    product_name: productName,
     category: "initial_sale",
-    order_created_at: {{DL - Order Date}} || new Date().toISOString(),
+    order_created_at: new Date().toISOString(),
     order_ip: "" // VTurb captura automaticamente
   };
   
