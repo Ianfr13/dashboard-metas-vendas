@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Home, BarChart3, Settings, Menu, LogOut, User } from "lucide-react";
+import { Home, BarChart3, Settings, Menu, LogOut, User, GitBranch, FileText } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function MobileNav() {
@@ -42,6 +42,8 @@ export default function MobileNav() {
     { href: "/", icon: Home, label: "Home" },
     { href: "/metricas", icon: BarChart3, label: "Métricas" },
     { href: "/admin", icon: Settings, label: "Admin" },
+    { href: "/admin/ab-tests", icon: GitBranch, label: "Testes A/B" },
+    { href: "/admin/pages", icon: FileText, label: "Páginas (CMS)" },
   ];
 
   return (
