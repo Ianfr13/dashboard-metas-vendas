@@ -177,19 +177,34 @@ export default {
         const cacheKey = `ab:${slug}`;
         let test: ABTest | null = null;
 
-        const cachedData = await env.AB_CACHE.get(cacheKey, 'json');
-        if (cachedData) {
-            test = cachedData as ABTest;
-        } else {
-            // Cache miss - fetch from Supabase
-            test = await fetchTestFromSupabase(slug, env);
+        // SWR: Get cached data (including metadata)
+        const cachedResult = await env.AB_CACHE.get<{ data: ABTest, written_at: number }>(cacheKey, 'json');
 
-            if (test) {
-                // Store in cache
-                await env.AB_CACHE.put(cacheKey, JSON.stringify(test), {
-                    expirationTtl: CACHE_TTL
-                });
+        const now = Date.now();
+        const shouldRevalidate = !cachedResult || (now - cachedResult.written_at > CACHE_TTL * 1000);
+
+        if (cachedResult) {
+            test = cachedResult.data;
+        }
+
+        // Logic to fetch from Supabase and update cache
+        const revalidate = async () => {
+            const fetchedTest = await fetchTestFromSupabase(slug, env);
+            if (fetchedTest) {
+                await env.AB_CACHE.put(cacheKey, JSON.stringify({
+                    data: fetchedTest,
+                    written_at: Date.now()
+                })); // No TTL: let it be persistent, we manage freshness manually
             }
+            return fetchedTest;
+        };
+
+        if (!test) {
+            // Cache Miss: Must block and wait for fetch
+            test = await revalidate();
+        } else if (shouldRevalidate) {
+            // SWR: We have stale data, serve it NOW, update in background
+            ctx.waitUntil(revalidate());
         }
 
         // Test not found or inactive
