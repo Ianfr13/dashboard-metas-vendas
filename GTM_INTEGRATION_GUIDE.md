@@ -134,20 +134,11 @@ Este tag envia dados de conversão (compra) para o VTurb. Os dados vêm do **che
 Checkout/Gateway → DataLayer (push) → GTM Tag → VTurb API
 ```
 
-### 6.2 Variáveis do DataLayer (Configurar no GTM)
-
-Crie estas **Variáveis de Camada de Dados** no GTM:
-
-| Nome da Variável GTM | Nome no DataLayer | Descrição |
-|---------------------|-------------------|-----------|
-| `DL - ecommerce` | `ecommerce` | Objeto completo do e-commerce |
-| `DL - vtid` | `vtid` | ID de rastreamento VTurb ⚠️ |
-
-> ⚠️ **IMPORTANTE:** O checkout precisa enviar o `vtid` no DataLayer. Se não estiver enviando, você precisa configurar o checkout para passar esse parâmetro.
-
-### 6.3 Criar a Tag no GTM
+### 6.2 Criar a Tag no GTM
 
 Crie uma nova tag do tipo **HTML Personalizado** com o nome `VTurb - Conversion Tracking`:
+
+> ✅ **Não precisa criar variáveis!** O script lê direto do DataLayer.
 
 ```html
 <script>
@@ -156,15 +147,30 @@ Crie uma nova tag do tipo **HTML Personalizado** com o nome `VTurb - Conversion 
   var VTURB_TOKEN = 'd00bfb43-9236-4007-9091-94480bcd326e';
   var VTURB_ENDPOINT = 'https://tracker.vturb.com/conversions/payt?t=' + VTURB_TOKEN;
   
-  // === DADOS DO ECOMMERCE (estrutura do checkout) ===
-  var ecommerce = {{DL - ecommerce}} || {};
+  // === LÊ DO DATALAYER (sem precisar de variáveis GTM) ===
+  var ecommerce = null;
+  var vtid = null;
   
-  // Busca o vtid do DataLayer (o checkout precisa enviar isso)
-  var vtid = {{DL - vtid}} || '';
+  // Percorre o dataLayer para encontrar os dados mais recentes
+  for (var i = dataLayer.length - 1; i >= 0; i--) {
+    var item = dataLayer[i];
+    if (item.ecommerce && !ecommerce) {
+      ecommerce = item.ecommerce;
+    }
+    if (item.vtid && !vtid) {
+      vtid = item.vtid;
+    }
+    if (ecommerce && vtid) break;
+  }
   
   // Se não tiver vtid, não podemos atribuir ao VTurb
   if (!vtid) {
     console.warn('[VTurb] vtid não encontrado no DataLayer. Conversão não será rastreada.');
+    return;
+  }
+  
+  if (!ecommerce) {
+    console.warn('[VTurb] ecommerce não encontrado no DataLayer.');
     return;
   }
   
@@ -203,7 +209,7 @@ Crie uma nova tag do tipo **HTML Personalizado** com o nome `VTurb - Conversion 
     if (response.ok) {
       console.log('[VTurb] ✅ Conversão enviada com sucesso!');
     } else {
-      console.error('[VTurb] ❌ Erro ao enviar conversão:', response.status);
+      console.error('[VTurb] ❌ Erro ao enviar:', response.status);
     }
   })
   .catch(function(error) {
