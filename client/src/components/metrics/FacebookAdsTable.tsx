@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { ArrowUp, ArrowDown, Search } from "lucide-react";
-import { FACEBOOK_METRICS, CALCULATED_METRICS, formatMetricValue, evaluateFormula, MetricConfig, CalculatedMetric, ALL_METRICS } from "@/lib/facebook-metrics";
+import { FACEBOOK_METRICS, CALCULATED_METRICS, formatMetricValue, evaluateFormula, MetricConfig, CalculatedMetric } from "@/lib/facebook-metrics";
+import { loadUserMetrics, UserMetric } from "./CustomMetricCreator";
 import { cn } from "@/lib/utils";
 
 interface FacebookAdsTableProps {
@@ -25,19 +26,26 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort,
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
     const [draggedMetric, setDraggedMetric] = useState<string | null>(null);
 
+    // Load user metrics from localStorage
+    const userMetrics = useMemo(() => loadUserMetrics(), [selectedMetrics]);
+
     const columns = useMemo(() => {
         return selectedMetrics.map(key => {
             // First check regular metrics
             const regular = FACEBOOK_METRICS.find(m => m.key === key);
             if (regular) return { ...regular, isCalculated: false };
 
-            // Then check calculated metrics
+            // Then check built-in calculated metrics
             const calculated = CALCULATED_METRICS.find(m => m.key === key);
             if (calculated) return { ...calculated, isCalculated: true };
 
+            // Finally check user-created metrics
+            const userMetric = userMetrics.find(m => m.key === key);
+            if (userMetric) return { ...userMetric, isCalculated: true };
+
             return null;
-        }).filter(Boolean) as ((MetricConfig | CalculatedMetric) & { isCalculated: boolean })[];
-    }, [selectedMetrics]);
+        }).filter(Boolean) as ((MetricConfig | CalculatedMetric | UserMetric) & { isCalculated: boolean })[];
+    }, [selectedMetrics, userMetrics]);
 
     // Internal sorting
     const sortedData = useMemo(() => {
