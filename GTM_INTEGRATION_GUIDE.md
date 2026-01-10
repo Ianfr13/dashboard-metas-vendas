@@ -122,133 +122,99 @@ Crie uma nova tag do tipo **HTML Personalizado**. Este script captura o **Títul
 ## 5. Acionamento
 Use um acionador de **Evento Personalizado** com o nome `.*` (marcando "Usar correspondência de expressão regular") para capturar todos os eventos automaticamente.
 
----
-
 ## 6. VTurb Conversion Tracking (Atribuição de Vendas)
 
-Este tag envia dados de conversão (compra) para o VTurb. Os dados vêm do **checkout (gateway de pagamento)** via DataLayer e são enviados diretamente para o VTurb.
+Envia dados de compra do checkout para o VTurb.
 
-### 6.1 Fluxo de Dados
+### 6.1 O que o Checkout Precisa Enviar
 
+O DataLayer precisa ter estes dados no momento do `purchase`:
+
+```javascript
+dataLayer.push({
+  event: 'purchase',
+  vtid: 'abc123xyz',  // ⚠️ OBRIGATÓRIO para atribuição
+  ecommerce: {
+    value: 900,       // Valor em reais
+    currency: 'BRL',
+    items: [{ item_name: 'Produto XYZ' }]
+  }
+});
 ```
-Checkout/Gateway → DataLayer (push) → GTM Tag → VTurb API
-```
 
-### 6.2 Criar a Tag no GTM
+### 6.2 Tag GTM (HTML Personalizado)
 
-Crie uma nova tag do tipo **HTML Personalizado** com o nome `VTurb - Conversion Tracking`:
-
-> ✅ **Não precisa criar variáveis!** O script lê direto do DataLayer.
+Cole este código em uma tag **HTML Personalizado**:
 
 ```html
 <script>
 (function() {
-  // === CONFIGURAÇÃO ===
-  var VTURB_TOKEN = 'd00bfb43-9236-4007-9091-94480bcd326e';
-  var VTURB_ENDPOINT = 'https://tracker.vturb.com/conversions/payt?t=' + VTURB_TOKEN;
+  var TOKEN = 'd00bfb43-9236-4007-9091-94480bcd326e';
+  var URL = 'https://tracker.vturb.com/conversions/payt?t=' + TOKEN;
   
-  // === LÊ DO DATALAYER (sem precisar de variáveis GTM) ===
-  var ecommerce = null;
-  var vtid = null;
-  
-  // Percorre o dataLayer para encontrar os dados mais recentes
+  // Busca dados no dataLayer
+  var vtid = null, ecom = null;
   for (var i = dataLayer.length - 1; i >= 0; i--) {
-    var item = dataLayer[i];
-    if (item.ecommerce && !ecommerce) {
-      ecommerce = item.ecommerce;
-    }
-    if (item.vtid && !vtid) {
-      vtid = item.vtid;
-    }
-    if (ecommerce && vtid) break;
+    if (dataLayer[i].vtid) vtid = dataLayer[i].vtid;
+    if (dataLayer[i].ecommerce) ecom = dataLayer[i].ecommerce;
+    if (vtid && ecom) break;
   }
   
-  // Se não tiver vtid, não podemos atribuir ao VTurb
-  if (!vtid) {
-    console.warn('[VTurb] vtid não encontrado no DataLayer. Conversão não será rastreada.');
-    return;
-  }
+  if (!vtid) { console.warn('[VTurb] vtid não encontrado'); return; }
+  if (!ecom) { console.warn('[VTurb] ecommerce não encontrado'); return; }
   
-  if (!ecommerce) {
-    console.warn('[VTurb] ecommerce não encontrado no DataLayer.');
-    return;
-  }
-  
-  // Extrai dados do ecommerce
-  var value = ecommerce.value || 0;
-  var currency = ecommerce.currency || 'BRL';
-  var productName = '';
-  
-  if (ecommerce.items && ecommerce.items.length > 0) {
-    productName = ecommerce.items[0].item_name || ecommerce.items[0].name || '';
-  }
-  
-  // === PAYLOAD PARA O VTURB ===
-  var payload = {
-    order_amount_cents: Math.round(value * 100), // Converte para centavos
-    currency: currency,
+  var data = {
+    order_amount_cents: Math.round((ecom.value || 0) * 100),
+    currency: ecom.currency || 'BRL',
     conversion_key: vtid,
-    product_name: productName,
-    category: "initial_sale",
+    product_name: ecom.items && ecom.items[0] ? (ecom.items[0].item_name || '') : '',
+    category: 'initial_sale',
     order_created_at: new Date().toISOString(),
-    order_ip: "" // VTurb captura automaticamente
+    order_ip: ''
   };
   
-  console.log('[VTurb] Enviando conversão:', payload);
+  console.log('[VTurb] Enviando:', data);
   
-  // === ENVIO ===
-  fetch(VTURB_ENDPOINT, {
+  fetch(URL, {
     method: 'POST',
-    mode: 'cors',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  })
-  .then(function(response) {
-    if (response.ok) {
-      console.log('[VTurb] ✅ Conversão enviada com sucesso!');
-    } else {
-      console.error('[VTurb] ❌ Erro ao enviar:', response.status);
-    }
-  })
-  .catch(function(error) {
-    console.error('[VTurb] ❌ Erro de rede:', error);
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).then(function(r) {
+    console.log('[VTurb] Status:', r.status);
+  }).catch(function(e) {
+    console.error('[VTurb] Erro:', e);
   });
 })();
 </script>
 ```
 
-### 6.4 Acionador da Tag
+### 6.3 Acionador
 
-Configure um acionador de **Evento Personalizado** com:
-- **Nome do evento**: `purchase` (ou o evento que seu checkout dispara)
-- **Este acionador dispara em**: Todos os eventos personalizados
+- **Tipo:** Evento Personalizado
+- **Nome do evento:** `purchase`
 
-### 6.5 Exemplo de DataLayer Push (Do Checkout)
+### 6.4 Debug (Testar no Console)
 
-O gateway de pagamento deve enviar este push no momento da compra:
+Abra o Console (F12) e cole isso para ver o que tem no DataLayer:
 
 ```javascript
-dataLayer.push({
-  event: 'purchase',
-  order_amount_cents: 19900,           // R$ 199,00 em centavos
-  currency: 'BRL',
-  vtid: 'abc123xyz',                   // ID de rastreamento VTurb
-  product_name: 'Curso Marketing Digital',
-  order_created_at: '2026-01-10T15:30:00.000Z'
+// Ver todo o dataLayer
+console.log(dataLayer);
+
+// Buscar vtid
+dataLayer.forEach(function(item, i) {
+  if (item.vtid) console.log('vtid encontrado na posição', i, ':', item.vtid);
+  if (item.ecommerce) console.log('ecommerce encontrado na posição', i, ':', item.ecommerce);
 });
 ```
 
-### 6.6 Campos Enviados ao VTurb
+### 6.5 Problemas Comuns
 
-| Campo | Descrição | Exemplo |
-|-------|-----------|---------|
-| `order_amount_cents` | Valor em centavos | `19900` (R$ 199,00) |
-| `currency` | Moeda | `BRL` |
-| `conversion_key` | vtid para atribuição | `abc123xyz` |
-| `product_name` | Nome do produto | `Curso Marketing Digital` |
-| `category` | Tipo da conversão | `initial_sale` |
-| `order_created_at` | Data/hora da compra (ISO) | `2026-01-10T15:30:00.000Z` |
-| `order_ip` | IP do cliente | (Capturado pelo VTurb) |
+| Problema | Solução |
+|----------|---------|
+| `vtid não encontrado` | O checkout não está enviando o `vtid`. Precisa adicionar no DataLayer push. |
+| `ecommerce não encontrado` | O checkout não está enviando os dados de compra. Verificar integração. |
+| CORS error | Normal em alguns navegadores - a conversão ainda é enviada. |
+| Status 4xx | Token inválido ou dados incorretos. Verificar com VTurb. |
+
 
