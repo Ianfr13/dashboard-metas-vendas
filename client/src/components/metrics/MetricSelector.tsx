@@ -4,7 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { Settings2, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FACEBOOK_METRICS, DEFAULT_METRICS, METRIC_GROUPS, MetricConfig } from "@/lib/facebook-metrics";
+import { FACEBOOK_METRICS, CALCULATED_METRICS, DEFAULT_METRICS, METRIC_GROUPS, MetricConfig, CalculatedMetric, ALL_METRICS } from "@/lib/facebook-metrics";
 
 interface MetricSelectorProps {
     selectedMetrics: string[];
@@ -27,11 +27,12 @@ export default function MetricSelector({ selectedMetrics, onChange }: MetricSele
         setOpen(false);
     };
 
-    const groupedMetrics = FACEBOOK_METRICS.reduce((acc, metric) => {
+    // Group all metrics (regular + calculated)
+    const groupedMetrics = [...FACEBOOK_METRICS, ...CALCULATED_METRICS].reduce((acc, metric) => {
         if (!acc[metric.group]) acc[metric.group] = [];
         acc[metric.group].push(metric);
         return acc;
-    }, {} as Record<string, MetricConfig[]>);
+    }, {} as Record<string, (MetricConfig | CalculatedMetric)[]>);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -57,7 +58,7 @@ export default function MetricSelector({ selectedMetrics, onChange }: MetricSele
 
                     <div className="flex flex-wrap gap-1">
                         {selectedMetrics.map(key => {
-                            const metric = FACEBOOK_METRICS.find(m => m.key === key);
+                            const metric = [...FACEBOOK_METRICS, ...CALCULATED_METRICS].find(m => m.key === key);
                             return (
                                 <Badge
                                     key={key}

@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { ArrowUp, ArrowDown, Search } from "lucide-react";
-import { FACEBOOK_METRICS, formatMetricValue, MetricConfig } from "@/lib/facebook-metrics";
+import { FACEBOOK_METRICS, CALCULATED_METRICS, formatMetricValue, evaluateFormula, MetricConfig, CalculatedMetric, ALL_METRICS } from "@/lib/facebook-metrics";
 import { cn } from "@/lib/utils";
 
 interface FacebookAdsTableProps {
@@ -26,7 +26,17 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort,
     const [draggedMetric, setDraggedMetric] = useState<string | null>(null);
 
     const columns = useMemo(() => {
-        return selectedMetrics.map(key => FACEBOOK_METRICS.find(m => m.key === key)!).filter(Boolean);
+        return selectedMetrics.map(key => {
+            // First check regular metrics
+            const regular = FACEBOOK_METRICS.find(m => m.key === key);
+            if (regular) return { ...regular, isCalculated: false };
+
+            // Then check calculated metrics
+            const calculated = CALCULATED_METRICS.find(m => m.key === key);
+            if (calculated) return { ...calculated, isCalculated: true };
+
+            return null;
+        }).filter(Boolean) as ((MetricConfig | CalculatedMetric) & { isCalculated: boolean })[];
     }, [selectedMetrics]);
 
     // Internal sorting
@@ -319,15 +329,24 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort,
                                     </td>
                                 )}
 
-                                {columns.map((col) => (
-                                    <td
-                                        key={col.key}
-                                        className={cn(cellClass, "text-right font-mono text-gray-600")}
-                                        style={{ width: getColumnWidth(col.key) }}
-                                    >
-                                        {formatMetricValue(parseFloat(row[col.key]), col.format)}
-                                    </td>
-                                ))}
+                                {columns.map((col) => {
+                                    let value: number;
+                                    if (col.isCalculated && 'formula' in col) {
+                                        // Calculated metric - evaluate formula
+                                        value = evaluateFormula(col.formula, row as Record<string, number>);
+                                    } else {
+                                        value = parseFloat(row[col.key]) || 0;
+                                    }
+                                    return (
+                                        <td
+                                            key={col.key}
+                                            className={cn(cellClass, "text-right font-mono text-gray-600")}
+                                            style={{ width: getColumnWidth(col.key) }}
+                                        >
+                                            {formatMetricValue(value, col.format)}
+                                        </td>
+                                    );
+                                })}
                             </tr>
                         ))}
                     </tbody>
@@ -351,15 +370,25 @@ export default function FacebookAdsTable({ data, selectedMetrics, level, onSort,
                             {level === 'adset' && <td className={footerClass + " bg-gray-100"}>-</td>}
                             {level === 'ad' && <td className={footerClass + " bg-gray-100"}>-</td>}
 
-                            {columns.map((col) => (
-                                <td
-                                    key={col.key}
-                                    className={cn(footerClass, "text-right bg-gray-100")}
-                                    style={{ width: getColumnWidth(col.key) }}
-                                >
-                                    {totals ? formatMetricValue(totals[col.key] || 0, col.format) : '-'}
-                                </td>
-                            ))}
+                            {columns.map((col) => {
+                                let value: number = 0;
+                                if (totals) {
+                                    if (col.isCalculated && 'formula' in col) {
+                                        value = evaluateFormula(col.formula, totals);
+                                    } else {
+                                        value = totals[col.key] || 0;
+                                    }
+                                }
+                                return (
+                                    <td
+                                        key={col.key}
+                                        className={cn(footerClass, "text-right bg-gray-100")}
+                                        style={{ width: getColumnWidth(col.key) }}
+                                    >
+                                        {totals ? formatMetricValue(value, col.format) : '-'}
+                                    </td>
+                                );
+                            })}
                         </tr>
                     </tfoot>
                 </table>
