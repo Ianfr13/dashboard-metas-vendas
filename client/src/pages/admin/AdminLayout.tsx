@@ -10,7 +10,8 @@ import {
   Target,
   GitBranch,
   Sliders,
-  TrendingUp
+  TrendingUp,
+  Split
 } from "lucide-react";
 import MobileNav from "@/components/MobileNav";
 
@@ -115,6 +116,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               >
                 <Sliders className="h-4 w-4 mr-2" />
                 Configurações
+              </Button>
+            </Link>
+            <Link href="/admin/ab-tests">
+              <Button
+                variant={location === "/admin/ab-tests" ? "default" : "ghost"}
+                size="sm"
+                className="whitespace-nowrap"
+              >
+                <Split className="h-4 w-4 mr-2" />
+                Testes A/B
               </Button>
             </Link>
           </div>

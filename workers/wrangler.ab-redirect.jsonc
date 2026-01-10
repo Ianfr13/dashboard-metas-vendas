@@ -1,0 +1,17 @@
+{
+    "name": "ab-redirect",
+    "main": "ab-redirect.ts",
+    "compatibility_date": "2025-12-24",
+    "compatibility_flags": [
+        "nodejs_compat"
+    ],
+    "kv_namespaces": [
+        {
+            "binding": "AB_CACHE",
+            "id": "8e7cfb33757544dbb319f637f943e84c"
+        }
+    ],
+    "vars": {
+        "ENVIRONMENT": "production"
+    }
+}

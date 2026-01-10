@@ -1,0 +1,217 @@
+/**
+ * A/B Redirect Worker
+ * 
+ * Ultra-fast edge redirector for A/B testing.
+ * - Uses KV cache for instant lookups
+ * - Preserves all UTM parameters
+ * - 302 redirect (invisible to trackers)
+ * - Async visit counting (doesn't block redirect)
+ */
+
+/// <reference types="@cloudflare/workers-types" />
+
+export interface Env {
+    AB_CACHE: KVNamespace;
+    SUPABASE_URL: string;
+    SUPABASE_SERVICE_ROLE_KEY: string;
+}
+
+interface ABTestVariant {
+    id: number;
+    name: string;
+    url: string;
+    weight: number;
+}
+
+interface ABTest {
+    id: number;
+    name: string;
+    slug: string;
+    status: string;
+    variants: ABTestVariant[];
+}
+
+// Cache TTL in seconds (5 minutes)
+const CACHE_TTL = 300;
+
+/**
+ * Select a variant based on weights using weighted random selection
+ */
+function selectVariant(variants: ABTestVariant[]): ABTestVariant {
+    const totalWeight = variants.reduce((sum, v) => sum + v.weight, 0);
+    if (totalWeight === 0) {
+        // If all weights are 0, select randomly
+        return variants[Math.floor(Math.random() * variants.length)];
+    }
+
+    let random = Math.random() * totalWeight;
+
+    for (const variant of variants) {
+        random -= variant.weight;
+        if (random <= 0) {
+            return variant;
+        }
+    }
+
+    // Fallback to last variant
+    return variants[variants.length - 1];
+}
+
+/**
+ * Append UTM parameters from original URL to destination URL
+ */
+function appendUtmParams(destinationUrl: string, originalUrl: URL): string {
+    const destUrl = new URL(destinationUrl);
+
+    // List of parameters to preserve
+    const paramsToPreserve = [
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+        'fbclid', 'gclid', 'ttclid', 'li_fat_id', // Ad platform click IDs
+        'ref', 'source', 'campaign' // Common custom params
+    ];
+
+    // Copy all params from original URL
+    for (const [key, value] of originalUrl.searchParams) {
+        // Skip the 'test' param if present (legacy)
+        if (key === 'test') continue;
+
+        // Preserve important params, don't overwrite if already in destination
+        if (!destUrl.searchParams.has(key)) {
+            destUrl.searchParams.set(key, value);
+        }
+    }
+
+    return destUrl.toString();
+}
+
+/**
+ * Fetch test config from Supabase
+ */
+async function fetchTestFromSupabase(slug: string, env: Env): Promise<ABTest | null> {
+    try {
+        // Fetch test
+        const testResponse = await fetch(
+            `${env.SUPABASE_URL}/rest/v1/ab_tests?slug=eq.${encodeURIComponent(slug)}&status=eq.active&select=id,name,slug,status`,
+            {
+                headers: {
+                    'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+                    'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+                }
+            }
+        );
+
+        if (!testResponse.ok) {
+            console.error('[ab-redirect] Failed to fetch test:', await testResponse.text());
+            return null;
+        }
+
+        const tests = await testResponse.json() as ABTest[];
+        if (tests.length === 0) {
+            return null;
+        }
+
+        const test = tests[0];
+
+        // Fetch variants
+        const variantsResponse = await fetch(
+            `${env.SUPABASE_URL}/rest/v1/ab_test_variants?test_id=eq.${test.id}&select=id,name,url,weight`,
+            {
+                headers: {
+                    'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+                    'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+                }
+            }
+        );
+
+        if (!variantsResponse.ok) {
+            console.error('[ab-redirect] Failed to fetch variants:', await variantsResponse.text());
+            return null;
+        }
+
+        const variants = await variantsResponse.json() as ABTestVariant[];
+
+        return {
+            ...test,
+            variants
+        };
+    } catch (error) {
+        console.error('[ab-redirect] Error fetching from Supabase:', error);
+        return null;
+    }
+}
+
+/**
+ * Increment visit count for a variant (async, doesn't block)
+ */
+async function incrementVisitCount(variantId: number, env: Env): Promise<void> {
+    try {
+        await fetch(
+            `${env.SUPABASE_URL}/rest/v1/rpc/increment_ab_variant_visits`,
+            {
+                method: 'POST',
+                headers: {
+                    'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+                    'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ variant_id: variantId })
+            }
+        );
+    } catch (error) {
+        console.error('[ab-redirect] Error incrementing visits:', error);
+    }
+}
+
+export default {
+    async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+        const url = new URL(request.url);
+
+        // Extract slug from path (e.g., /x7k9m2p1 -> x7k9m2p1)
+        const slug = url.pathname.slice(1).split('/')[0];
+
+        if (!slug || slug === '' || slug === 'favicon.ico') {
+            return new Response('Not Found', { status: 404 });
+        }
+
+        // Try to get from cache first
+        const cacheKey = `ab:${slug}`;
+        let test: ABTest | null = null;
+
+        const cachedData = await env.AB_CACHE.get(cacheKey, 'json');
+        if (cachedData) {
+            test = cachedData as ABTest;
+        } else {
+            // Cache miss - fetch from Supabase
+            test = await fetchTestFromSupabase(slug, env);
+
+            if (test) {
+                // Store in cache
+                await env.AB_CACHE.put(cacheKey, JSON.stringify(test), {
+                    expirationTtl: CACHE_TTL
+                });
+            }
+        }
+
+        // Test not found or inactive
+        if (!test) {
+            return new Response('Test not found', { status: 404 });
+        }
+
+        // No variants configured
+        if (!test.variants || test.variants.length === 0) {
+            return new Response('No variants configured', { status: 500 });
+        }
+
+        // Select variant based on weights
+        const selectedVariant = selectVariant(test.variants);
+
+        // Build destination URL with preserved UTM params
+        const destinationUrl = appendUtmParams(selectedVariant.url, url);
+
+        // Increment visit count asynchronously (don't block redirect)
+        ctx.waitUntil(incrementVisitCount(selectedVariant.id, env));
+
+        // Return 302 redirect (instant, invisible to trackers)
+        return Response.redirect(destinationUrl, 302);
+    }
+};
