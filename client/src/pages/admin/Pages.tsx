@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -19,8 +19,26 @@ interface Page {
     name: string;
     slug: string;
     html_content: string;
+    head_code?: string;
+    body_code?: string;
+    footer_code?: string;
+
+    tracking_params?: any;
     updated_at: string;
 }
+
+const DEFAULT_GEN_PARAMS = {
+    fid: "",
+    ftype: "compra",
+    fver: "",
+    pver: "",
+    oid: "",
+    fstg: "",
+    utm_medium: "",
+    utm_campaign: "",
+    utm_term: "",
+    utm_content: ""
+};
 
 export default function Pages() {
     const [pages, setPages] = useState<Page[]>([]);
@@ -29,18 +47,10 @@ export default function Pages() {
     const [showForm, setShowForm] = useState(false);
 
     // Generator State
-    const [genParams, setGenParams] = useState({
-        fid: "",
-        ftype: "compra",
-        fver: "",
-        pver: "",
-        oid: "",
-        fstg: "",
-        utm_medium: "",
-        utm_campaign: "",
-        utm_term: "",
-        utm_content: ""
-    });
+
+
+    // Generator State
+    const [genParams, setGenParams] = useState(DEFAULT_GEN_PARAMS);
 
     useEffect(() => {
         fetchPages();
@@ -72,6 +82,11 @@ export default function Pages() {
                         name: editingPage.name,
                         slug: editingPage.slug,
                         html_content: editingPage.html_content,
+                        head_code: editingPage.head_code,
+                        body_code: editingPage.body_code,
+                        footer_code: editingPage.footer_code,
+
+                        tracking_params: genParams, // Save current genParams
                         updated_at: new Date().toISOString()
                     })
                     .eq("id", editingPage.id)
@@ -84,7 +99,10 @@ export default function Pages() {
                     .insert({
                         name: editingPage.name,
                         slug: editingPage.slug,
-                        html_content: editingPage.html_content
+                        html_content: editingPage.html_content,
+                        head_code: editingPage.head_code,
+                        body_code: editingPage.body_code,
+                        footer_code: editingPage.footer_code
                     })
                     .select()
                     .single();
@@ -116,6 +134,28 @@ export default function Pages() {
 
             const toastId = toast.loading("Preparando e Publicando...");
 
+            // Inject scripts into HTML
+            let finalHtml = editingPage.html_content;
+
+            if (editingPage.head_code) {
+                finalHtml = finalHtml.replace("</head>", `${editingPage.head_code}</head>`);
+            }
+            if (editingPage.body_code) {
+                finalHtml = finalHtml.replace("<body", `<body ${editingPage.body_code.includes("<") ? "" : ""}`); // Just in case, but usually body_code goes inside body tag? No, usually after.
+                // Standard injection points:
+                // Head: before </head>
+                // Body Start: after <body ...>
+                // Footer: before </body>
+
+                // Simplest injection for Body Start (regex to find start of body tag and append after it closes)
+                // This is complex regex. Let's assume user wants it immediately after <body> opening.
+                finalHtml = finalHtml.replace(/<body[^>]*>/i, (match) => `${match}\n${editingPage.body_code}`);
+            }
+            if (editingPage.footer_code) {
+                finalHtml = finalHtml.replace("</body>", `${editingPage.footer_code}\n</body>`);
+            }
+
+
             const response = await fetch(`${WORKER_URL}/admin/pages`, {
                 method: "POST",
                 headers: {
@@ -124,7 +164,7 @@ export default function Pages() {
                 },
                 body: JSON.stringify({
                     slug: editingPage.slug,
-                    html: editingPage.html_content
+                    html: finalHtml
                 })
             });
 
@@ -305,13 +345,53 @@ export default function Pages() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <Label className="mb-2 block">Código HTML</Label>
-                                    <Textarea
-                                        className="font-mono text-xs min-h-[500px]"
-                                        value={editingPage?.html_content || ""}
-                                        onChange={e => setEditingPage(prev => ({ ...prev!, html_content: e.target.value }))}
-                                        placeholder="<html>... Cole o código do Atomicat aqui ...</html>"
-                                    />
+                                    {/* TABS PARA HTML e SCRIPTS */}
+                                    <Tabs defaultValue="html">
+                                        <TabsList className="mb-4">
+                                            <TabsTrigger value="html">Principal (HTML)</TabsTrigger>
+                                            <TabsTrigger value="scripts">Scripts (Injeção)</TabsTrigger>
+                                        </TabsList>
+
+                                        <TabsContent value="html">
+                                            <Label className="mb-2 block">Código HTML Completo</Label>
+                                            <Textarea
+                                                className="font-mono text-xs min-h-[500px]"
+                                                value={editingPage?.html_content || ""}
+                                                onChange={e => setEditingPage(prev => ({ ...prev!, html_content: e.target.value }))}
+                                                placeholder="<html>... Cole o código do Atomicat aqui ...</html>"
+                                            />
+                                        </TabsContent>
+
+                                        <TabsContent value="scripts" className="space-y-4">
+                                            <div>
+                                                <Label>Head Code (Antes de &lt;/head&gt;)</Label>
+                                                <Textarea
+                                                    className="font-mono text-xs min-h-[150px]"
+                                                    value={editingPage?.head_code || ""}
+                                                    onChange={e => setEditingPage(prev => ({ ...prev!, head_code: e.target.value }))}
+                                                    placeholder="<script>... (Google Analytics, Pixel, etc)</script>"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label>Body Start (Logo após &lt;body&gt;)</Label>
+                                                <Textarea
+                                                    className="font-mono text-xs min-h-[150px]"
+                                                    value={editingPage?.body_code || ""}
+                                                    onChange={e => setEditingPage(prev => ({ ...prev!, body_code: e.target.value }))}
+                                                    placeholder="<noscript>... (GTM Body)</noscript>"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label>Footer Code (Antes de &lt;/body&gt;)</Label>
+                                                <Textarea
+                                                    className="font-mono text-xs min-h-[150px]"
+                                                    value={editingPage?.footer_code || ""}
+                                                    onChange={e => setEditingPage(prev => ({ ...prev!, footer_code: e.target.value }))}
+                                                    placeholder="<script>... (Scripts de fechamento)</script>"
+                                                />
+                                            </div>
+                                        </TabsContent>
+                                    </Tabs>
                                 </CardContent>
                             </Card>
                         </div>
@@ -395,7 +475,18 @@ export default function Pages() {
                         <p className="text-muted-foreground">Hospedagem de páginas de alta performance</p>
                     </div>
                     <Button onClick={() => {
-                        setEditingPage({ id: 0, name: "", slug: "", html_content: "", updated_at: "" });
+                        setEditingPage({
+                            id: 0,
+                            name: "",
+                            slug: "",
+                            html_content: "",
+                            head_code: "",  // Default empty
+                            body_code: "",
+                            footer_code: "",
+                            tracking_params: {}, // Empty params for new page
+                            updated_at: ""
+                        });
+                        setGenParams(DEFAULT_GEN_PARAMS);
                         setShowForm(true);
                     }}>
                         <Plus className="h-4 w-4 mr-2" /> Nova Página
@@ -404,7 +495,15 @@ export default function Pages() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {pages.map(page => (
-                        <Card key={page.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setEditingPage(page); setShowForm(true); }}>
+                        <Card key={page.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => {
+                            setEditingPage(page);
+                            if (page.tracking_params) {
+                                setGenParams({ ...DEFAULT_GEN_PARAMS, ...page.tracking_params });
+                            } else {
+                                setGenParams(DEFAULT_GEN_PARAMS);
+                            }
+                            setShowForm(true);
+                        }}>
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg">{page.name}</CardTitle>
                                 <code className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded w-fit">/{page.slug}</code>

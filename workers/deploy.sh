@@ -23,6 +23,11 @@ echo ""
 echo "📘 Deploying facebook-worker..."
 wrangler deploy --config wrangler.facebook.jsonc
 
+# Deploy A/B Redirect (CMS)
+echo ""
+echo "🔀 Deploying ab-redirect..."
+wrangler deploy --config wrangler.ab-redirect.jsonc
+
 echo ""
 echo "✅ Deploy complete!"
 echo ""

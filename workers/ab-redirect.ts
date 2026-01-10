@@ -261,7 +261,15 @@ export default {
         // Verifica se é uma página publicada pelo painel
         const pageHtml = await env.AB_CACHE.get(`page:${slug}`);
         if (pageHtml) {
-            return new Response(pageHtml, {
+            // AUTOMATIC FIX: Inject CSS to ensure .esconder works with Tailwind
+            // Use specific selector (body .esconder) to beat Tailwind (.grid) without !important
+            // This allows JS to override it with inline styles later
+            const fixedHtml = pageHtml.replace(
+                '</head>',
+                '<style>body .esconder { display: none; }</style></head>'
+            );
+
+            return new Response(fixedHtml, {
                 headers: { 'Content-Type': 'text/html; charset=utf-8' }
             });
         }
