@@ -57,10 +57,10 @@ export default function MetricSelector({ selectedMetrics, onChange }: MetricSele
                     Métricas ({selectedMetrics.length})
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-96 p-4" align="end">
+            <PopoverContent className="w-[480px] p-5" align="end">
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-sm">Selecionar Métricas</h4>
+                        <h4 className="font-semibold text-base">Selecionar Métricas</h4>
                         <Button
                             variant="ghost"
                             size="sm"
@@ -88,7 +88,7 @@ export default function MetricSelector({ selectedMetrics, onChange }: MetricSele
                         })}
                     </div>
 
-                    <div className="max-h-80 overflow-y-auto space-y-4">
+                    <div className="max-h-[500px] overflow-y-auto space-y-5">
                         {/* Built-in metrics */}
                         {Object.entries(groupedMetrics)
                             .filter(([group]) => group !== 'calculated')
