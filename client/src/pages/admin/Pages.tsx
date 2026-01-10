@@ -106,11 +106,14 @@ export default function Pages() {
     }
 
     async function handleDeploy() {
-        if (!editingPage?.slug || !editingPage?.html_content) return;
+        if (!editingPage?.slug) return toast.error("Preencha o Slug (URL) antes de publicar");
+        if (!editingPage?.html_content) return toast.error("Cole o conteúdo HTML antes de publicar");
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) return toast.error("Não autenticado");
+            if (!session?.access_token) return toast.error("Sua sessão expirou. Faça login novamente.");
+
+            const toastId = toast.loading("Publicando...");
 
             const response = await fetch(`${WORKER_URL}/admin/pages`, {
                 method: "POST",
@@ -124,24 +127,33 @@ export default function Pages() {
                 })
             });
 
+            toast.dismiss(toastId);
+
             if (response.ok) {
-                toast.success("Página publicada no Edge! 🚀");
+                toast.success("Sucesso! Página publicada no Edge. 🚀");
             } else {
-                toast.error("Erro no deploy: " + await response.text());
+                const text = await response.text();
+                toast.error(`Falha no deploy: ${text}`);
             }
-        } catch (e) {
-            toast.error("Erro de conexão");
+        } catch (e: any) {
+            console.error(e);
+            toast.error(`Erro de conexão: ${e.message}`);
         }
     }
 
-    const generatedLink = editingPage ? generateTrackingUrl({
+    const generatedLink = editingPage?.slug ? generateTrackingUrl({
         baseUrl: `${WORKER_URL}/${editingPage.slug}`,
         ...genParams
-    } as any) : ""; // Cast any because ftype type mismatch potential
+    } as any) : "";
 
-    function copyLink() {
-        navigator.clipboard.writeText(generatedLink);
-        toast.success("Link copiado!");
+    async function copyLink() {
+        if (!generatedLink) return toast.error("Link vazio");
+        try {
+            await navigator.clipboard.writeText(generatedLink);
+            toast.success("Link copiado para a área de transferência!");
+        } catch (err) {
+            toast.error("Erro ao copiar link manually");
+        }
     }
 
     if (loading) return <DashboardLayout><p>Carregando...</p></DashboardLayout>;
