@@ -19,6 +19,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useUserRole } from "@/hooks/useUserRole";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Users, Trophy, Settings, Target, Package, GitBranch, Sliders, Link as LinkIcon } from "lucide-react";
@@ -165,6 +166,7 @@ function DashboardLayoutContent({
   onRefresh,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
+  const { canAccessAdmin, hasPermission, isMaster } = useUserRole();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -263,32 +265,47 @@ function DashboardLayoutContent({
               <div className="h-px bg-border" />
             </div>
 
-            {/* Admin Section */}
-            <div className="px-4 py-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
-                Administração
-              </span>
-            </div>
-            <SidebarMenu className="px-2 py-1">
-              {adminMenuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            {/* Admin Section - Only show if user has access to at least one admin feature */}
+            {canAccessAdmin() && (
+              <>
+                <div className="px-4 py-2">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+                    Administração
+                  </span>
+                </div>
+                <SidebarMenu className="px-2 py-1">
+                  {adminMenuItems
+                    .filter(item => {
+                      if (item.path === '/admin') return true; // Dashboard is always visible if canAccessAdmin is true
+                      if (item.path === '/admin/users') return isMaster;
+                      if (item.path === '/admin/pages') return hasPermission('pages', 'read');
+                      if (item.path === '/admin/ab-tests') return hasPermission('ab_tests', 'read');
+                      if (item.path === '/admin/metas') return hasPermission('metas', 'read');
+                      if (item.path === '/admin/configuracoes') return hasPermission('configuracoes', 'read');
+                      if (item.path === '/admin/trafego') return hasPermission('metas', 'read'); // Using Metas permission as proxy for now, or just allow all admins
+                      return true;
+                    })
+                    .map(item => {
+                      const isActive = location === item.path;
+                      return (
+                        <SidebarMenuItem key={item.path}>
+                          <SidebarMenuButton
+                            isActive={isActive}
+                            onClick={() => setLocation(item.path)}
+                            tooltip={item.label}
+                            className={`h-10 transition-all font-normal`}
+                          >
+                            <item.icon
+                              className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                            />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                </SidebarMenu>
+              </>
+            )}
           </SidebarContent>
 
           <SidebarFooter className="p-3">

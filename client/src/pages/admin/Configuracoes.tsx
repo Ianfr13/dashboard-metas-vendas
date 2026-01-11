@@ -1,8 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useUserRole } from "@/hooks/useUserRole";
+import { AccessDenied } from "@/components/AccessDenied";
 import { Settings, Database, Shield, Zap } from "lucide-react";
 
 export default function AdminConfiguracoes() {
+  const { hasPermission, loading: roleLoading } = useUserRole();
+
+  if (roleLoading) return <DashboardLayout><p className="p-8">Carregando...</p></DashboardLayout>;
+  if (!hasPermission('configuracoes', 'read')) return <AccessDenied message="Você não tem permissão para visualizar Configurações." requiredRole="permissão 'configuracoes.read'" />;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -125,7 +132,7 @@ export default function AdminConfiguracoes() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <p>
-              ⚠️ <strong>JWT Desabilitado:</strong> As Edge Functions estão configuradas sem verificação JWT para facilitar o desenvolvimento. 
+              ⚠️ <strong>JWT Desabilitado:</strong> As Edge Functions estão configuradas sem verificação JWT para facilitar o desenvolvimento.
               Antes de ir para produção, reabilite o JWT seguindo o guia de segurança.
             </p>
             <p>

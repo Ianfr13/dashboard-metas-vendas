@@ -7,6 +7,9 @@ import { Plus, Trash2, Copy, Play, Pause, Zap, FileText, Gauge, Loader2, RotateC
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
+import { useUserRole } from "@/hooks/useUserRole";
+import { AccessDenied } from "@/components/AccessDenied";
 
 interface Variant {
     id?: number;
@@ -17,11 +20,12 @@ interface Variant {
 }
 
 interface ABTest {
-    id: number;
+    id: string;
     name: string;
     slug: string;
     status: string;
     variants: Variant[];
+    created_at: string;
 }
 
 const WORKER_URL = "https://ab.douravita.com.br";
@@ -34,6 +38,7 @@ interface CMSPage {
 }
 
 export default function ABTests() {
+    const { hasPermission, loading: roleLoading } = useUserRole();
     const [tests, setTests] = useState<ABTest[]>([]);
     const [loading, setLoading] = useState(true);
     const [newTest, setNewTest] = useState({ name: "", variants: [{ name: "A", url: "", weight: 50, visits: 0 }, { name: "B", url: "", weight: 50, visits: 0 }] });

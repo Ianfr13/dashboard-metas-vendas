@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { AccessDenied } from "@/components/AccessDenied";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +63,7 @@ const DEFAULT_GEN_PARAMS = {
 };
 
 export default function Pages() {
+    const { hasPermission, loading: roleLoading } = useUserRole();
     const [pages, setPages] = useState<Page[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingPage, setEditingPage] = useState<Page | null>(null);

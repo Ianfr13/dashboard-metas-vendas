@@ -7,6 +7,8 @@ import { Plus, Trash2, Loader2, Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/lib/supabase";
+import { useUserRole } from "@/hooks/useUserRole";
+import { AccessDenied } from "@/components/AccessDenied";
 
 interface Meta {
   id: number;
@@ -33,7 +35,7 @@ export default function AdminMetas() {
   const [subMetas, setSubMetas] = useState<SubMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   // Formulário nova meta
   const [novaMeta, setNovaMeta] = useState({
     mes: new Date().getMonth() + 1,
@@ -51,7 +53,7 @@ export default function AdminMetas() {
   });
 
   const [metaSelecionada, setMetaSelecionada] = useState<number | null>(null);
-  
+
   // Estados de edição
   const [editandoMeta, setEditandoMeta] = useState<number | null>(null);
   const [editandoSubMeta, setEditandoSubMeta] = useState<number | null>(null);
@@ -83,7 +85,7 @@ export default function AdminMetas() {
       if (error) throw error;
 
       setMetas(data || []);
-      
+
       // Selecionar a primeira meta automaticamente
       if (data && data.length > 0 && !metaSelecionada) {
         setMetaSelecionada(data[0].id);
@@ -148,7 +150,7 @@ export default function AdminMetas() {
         percentual_marketing: 85,
         percentual_comercial: 15,
       });
-      
+
       await loadMetas();
       setMetaSelecionada(data.id);
     } catch (error: any) {
@@ -177,12 +179,12 @@ export default function AdminMetas() {
       if (error) throw error;
 
       toast.success('Meta deletada com sucesso!');
-      
+
       if (metaSelecionada === id) {
         setMetaSelecionada(null);
         setSubMetas([]);
       }
-      
+
       await loadMetas();
     } catch (error: any) {
       console.error('Erro ao deletar meta:', error);
@@ -304,7 +306,7 @@ export default function AdminMetas() {
       if (error) throw error;
 
       toast.success('Sub-meta deletada com sucesso!');
-      
+
       if (metaSelecionada) {
         await loadSubMetas(metaSelecionada);
       }
@@ -412,8 +414,8 @@ export default function AdminMetas() {
                       const parsed = parseInt(e.target.value, 10);
                       const marketing = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
                       const comercial = Math.max(0, Math.min(100, 100 - marketing));
-                      setNovaMeta({ 
-                        ...novaMeta, 
+                      setNovaMeta({
+                        ...novaMeta,
                         percentual_marketing: marketing,
                         percentual_comercial: comercial
                       });
@@ -431,8 +433,8 @@ export default function AdminMetas() {
                       const parsed = parseInt(e.target.value, 10);
                       const comercial = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
                       const marketing = Math.max(0, Math.min(100, 100 - comercial));
-                      setNovaMeta({ 
-                        ...novaMeta, 
+                      setNovaMeta({
+                        ...novaMeta,
                         percentual_comercial: comercial,
                         percentual_marketing: marketing
                       });
@@ -465,9 +467,8 @@ export default function AdminMetas() {
                   metas.map((meta) => (
                     <div
                       key={meta.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                        metaSelecionada === meta.id ? 'bg-accent border-primary' : 'hover:bg-accent'
-                      }`}
+                      className={`flex items - center justify - between p - 3 rounded - lg border cursor - pointer transition - colors ${metaSelecionada === meta.id ? 'bg-accent border-primary' : 'hover:bg-accent'
+                        } `}
                       onClick={() => setMetaSelecionada(meta.id)}
                     >
                       <div className="flex-1">
@@ -516,8 +517,8 @@ export default function AdminMetas() {
                                   const parsed = parseInt(e.target.value, 10);
                                   const marketing = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
                                   const comercial = Math.max(0, Math.min(100, 100 - marketing));
-                                  setMetaEditada({ 
-                                    ...metaEditada, 
+                                  setMetaEditada({
+                                    ...metaEditada,
                                     percentual_marketing: marketing,
                                     percentual_comercial: comercial
                                   });
@@ -534,8 +535,8 @@ export default function AdminMetas() {
                                   const parsed = parseInt(e.target.value, 10);
                                   const comercial = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
                                   const marketing = Math.max(0, Math.min(100, 100 - comercial));
-                                  setMetaEditada({ 
-                                    ...metaEditada, 
+                                  setMetaEditada({
+                                    ...metaEditada,
                                     percentual_comercial: comercial,
                                     percentual_marketing: marketing
                                   });
