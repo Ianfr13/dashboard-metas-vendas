@@ -6,6 +6,11 @@ import path from "path";
 import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 import { VitePWA } from "vite-plugin-pwa";
+// NOTA: Para ativar Bundle Analysis e Brotli Compression:
+// 1. Instalar: pnpm add -D rollup-plugin-visualizer vite-plugin-compression
+// 2. Descomentar as linhas abaixo
+import { visualizer } from 'rollup-plugin-visualizer';
+import viteCompression from 'vite-plugin-compression';
 
 
 const plugins = [
@@ -43,6 +48,27 @@ const plugins = [
     filename: "sw.ts",
     strategies: "injectManifest"
   }),
+  // Bundle Analysis - Gera relatório visual
+  visualizer({
+    open: false,
+    gzipSize: true,
+    brotliSize: true,
+    filename: 'dist/stats.html'
+  }),
+  // Brotli Compression
+  viteCompression({
+    algorithm: 'brotliCompress',
+    ext: '.br',
+    threshold: 1024,
+    deleteOriginFile: false
+  }),
+  // Gzip Compression
+  viteCompression({
+    algorithm: 'gzip',
+    ext: '.gz',
+    threshold: 1024,
+    deleteOriginFile: false
+  })
 ];
 
 export default defineConfig({
@@ -62,15 +88,40 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-slot', 'class-variance-authority', 'clsx', 'tailwind-merge'],
-          charts: ['recharts'],
-          icons: ['lucide-react'],
-          utils: ['date-fns'],
-          supabase: ['@supabase/supabase-js'],
-          query: ['@tanstack/react-query']
-        }
+        // Chunking dinâmico otimizado para melhor cache
+        manualChunks: (id) => {
+          // Vendor chunks (libs grandes que mudam pouco)
+          if (id.includes('node_modules')) {
+            // UI libs (Radix, etc - médio e estável)
+            if (id.includes('@radix-ui') || id.includes('class-variance-authority') ||
+              id.includes('clsx') || id.includes('tailwind-merge')) {
+              return 'vendor-ui';
+            }
+            // Charts (grande, muda pouco)
+            if (id.includes('recharts')) {
+              return 'vendor-charts';
+            }
+            // Icons (grande, muda pouco)
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            // Supabase + Query (data layer, médio)
+            if (id.includes('@supabase') || id.includes('@tanstack/react-query')) {
+              return 'vendor-data';
+            }
+            // React ecosystem (core, grande e estável) - CHECK AFTER OTHERS
+            if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router/') ||
+              id.includes('/scheduler/') || id.includes('/prop-types/')) {
+              return 'vendor-react';
+            }
+            // Resto dos node_modules
+            return 'vendor-misc';
+          }
+        },
+        // Garantir hashes nos nomes para cache imutável
+        chunkFileNames: 'assets/[name].[hash].js',
+        entryFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash].[ext]'
       }
     }
   },
