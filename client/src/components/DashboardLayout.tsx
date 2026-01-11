@@ -41,6 +41,7 @@ const adminMenuItems = [
   { icon: Sliders, label: "Configurações", path: "/admin/configuracoes" },
   { icon: LayoutDashboard, label: "Páginas (CMS)", path: "/admin/pages" },
   { icon: GitBranch, label: "Testes A/B", path: "/admin/ab-tests" },
+  { icon: Users, label: "Gerenciar Usuários", path: "/admin/users" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

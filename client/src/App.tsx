@@ -14,6 +14,7 @@ import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import AdminTraffic from "./pages/admin/Trafego";
 import ABTests from "./pages/admin/ABTests";
 import Pages from "./pages/admin/Pages";
+import UserRoles from "./pages/admin/UserRoles";
 import UrlGeneratorPage from "./pages/admin/UrlGeneratorPage";
 import Metricas from "./pages/Metricas";
 import Ranking from "./pages/Ranking";
@@ -93,6 +94,14 @@ function Router() {
         {() => (
           <ProtectedRoute>
             <Pages />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/admin/users">
+        {() => (
+          <ProtectedRoute>
+            <UserRoles />
           </ProtectedRoute>
         )}
       </Route>
