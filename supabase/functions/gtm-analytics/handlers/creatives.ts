@@ -78,10 +78,14 @@ export async function getCreativeRanking(
     const startDateYMD = startDate.split('T')[0];
     const endDateYMD = endDate.split('T')[0];
 
+    console.log(`[creatives.ts] Fetching insights for ${startDateYMD} to ${endDateYMD}`);
+
     // Fetch Facebook Ads spend data using pagination
     const insightsData = await fetchAllRows<any>('facebook_insights', 'ad_id, spend', (q) => {
         return q.gte('date', startDateYMD).lte('date', endDateYMD).not('ad_id', 'is', null);
     });
+
+    console.log(`[creatives.ts] Found ${insightsData.length} insight rows`);
 
     // Create spend map: ad_id -> total spend
     const spendMap = new Map<string, number>();
@@ -92,6 +96,11 @@ export async function getCreativeRanking(
             spendMap.set(adId, current + Number(insight.spend || 0));
         }
     });
+
+    console.log(`[creatives.ts] Spend map size: ${spendMap.size}`);
+    if (spendMap.size > 0) {
+        console.log(`[creatives.ts] Sample spend: ${Array.from(spendMap.entries()).slice(0, 3).map(e => `${e[0]}: ${e[1]}`).join(', ')}`);
+    }
 
 
     if (!events || events.length === 0) {
