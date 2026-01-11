@@ -36,7 +36,8 @@ interface Page {
 
 interface VTurbVideo {
     id: string;
-    delay: number;
+    delay: string | number;
+
 }
 
 interface VTurbConfig {
@@ -262,7 +263,7 @@ export default function Pages() {
             if (vturbConfig.enabled && vturbConfig.videos.some(v => v.id.trim())) {
                 const listPitchEntries = vturbConfig.videos
                     .filter(v => v.id.trim())
-                    .map(v => `'${v.id.trim()}': { delay: ${v.delay} }`)
+                    .map(v => `'${v.id.trim()}': { delay: ${parseInt(String(v.delay)) || 0} }`)
                     .join(',\n    ');
 
                 const vturbScript = `
@@ -613,13 +614,16 @@ document.addEventListener('player:ready', function(event) {
                                                                 }}
                                                             />
                                                             <Input
-                                                                type="number"
                                                                 className="w-24"
                                                                 placeholder="Delay (s)"
+                                                                type="text"
                                                                 value={video.delay}
                                                                 onChange={e => {
+                                                                    const val = e.target.value;
+                                                                    if (!/^\d*$/.test(val)) return; // Apenas números
+
                                                                     const newVideos = [...vturbConfig.videos];
-                                                                    newVideos[index].delay = parseInt(e.target.value) || 10;
+                                                                    newVideos[index].delay = val;
                                                                     setVturbConfig(prev => ({ ...prev, videos: newVideos }));
                                                                 }}
                                                             />
