@@ -250,6 +250,28 @@ export default {
             }
         }
 
+        // Rota de Admin para Despublicar/Deletar Página do KV
+        // DELETE /admin/pages?slug=xxx
+        if (url.pathname === '/admin/pages' && request.method === 'DELETE') {
+            const authHeader = request.headers.get('Authorization');
+            if (!authHeader) return cors(new Response('Missing Authorization header', { status: 401 }));
+
+            const userResponse = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+                headers: {
+                    'Authorization': authHeader,
+                    'apikey': env.SUPABASE_SERVICE_ROLE_KEY
+                }
+            });
+
+            if (!userResponse.ok) return cors(new Response('Unauthorized', { status: 401 }));
+
+            const slugToDelete = url.searchParams.get('slug');
+            if (!slugToDelete) return cors(new Response('Missing slug param', { status: 400 }));
+
+            await env.AB_CACHE.delete(`page:${slugToDelete}`);
+            return cors(new Response(`Page ${slugToDelete} unpublished`, { status: 200 }));
+        }
+
         // Extract slug from path (e.g., /x7k9m2p1 -> x7k9m2p1)
         const slug = url.pathname.slice(1).split('/')[0];
 

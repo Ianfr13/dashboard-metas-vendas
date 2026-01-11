@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity, Video } from "lucide-react";
+import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity, Video, Eye, CloudOff, CheckCircle2, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { generateTrackingUrl } from "@/lib/urlGenerator";
@@ -26,6 +27,8 @@ interface Page {
 
     tracking_params?: any;
     vturb_config?: VTurbConfig;
+    is_published?: boolean;
+    published_slug?: string;
     updated_at: string;
 }
 
@@ -82,6 +85,65 @@ export default function Pages() {
         if (error) console.error(error);
         if (data) setPages(data);
         setLoading(false);
+    }
+
+    async function handleDelete(page: Page) {
+        try {
+            // If published, remove from KV first
+            if (page.is_published && page.published_slug) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) {
+                    await fetch(`${WORKER_URL}/admin/pages?slug=${page.published_slug}`, {
+                        method: "DELETE",
+                        headers: { "Authorization": `Bearer ${session.access_token}` }
+                    });
+                }
+            }
+
+            // Delete from DB
+            const { error } = await supabase.from("pages").delete().eq("id", page.id);
+            if (error) throw error;
+
+            toast.success("Página excluída com sucesso");
+            setShowForm(false);
+            setEditingPage(null);
+            fetchPages();
+        } catch (e: any) {
+            toast.error("Erro ao excluir: " + e.message);
+        }
+    }
+
+    async function handleUnpublish() {
+        if (!editingPage?.id) return;
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) return toast.error("Sessão expirada");
+
+            const slugToRemove = editingPage.published_slug || editingPage.slug;
+
+            // Remove from KV
+            const response = await fetch(`${WORKER_URL}/admin/pages?slug=${slugToRemove}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${session.access_token}` }
+            });
+
+            if (!response.ok) {
+                throw new Error(await response.text());
+            }
+
+            // Update DB
+            await supabase.from("pages").update({
+                is_published: false,
+                published_slug: null
+            }).eq("id", editingPage.id);
+
+            setEditingPage(prev => prev ? { ...prev, is_published: false, published_slug: undefined } : null);
+            toast.success("Página despublicada");
+            fetchPages();
+        } catch (e: any) {
+            toast.error("Erro ao despublicar: " + e.message);
+        }
     }
 
     async function handleSave() {
@@ -203,6 +265,13 @@ document.addEventListener('player:ready', function(event) {
                 finalHtml = finalHtml.replace("</body>", `${vturbScript}\n</body>`);
             }
 
+            // Smart Republish: If slug changed, delete old from KV
+            if (editingPage.published_slug && editingPage.published_slug !== editingPage.slug) {
+                await fetch(`${WORKER_URL}/admin/pages?slug=${editingPage.published_slug}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${session.access_token}` }
+                });
+            }
 
             const response = await fetch(`${WORKER_URL}/admin/pages`, {
                 method: "POST",
@@ -219,7 +288,15 @@ document.addEventListener('player:ready', function(event) {
             toast.dismiss(toastId);
 
             if (response.ok) {
+                // Update DB with published status
+                await supabase.from("pages").update({
+                    is_published: true,
+                    published_slug: editingPage.slug
+                }).eq("id", editingPage.id);
+
+                setEditingPage(prev => prev ? { ...prev, is_published: true, published_slug: editingPage.slug } : null);
                 toast.success("Sucesso! Página publicada no Edge. 🚀");
+                fetchPages();
             } else {
                 const text = await response.text();
                 toast.error(`Falha no deploy: ${text}`);
@@ -282,13 +359,58 @@ document.addEventListener('player:ready', function(event) {
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <Button variant="ghost" onClick={() => { setShowForm(false); setEditingPage(null); }}>← Voltar</Button>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 items-center">
+                            {/* Status Indicator */}
+                            {editingPage?.is_published ? (
+                                <span className="flex items-center gap-1 text-sm text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                                    <CheckCircle2 className="h-4 w-4" /> Publicado
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1 text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                                    <AlertCircle className="h-4 w-4" /> Rascunho
+                                </span>
+                            )}
+
                             <Button variant="outline" onClick={handleSave}>
                                 <Save className="h-4 w-4 mr-2" /> Salvar (Backup)
                             </Button>
+
+                            {/* Unpublish Button (only if published) */}
+                            {editingPage?.is_published && (
+                                <Button variant="outline" onClick={handleUnpublish} className="text-orange-600 hover:text-orange-700">
+                                    <CloudOff className="h-4 w-4 mr-2" /> Despublicar
+                                </Button>
+                            )}
+
                             <Button onClick={handleDeploy} className="bg-green-600 hover:bg-green-700">
                                 <Rocket className="h-4 w-4 mr-2" /> Publicar (Live)
                             </Button>
+
+                            {/* Delete Button with Confirmation */}
+                            {editingPage?.id && editingPage.id > 0 && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="outline" className="text-destructive hover:text-destructive">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Excluir Página?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Esta ação não pode ser desfeita. A página "{editingPage.name}" será removida permanentemente.
+                                                {editingPage.is_published && " Ela também será removida do servidor (Edge)."}
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDelete(editingPage)} className="bg-destructive hover:bg-destructive/90">
+                                                Excluir
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
 
                             <Dialog>
                                 <DialogTrigger asChild>
@@ -399,6 +521,7 @@ document.addEventListener('player:ready', function(event) {
                                             <TabsTrigger value="html">Principal (HTML)</TabsTrigger>
                                             <TabsTrigger value="scripts">Scripts (Injeção)</TabsTrigger>
                                             <TabsTrigger value="vturb"><Video className="h-4 w-4 mr-1" /> VTurb Delay</TabsTrigger>
+                                            <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1" /> Preview</TabsTrigger>
                                         </TabsList>
 
                                         <TabsContent value="html">
@@ -506,6 +629,27 @@ document.addEventListener('player:ready', function(event) {
                                                     </Button>
                                                 </div>
                                             )}
+                                        </TabsContent>
+
+                                        <TabsContent value="preview" className="space-y-4">
+                                            <div className="border rounded-lg overflow-hidden bg-white">
+                                                <div className="bg-muted px-4 py-2 flex items-center gap-2 border-b">
+                                                    <Eye className="h-4 w-4" />
+                                                    <span className="text-sm font-medium">Preview (Sem Cache)</span>
+                                                </div>
+                                                {editingPage?.html_content ? (
+                                                    <iframe
+                                                        srcDoc={editingPage.html_content}
+                                                        sandbox="allow-scripts allow-same-origin"
+                                                        className="w-full h-[600px] border-0"
+                                                        title="Page Preview"
+                                                    />
+                                                ) : (
+                                                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                                                        Cole o HTML na aba Principal para visualizar
+                                                    </div>
+                                                )}
+                                            </div>
                                         </TabsContent>
                                     </Tabs>
                                 </CardContent>
@@ -627,7 +771,18 @@ document.addEventListener('player:ready', function(event) {
                             setShowForm(true);
                         }}>
                             <CardHeader className="pb-3">
-                                <CardTitle className="text-lg">{page.name}</CardTitle>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-lg">{page.name}</CardTitle>
+                                    {page.is_published ? (
+                                        <span className="flex items-center gap-1 text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                                            <CheckCircle2 className="h-3 w-3" /> Publicado
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                                            <AlertCircle className="h-3 w-3" /> Rascunho
+                                        </span>
+                                    )}
+                                </div>
                                 <code className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded w-fit">/{page.slug}</code>
                             </CardHeader>
                             <CardContent>

@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Play, Pause, Zap } from "lucide-react";
+import { Plus, Trash2, Copy, Play, Pause, Zap, FileText } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -25,16 +26,33 @@ interface ABTest {
 
 const WORKER_URL = "https://ab.douravita.com.br";
 
+interface CMSPage {
+    id: number;
+    name: string;
+    slug: string;
+    is_published?: boolean;
+}
+
 export default function ABTests() {
     const [tests, setTests] = useState<ABTest[]>([]);
     const [loading, setLoading] = useState(true);
     const [newTest, setNewTest] = useState({ name: "", variants: [{ name: "A", url: "", weight: 50, visits: 0 }, { name: "B", url: "", weight: 50, visits: 0 }] });
     const [showForm, setShowForm] = useState(false);
+    const [cmsPages, setCmsPages] = useState<CMSPage[]>([]);
 
-    // Fetch tests
     useEffect(() => {
         fetchTests();
+        fetchCmsPages();
     }, []);
+
+    async function fetchCmsPages() {
+        const { data } = await supabase
+            .from("pages")
+            .select("id, name, slug, is_published")
+            .eq("is_published", true)
+            .order("name");
+        if (data) setCmsPages(data);
+    }
 
     async function fetchTests() {
         const { data: testsData } = await supabase.from("ab_tests").select("*").order("created_at", { ascending: false });
@@ -163,6 +181,31 @@ export default function ABTests() {
                                             setNewTest({ ...newTest, variants });
                                         }}
                                     />
+                                    <Select
+                                        value={cmsPages.some(p => `${WORKER_URL}/${p.slug}` === v.url) ? v.url : "custom"}
+                                        onValueChange={(value) => {
+                                            const variants = [...newTest.variants];
+                                            variants[i].url = value === "custom" ? "" : value;
+                                            setNewTest({ ...newTest, variants });
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Selecionar..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="custom">
+                                                <span className="flex items-center gap-2">URL Externa</span>
+                                            </SelectItem>
+                                            {cmsPages.map(page => (
+                                                <SelectItem key={page.id} value={`${WORKER_URL}/${page.slug}`}>
+                                                    <span className="flex items-center gap-2">
+                                                        <FileText className="h-3 w-3" />
+                                                        {page.name}
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <Input
                                         className="flex-1"
                                         placeholder="URL de destino"

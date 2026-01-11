@@ -40,6 +40,8 @@ const adminMenuItems = [
   { icon: Package, label: "Tráfego Pago", path: "/admin/trafego" },
   { icon: Sliders, label: "Configurações", path: "/admin/configuracoes" },
   { icon: LinkIcon, label: "Gerador de URL", path: "/admin/url-generator" },
+  { icon: LayoutDashboard, label: "Páginas (CMS)", path: "/admin/pages" },
+  { icon: GitBranch, label: "Testes A/B", path: "/admin/ab-tests" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
