@@ -353,7 +353,12 @@ export default {
         // Increment visit count asynchronously (don't block redirect)
         ctx.waitUntil(incrementVisitCount(selectedVariant.id, env));
 
-        // Return 302 redirect (instant, invisible to trackers)
-        return Response.redirect(destinationUrl, 302);
+        // Return 302 redirect with CORS headers
+        return cors(new Response(null, {
+            status: 302,
+            headers: {
+                'Location': destinationUrl
+            }
+        }));
     }
 };
