@@ -31,6 +31,22 @@ interface SubMeta {
 }
 
 export default function AdminMetas() {
+  const { hasPermission, loading: roleLoading } = useUserRole();
+
+  if (roleLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!hasPermission('metas', 'read')) {
+    return <AccessDenied feature="Metas" />;
+  }
+
   const [metas, setMetas] = useState<Meta[]>([]);
   const [subMetas, setSubMetas] = useState<SubMeta[]>([]);
   const [loading, setLoading] = useState(true);

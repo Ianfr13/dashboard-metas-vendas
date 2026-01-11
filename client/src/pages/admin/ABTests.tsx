@@ -39,6 +39,21 @@ interface CMSPage {
 
 export default function ABTests() {
     const { hasPermission, loading: roleLoading } = useUserRole();
+
+    if (roleLoading) {
+        return (
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    if (!hasPermission('ab_tests', 'read')) {
+        return <AccessDenied feature="Testes A/B" />;
+    }
+
     const [tests, setTests] = useState<ABTest[]>([]);
     const [loading, setLoading] = useState(true);
     const [newTest, setNewTest] = useState({ name: "", variants: [{ name: "A", url: "", weight: 50, visits: 0 }, { name: "B", url: "", weight: 50, visits: 0 }] });

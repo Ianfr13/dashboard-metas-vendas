@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity, Video, Eye, CloudOff, CheckCircle2, AlertCircle, Smartphone, Tablet, Monitor } from "lucide-react";
+import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity, Video, Eye, CloudOff, CheckCircle2, AlertCircle, Smartphone, Tablet, Monitor, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
@@ -64,6 +64,21 @@ const DEFAULT_GEN_PARAMS = {
 
 export default function Pages() {
     const { hasPermission, loading: roleLoading } = useUserRole();
+
+    if (roleLoading) {
+        return (
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    if (!hasPermission('pages', 'read')) {
+        return <AccessDenied feature="Páginas (CMS)" />;
+    }
+
     const [pages, setPages] = useState<Page[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingPage, setEditingPage] = useState<Page | null>(null);

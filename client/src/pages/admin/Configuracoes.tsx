@@ -7,8 +7,20 @@ import { Settings, Database, Shield, Zap } from "lucide-react";
 export default function AdminConfiguracoes() {
   const { hasPermission, loading: roleLoading } = useUserRole();
 
-  if (roleLoading) return <DashboardLayout><p className="p-8">Carregando...</p></DashboardLayout>;
-  if (!hasPermission('configuracoes', 'read')) return <AccessDenied message="Você não tem permissão para visualizar Configurações." requiredRole="permissão 'configuracoes.read'" />;
+  if (roleLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          {/* Loader2 needs import if not present, but usually DashboardLayout handles loading or we import it */}
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!hasPermission('configuracoes', 'read')) {
+    return <AccessDenied feature="Configurações" />;
+  }
 
   return (
     <DashboardLayout>
