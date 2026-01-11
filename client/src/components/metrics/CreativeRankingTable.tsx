@@ -21,8 +21,10 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
     const sortedData = [...filteredData].sort((a, b) => {
         if (!sortConfig) return 0;
         const { key, direction } = sortConfig;
-        if (a[key] < b[key]) return direction === 'asc' ? -1 : 1;
-        if (a[key] > b[key]) return direction === 'asc' ? 1 : -1;
+        const aVal = a[key] ?? 0;
+        const bVal = b[key] ?? 0;
+        if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return direction === 'asc' ? 1 : -1;
         return 0;
     });
 
@@ -105,6 +107,21 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                                 <TableHead onClick={() => requestSort('revenue')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
                                     <div className="flex items-center justify-end">Receita {getSortIcon('revenue')}</div>
                                 </TableHead>
+                                <TableHead onClick={() => requestSort('spend')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Gasto {getSortIcon('spend')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('cpa')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">CPA {getSortIcon('cpa')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('cpl')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">CPL {getSortIcon('cpl')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('costPerCheckout')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Custo/IC {getSortIcon('costPerCheckout')}</div>
+                                </TableHead>
+                                <TableHead onClick={() => requestSort('costPerAddToCart')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Custo/ATC {getSortIcon('costPerAddToCart')}</div>
+                                </TableHead>
                                 <TableHead onClick={() => requestSort('conversionRate')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
                                     <div className="flex items-center justify-end">Conv. Venda {getSortIcon('conversionRate')}</div>
                                 </TableHead>
@@ -167,6 +184,29 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                                     <TableCell className="text-right font-semibold text-green-600">
                                         {formatCurrency(item.revenue)}
                                     </TableCell>
+                                    <TableCell className="text-right font-semibold text-orange-600">
+                                        {formatCurrency(item.spend || 0)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Badge variant={(item.cpa || 0) > 0 && (item.cpa || 0) < 100 ? "default" : (item.cpa || 0) === 0 ? "secondary" : "destructive"}>
+                                            {formatCurrency(item.cpa || 0)}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Badge variant={(item.cpl || 0) > 0 && (item.cpl || 0) < 20 ? "default" : (item.cpl || 0) === 0 ? "secondary" : "destructive"}>
+                                            {formatCurrency(item.cpl || 0)}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Badge variant={(item.costPerCheckout || 0) > 0 && (item.costPerCheckout || 0) < 50 ? "default" : (item.costPerCheckout || 0) === 0 ? "secondary" : "destructive"}>
+                                            {formatCurrency(item.costPerCheckout || 0)}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Badge variant={(item.costPerAddToCart || 0) > 0 && (item.costPerAddToCart || 0) < 30 ? "default" : (item.costPerAddToCart || 0) === 0 ? "secondary" : "destructive"}>
+                                            {formatCurrency(item.costPerAddToCart || 0)}
+                                        </Badge>
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <Badge variant={(item.conversionRate || 0) > 1 ? "default" : "secondary"}>
                                             {(item.conversionRate || 0).toFixed(2)}%
@@ -177,7 +217,7 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
 
                             {sortedData.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                                         Nenhum dado de criativo registrado no período.
                                     </TableCell>
                                 </TableRow>

@@ -15,6 +15,11 @@ export interface CreativeMetrics {
     revenue: number
     conversionRate: number
     bestPlacement: string
+    spend: number
+    cpa: number
+    cpl: number
+    costPerCheckout: number
+    costPerAddToCart: number
 }
 
 export async function getCreativeRanking(
@@ -68,6 +73,24 @@ export async function getCreativeRanking(
     // Fetch Facebook Ads links
     const { data: adsData } = await supabase.from('facebook_ads').select('id, preview_shareable_link');
     const adLinkMap = new Map(adsData?.map((a: any) => [a.id, a.preview_shareable_link]) || []);
+
+    // Fetch Facebook Ads spend data
+    const { data: insightsData } = await supabase
+        .from('facebook_insights')
+        .select('ad_id, spend')
+        .gte('date', startDate)
+        .lte('date', end);
+
+    // Create spend map: ad_id -> total spend
+    const spendMap = new Map<string, number>();
+    insightsData?.forEach((insight: any) => {
+        const adId = insight.ad_id;
+        if (adId) {
+            const current = spendMap.get(adId) || 0;
+            spendMap.set(adId, current + Number(insight.spend || 0));
+        }
+    });
+
 
     if (!events || events.length === 0) {
         return [];
@@ -123,6 +146,11 @@ export async function getCreativeRanking(
                 revenue: 0,
                 conversionRate: 0,
                 bestPlacement: '',
+                spend: 0,
+                cpa: 0,
+                cpl: 0,
+                costPerCheckout: 0,
+                costPerAddToCart: 0,
                 placements: new Map()
             })
         }
@@ -178,6 +206,15 @@ export async function getCreativeRanking(
                 bestPlacement = sortedPlacements[0][0] // The key (medium)
             }
 
+            // Get spend from spendMap
+            const spend = spendMap.get(m.creativeId) || 0;
+
+            // Calculate cost metrics
+            const cpa = m.sales > 0 ? spend / m.sales : 0;
+            const cpl = m.leads > 0 ? spend / m.leads : 0;
+            const costPerCheckout = m.checkouts > 0 ? spend / m.checkouts : 0;
+            const costPerAddToCart = m.addToCart > 0 ? spend / m.addToCart : 0;
+
             // Remove internal 'placements' map before returning
             const { placements, ...rest } = m
             return {
@@ -187,7 +224,12 @@ export async function getCreativeRanking(
                 conversionRate: m.pageViews > 0
                     ? Math.round((m.sales / m.pageViews) * 100 * 100) / 100
                     : 0,
-                preview_shareable_link: adLinkMap.get(m.creativeId)
+                preview_shareable_link: adLinkMap.get(m.creativeId),
+                spend: Math.round(spend * 100) / 100,
+                cpa: Math.round(cpa * 100) / 100,
+                cpl: Math.round(cpl * 100) / 100,
+                costPerCheckout: Math.round(costPerCheckout * 100) / 100,
+                costPerAddToCart: Math.round(costPerAddToCart * 100) / 100
             }
         })
         // Sorting by weight: Purchase > IC > AddToCart > Wishlist > PageView

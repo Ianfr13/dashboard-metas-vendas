@@ -377,6 +377,11 @@ export interface CreativeMetrics {
   conversionRate: number;
   bestPlacement: string;
   preview_shareable_link?: string;
+  spend: number;
+  cpa: number;
+  cpl: number;
+  costPerCheckout: number;
+  costPerAddToCart: number;
 }
 
 export interface PlacementMetrics {
