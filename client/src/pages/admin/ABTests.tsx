@@ -60,10 +60,24 @@ export default function ABTests() {
     const [showForm, setShowForm] = useState(false);
     const [cmsPages, setCmsPages] = useState<CMSPage[]>([]);
     const [speedTests, setSpeedTests] = useState<Record<number, { loading: boolean; speed?: number; cached?: boolean }>>({});
+    const [speedStats, setSpeedStats] = useState<Record<string, any>>({});
 
     useEffect(() => {
         fetchTests();
         fetchCmsPages();
+
+        // Speed Poll
+        const fetchSpeed = async () => {
+            try {
+                const res = await fetch(`${WORKER_URL}/admin/speed-stats`);
+                if (res.ok) setSpeedStats(await res.json());
+            } catch (e) {
+                console.error("Failed to fetch speed stats", e);
+            }
+        };
+        fetchSpeed();
+        const interval = setInterval(fetchSpeed, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     async function fetchCmsPages() {
@@ -346,8 +360,34 @@ export default function ABTests() {
                                 ))}
                             </div>
 
-                            {/* Speed/Cache Meter */}
-                            <div className="mt-4 pt-4 border-t flex items-center gap-4">
+                        </div>
+
+                        {/* Speed/Cache Meter */}
+                        <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-6">
+                            {/* Real-Time Badge */}
+                            <div className="flex items-center gap-3 pr-6 border-r">
+                                <div className="text-sm">
+                                    <div className="font-semibold flex items-center gap-2">
+                                        <Gauge className="h-4 w-4 text-purple-500" />
+                                        Monitoramento Real-Time (Edge)
+                                    </div>
+                                    {speedStats[test.slug] ? (
+                                        <div className="mt-1 flex items-center gap-2">
+                                            <span className={`text-xl font-bold ${speedStats[test.slug].last_latency < 200 ? 'text-green-600' : 'text-yellow-600'}`}>
+                                                {speedStats[test.slug].last_latency}ms
+                                            </span>
+                                            <div className="text-xs text-muted-foreground flex flex-col leading-tight">
+                                                <span>Live ({speedStats[test.slug].count} checkins)</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm text-muted-foreground mt-1">Aguardando tráfego...</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Manual Test Controls */}
+                            <div className="flex items-center gap-4">
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -357,9 +397,9 @@ export default function ABTests() {
                                     {speedTests[test.id]?.loading ? (
                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                     ) : (
-                                        <Gauge className="h-4 w-4 mr-2" />
+                                        <Zap className="h-4 w-4 mr-2" />
                                     )}
-                                    Testar Velocidade
+                                    Testar Agora (Cache Check)
                                 </Button>
 
                                 {speedTests[test.id]?.speed !== undefined && (
@@ -376,14 +416,15 @@ export default function ABTests() {
                                     </div>
                                 )}
                             </div>
-                        </CardContent>
+                        </div>
+                    </CardContent>
                     </Card>
                 ))}
 
-                {tests.length === 0 && !showForm && (
-                    <p className="text-center text-muted-foreground py-8">Nenhum teste criado ainda</p>
-                )}
-            </div>
-        </DashboardLayout>
+            {tests.length === 0 && !showForm && (
+                <p className="text-center text-muted-foreground py-8">Nenhum teste criado ainda</p>
+            )}
+        </div>
+        </DashboardLayout >
     );
 }

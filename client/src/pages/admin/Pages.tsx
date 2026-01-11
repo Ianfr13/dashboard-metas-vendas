@@ -88,6 +88,23 @@ export default function Pages() {
     // Generator State
     const [genParams, setGenParams] = useState(DEFAULT_GEN_PARAMS);
 
+    // Speed Stats State
+    const [speedStats, setSpeedStats] = useState<Record<string, any>>({});
+
+    useEffect(() => {
+        const fetchSpeed = async () => {
+            try {
+                const res = await fetch(`${WORKER_URL}/admin/speed-stats`);
+                if (res.ok) setSpeedStats(await res.json());
+            } catch (e) {
+                console.error("Failed to fetch speed stats", e);
+            }
+        };
+        fetchSpeed();
+        const interval = setInterval(fetchSpeed, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
     // VTurb Config State
     const [vturbConfig, setVturbConfig] = useState<VTurbConfig>(DEFAULT_VTURB_CONFIG);
 
@@ -849,9 +866,29 @@ document.addEventListener('player:ready', function(event) {
                                 <code className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded w-fit">/{page.slug}</code>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                    <RefreshCw className="h-3 w-3" />
-                                    Atualizado em {new Date(page.updated_at).toLocaleDateString()}
+                                <div className="space-y-3">
+                                    {/* Speed Badge */}
+                                    {speedStats[page.slug] ? (
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <Gauge className={`h-4 w-4 ${speedStats[page.slug].last_latency < 200 ? 'text-green-500' : speedStats[page.slug].last_latency < 500 ? 'text-yellow-500' : 'text-red-500'}`} />
+                                            <span className="font-bold">
+                                                {speedStats[page.slug].last_latency}ms
+                                            </span>
+                                            <span className="text-muted-foreground text-[10px] uppercase tracking-wider">
+                                                (Real-Time)
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground opacity-50">
+                                            <Gauge className="h-4 w-4" />
+                                            <span>Sem dados recentes</span>
+                                        </div>
+                                    )}
+
+                                    <div className="text-xs text-muted-foreground flex items-center gap-2 border-t pt-2">
+                                        <RefreshCw className="h-3 w-3" />
+                                        Atualizado em {new Date(page.updated_at).toLocaleDateString()}
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
