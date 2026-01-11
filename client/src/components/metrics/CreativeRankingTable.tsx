@@ -13,6 +13,11 @@ interface CreativeRankingTableProps {
 type SortKey = keyof CreativeMetrics;
 
 export default function CreativeRankingTable({ data }: CreativeRankingTableProps) {
+    // Defensive check
+    if (!data || !Array.isArray(data)) {
+        return <div className="p-4 text-center text-muted-foreground">Carregando dados...</div>;
+    }
+
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
     const [selectedType, setSelectedType] = useState<'compra' | 'leads'>('compra');
 
@@ -46,11 +51,15 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
     };
 
     const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-            minimumFractionDigits: 0,
-        }).format(value);
+        if (value === undefined || value === null || isNaN(value)) return 'R$ 0,00';
+        try {
+            return new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+            }).format(value);
+        } catch (e) {
+            return 'R$ 0,00';
+        }
     };
 
     const formatNumber = (value: number) => {
