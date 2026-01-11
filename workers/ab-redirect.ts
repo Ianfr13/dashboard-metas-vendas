@@ -270,7 +270,10 @@ export default {
             );
 
             return new Response(fixedHtml, {
-                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+                headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'public, max-age=0, must-revalidate' // Force browser to check with Edge (KV is instant)
+                }
             });
         }
 

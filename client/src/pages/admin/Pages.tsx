@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity } from "lucide-react";
+import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity, Video } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { generateTrackingUrl } from "@/lib/urlGenerator";
@@ -24,8 +25,24 @@ interface Page {
     footer_code?: string;
 
     tracking_params?: any;
+    vturb_config?: VTurbConfig;
     updated_at: string;
 }
+
+interface VTurbVideo {
+    id: string;
+    delay: number;
+}
+
+interface VTurbConfig {
+    enabled: boolean;
+    videos: VTurbVideo[];
+}
+
+const DEFAULT_VTURB_CONFIG: VTurbConfig = {
+    enabled: false,
+    videos: [{ id: '', delay: 10 }]
+};
 
 const DEFAULT_GEN_PARAMS = {
     fid: "",
@@ -47,10 +64,10 @@ export default function Pages() {
     const [showForm, setShowForm] = useState(false);
 
     // Generator State
-
-
-    // Generator State
     const [genParams, setGenParams] = useState(DEFAULT_GEN_PARAMS);
+
+    // VTurb Config State
+    const [vturbConfig, setVturbConfig] = useState<VTurbConfig>(DEFAULT_VTURB_CONFIG);
 
     useEffect(() => {
         fetchPages();
@@ -86,7 +103,8 @@ export default function Pages() {
                         body_code: editingPage.body_code,
                         footer_code: editingPage.footer_code,
 
-                        tracking_params: genParams, // Save current genParams
+                        tracking_params: genParams,
+                        vturb_config: vturbConfig,
                         updated_at: new Date().toISOString()
                     })
                     .eq("id", editingPage.id)
@@ -102,7 +120,9 @@ export default function Pages() {
                         html_content: editingPage.html_content,
                         head_code: editingPage.head_code,
                         body_code: editingPage.body_code,
-                        footer_code: editingPage.footer_code
+                        footer_code: editingPage.footer_code,
+                        tracking_params: genParams,
+                        vturb_config: vturbConfig
                     })
                     .select()
                     .single();
@@ -153,6 +173,34 @@ export default function Pages() {
             }
             if (editingPage.footer_code) {
                 finalHtml = finalHtml.replace("</body>", `${editingPage.footer_code}\n</body>`);
+            }
+
+            // VTurb Delay Script Injection
+            if (vturbConfig.enabled && vturbConfig.videos.some(v => v.id.trim())) {
+                const listPitchEntries = vturbConfig.videos
+                    .filter(v => v.id.trim())
+                    .map(v => `'${v.id.trim()}': { delay: ${v.delay} }`)
+                    .join(',\n    ');
+
+                const vturbScript = `
+<script>
+var listPitch = {
+    ${listPitchEntries}
+};
+var alreadyInitialized = false;
+document.addEventListener('player:ready', function(event) {
+    if (alreadyInitialized) return;
+    var detail = event.detail || {};
+    var config = detail.config || {};
+    var player = detail.player || document.querySelector('vturb-smartplayer');
+    var playerId = config.id;
+    var pitchConfig = listPitch[playerId];
+    if (!playerId || !pitchConfig) return;
+    alreadyInitialized = true;
+    player.displayHiddenElements(pitchConfig.delay, ['.esconder'], { persist: true });
+});
+</script>`;
+                finalHtml = finalHtml.replace("</body>", `${vturbScript}\n</body>`);
             }
 
 
@@ -350,6 +398,7 @@ export default function Pages() {
                                         <TabsList className="mb-4">
                                             <TabsTrigger value="html">Principal (HTML)</TabsTrigger>
                                             <TabsTrigger value="scripts">Scripts (Injeção)</TabsTrigger>
+                                            <TabsTrigger value="vturb"><Video className="h-4 w-4 mr-1" /> VTurb Delay</TabsTrigger>
                                         </TabsList>
 
                                         <TabsContent value="html">
@@ -390,6 +439,73 @@ export default function Pages() {
                                                     placeholder="<script>... (Scripts de fechamento)</script>"
                                                 />
                                             </div>
+                                        </TabsContent>
+
+                                        <TabsContent value="vturb" className="space-y-4">
+                                            <div className="flex items-center justify-between p-4 border rounded-lg">
+                                                <div>
+                                                    <Label className="text-base font-medium">Ativar Script de Delay</Label>
+                                                    <p className="text-sm text-muted-foreground">Injeta automaticamente o script de delay do VTurb</p>
+                                                </div>
+                                                <Switch
+                                                    checked={vturbConfig.enabled}
+                                                    onCheckedChange={(checked) => setVturbConfig(prev => ({ ...prev, enabled: checked }))}
+                                                />
+                                            </div>
+
+                                            {vturbConfig.enabled && (
+                                                <div className="space-y-3">
+                                                    <Label>Vídeos Configurados</Label>
+                                                    {vturbConfig.videos.map((video, index) => (
+                                                        <div key={index} className="flex items-center gap-2">
+                                                            <Input
+                                                                className="flex-1 font-mono text-xs"
+                                                                placeholder="ID do Vídeo (ex: abc123xyz)"
+                                                                value={video.id}
+                                                                onChange={e => {
+                                                                    const newVideos = [...vturbConfig.videos];
+                                                                    newVideos[index].id = e.target.value;
+                                                                    setVturbConfig(prev => ({ ...prev, videos: newVideos }));
+                                                                }}
+                                                            />
+                                                            <Input
+                                                                type="number"
+                                                                className="w-24"
+                                                                placeholder="Delay (s)"
+                                                                value={video.delay}
+                                                                onChange={e => {
+                                                                    const newVideos = [...vturbConfig.videos];
+                                                                    newVideos[index].delay = parseInt(e.target.value) || 10;
+                                                                    setVturbConfig(prev => ({ ...prev, videos: newVideos }));
+                                                                }}
+                                                            />
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => {
+                                                                    if (vturbConfig.videos.length > 1) {
+                                                                        const newVideos = vturbConfig.videos.filter((_, i) => i !== index);
+                                                                        setVturbConfig(prev => ({ ...prev, videos: newVideos }));
+                                                                    }
+                                                                }}
+                                                                disabled={vturbConfig.videos.length <= 1}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setVturbConfig(prev => ({
+                                                            ...prev,
+                                                            videos: [...prev.videos, { id: '', delay: 10 }]
+                                                        }))}
+                                                    >
+                                                        <Plus className="h-4 w-4 mr-1" /> Adicionar Vídeo
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </TabsContent>
                                     </Tabs>
                                 </CardContent>
@@ -487,6 +603,7 @@ export default function Pages() {
                             updated_at: ""
                         });
                         setGenParams(DEFAULT_GEN_PARAMS);
+                        setVturbConfig(DEFAULT_VTURB_CONFIG);
                         setShowForm(true);
                     }}>
                         <Plus className="h-4 w-4 mr-2" /> Nova Página
@@ -501,6 +618,11 @@ export default function Pages() {
                                 setGenParams({ ...DEFAULT_GEN_PARAMS, ...page.tracking_params });
                             } else {
                                 setGenParams(DEFAULT_GEN_PARAMS);
+                            }
+                            if (page.vturb_config) {
+                                setVturbConfig({ ...DEFAULT_VTURB_CONFIG, ...page.vturb_config });
+                            } else {
+                                setVturbConfig(DEFAULT_VTURB_CONFIG);
                             }
                             setShowForm(true);
                         }}>
