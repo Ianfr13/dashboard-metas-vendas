@@ -166,7 +166,7 @@ function DashboardLayoutContent({
   onRefresh,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
-  const { canAccessAdmin, hasPermission, isMaster } = useUserRole();
+  const { canAccessAdmin, hasPermission, isMaster, userRole } = useUserRole();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -309,6 +309,11 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3">
+            {/* DEBUG INFO - REMOVE LATER */}
+            <div className="text-[10px] text-muted-foreground break-all p-1 border rounded bg-slate-100 dark:bg-slate-800 mb-2">
+              R: {userRole?.role || 'null'} | M: {isMaster ? 'Y' : 'N'} | A: {canAccessAdmin() ? 'Y' : 'N'}
+            </div>
+            {/* END DEBUG INFO */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
