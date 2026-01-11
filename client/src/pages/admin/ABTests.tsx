@@ -360,71 +360,72 @@ export default function ABTests() {
                                 ))}
                             </div>
 
-                        </div>
-
-                        {/* Speed/Cache Meter */}
-                        <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-6">
-                            {/* Real-Time Badge */}
-                            <div className="flex items-center gap-3 pr-6 border-r">
-                                <div className="text-sm">
-                                    <div className="font-semibold flex items-center gap-2">
-                                        <Gauge className="h-4 w-4 text-purple-500" />
-                                        Monitoramento Real-Time (Edge)
+                            {/* Speed/Cache Meter */}
+                            <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-6">
+                                {/* Real-Time Badge */}
+                                <div className="flex items-center gap-3 pr-6 border-r">
+                                    <div className="text-sm">
+                                        <div className="font-semibold flex items-center gap-2">
+                                            <Gauge className="h-4 w-4 text-purple-500" />
+                                            Monitoramento Real-Time (Edge)
+                                        </div>
+                                        {speedStats[test.slug] ? (
+                                            <div className="mt-1 flex items-center gap-2">
+                                                <span className={`text-xl font-bold ${speedStats[test.slug].last_latency < 200 ? 'text-green-600' : 'text-yellow-600'}`}>
+                                                    {speedStats[test.slug].last_latency}ms
+                                                </span>
+                                                <div className="text-xs text-muted-foreground flex flex-col leading-tight">
+                                                    <span>Live ({speedStats[test.slug].count} checkins)</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-muted-foreground mt-1">Aguardando tráfego...</div>
+                                        )}
                                     </div>
-                                    {speedStats[test.slug] ? (
-                                        <div className="mt-1 flex items-center gap-2">
-                                            <span className={`text-xl font-bold ${speedStats[test.slug].last_latency < 200 ? 'text-green-600' : 'text-yellow-600'}`}>
-                                                {speedStats[test.slug].last_latency}ms
-                                            </span>
-                                            <div className="text-xs text-muted-foreground flex flex-col leading-tight">
-                                                <span>Live ({speedStats[test.slug].count} checkins)</span>
+                                </div>
+
+                                {/* Manual Test Controls */}
+                                <div className="flex items-center gap-4">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => testSpeed(test)}
+                                        disabled={speedTests[test.id]?.loading}
+                                    >
+                                        {speedTests[test.id]?.loading ? (
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <Zap className="h-4 w-4 mr-2" />
+                                        )}
+                                        Testar Agora (Cache Check)
+                                    </Button>
+
+                                    {speedTests[test.id]?.speed !== undefined && (
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-sm">
+                                                <span className="font-medium">{speedTests[test.id]?.speed}ms</span>
+                                                <span className="text-muted-foreground ml-1">
+                                                    {(speedTests[test.id]?.speed || 0) < 100 ? '⚡ Rápido' : (speedTests[test.id]?.speed || 0) < 500 ? '✓ OK' : '⚠️ Lento'}
+                                                </span>
+                                            </div>
+                                            <div className={`text-xs px-2 py-0.5 rounded-full ${speedTests[test.id]?.cached ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                {speedTests[test.id]?.cached ? 'Cache HIT' : 'Cache MISS'}
                                             </div>
                                         </div>
-                                    ) : (
-                                        <div className="text-sm text-muted-foreground mt-1">Aguardando tráfego...</div>
                                     )}
                                 </div>
                             </div>
+                        </CardContent>
+                    </Card >
+                ))
+                }
 
-                            {/* Manual Test Controls */}
-                            <div className="flex items-center gap-4">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => testSpeed(test)}
-                                    disabled={speedTests[test.id]?.loading}
-                                >
-                                    {speedTests[test.id]?.loading ? (
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    ) : (
-                                        <Zap className="h-4 w-4 mr-2" />
-                                    )}
-                                    Testar Agora (Cache Check)
-                                </Button>
-
-                                {speedTests[test.id]?.speed !== undefined && (
-                                    <div className="flex items-center gap-3">
-                                        <div className="text-sm">
-                                            <span className="font-medium">{speedTests[test.id]?.speed}ms</span>
-                                            <span className="text-muted-foreground ml-1">
-                                                {(speedTests[test.id]?.speed || 0) < 100 ? '⚡ Rápido' : (speedTests[test.id]?.speed || 0) < 500 ? '✓ OK' : '⚠️ Lento'}
-                                            </span>
-                                        </div>
-                                        <div className={`text-xs px-2 py-0.5 rounded-full ${speedTests[test.id]?.cached ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                            {speedTests[test.id]?.cached ? 'Cache HIT' : 'Cache MISS'}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </CardContent>
-                    </Card>
-                ))}
-
-            {tests.length === 0 && !showForm && (
-                <p className="text-center text-muted-foreground py-8">Nenhum teste criado ainda</p>
-            )}
-        </div>
+                {
+                    tests.length === 0 && !showForm && (
+                        <p className="text-center text-muted-foreground py-8">Nenhum teste criado ainda</p>
+                    )
+                }
+            </div >
         </DashboardLayout >
     );
 }
