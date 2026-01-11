@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Play, Pause, Zap, FileText, Gauge, Loader2 } from "lucide-react";
+import { Plus, Trash2, Copy, Play, Pause, Zap, FileText, Gauge, Loader2, RotateCcw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -148,6 +148,21 @@ export default function ABTests() {
         toast.success("URL copiada!");
     }
 
+    // Reset visits
+    async function resetVisits(test: ABTest) {
+        if (!confirm(`Zerar visitas do teste "${test.name}"?`)) return;
+
+        // Update all variants to 0 visits
+        for (const variant of test.variants) {
+            if (variant.id) {
+                await supabase.from("ab_test_variants").update({ visits: 0 }).eq("id", variant.id);
+            }
+        }
+
+        toast.success("Visitas zeradas!");
+        fetchTests();
+    }
+
     // Speed/Cache Test
     async function testSpeed(test: ABTest) {
         setSpeedTests(prev => ({ ...prev, [test.id]: { loading: true } }));
@@ -285,6 +300,9 @@ export default function ABTests() {
                             <div className="flex gap-2">
                                 <Button variant="ghost" size="icon" onClick={() => copyUrl(test.slug)} title="Copiar URL">
                                     <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => resetVisits(test)} title="Zerar Visitas">
+                                    <RotateCcw className="h-4 w-4 text-orange-500" />
                                 </Button>
                                 <Button variant="ghost" size="icon" onClick={() => purgeCache(test.slug)} title="Limpar Cache (Forçar)">
                                     <Zap className="h-4 w-4 text-yellow-500" />
