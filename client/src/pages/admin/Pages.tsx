@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity, Video, Eye, CloudOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity, Video, Eye, CloudOff, CheckCircle2, AlertCircle, Smartphone, Tablet, Monitor } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
@@ -71,6 +71,9 @@ export default function Pages() {
 
     // VTurb Config State
     const [vturbConfig, setVturbConfig] = useState<VTurbConfig>(DEFAULT_VTURB_CONFIG);
+
+    // Preview Viewport State
+    const [previewViewport, setPreviewViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
 
     useEffect(() => {
         fetchPages();
@@ -633,22 +636,60 @@ document.addEventListener('player:ready', function(event) {
 
                                         <TabsContent value="preview" className="space-y-4">
                                             <div className="border rounded-lg overflow-hidden bg-white">
-                                                <div className="bg-muted px-4 py-2 flex items-center gap-2 border-b">
-                                                    <Eye className="h-4 w-4" />
-                                                    <span className="text-sm font-medium">Preview (Sem Cache)</span>
-                                                </div>
-                                                {editingPage?.html_content ? (
-                                                    <iframe
-                                                        srcDoc={editingPage.html_content}
-                                                        sandbox="allow-scripts allow-same-origin"
-                                                        className="w-full h-[600px] border-0"
-                                                        title="Page Preview"
-                                                    />
-                                                ) : (
-                                                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                                                        Cole o HTML na aba Principal para visualizar
+                                                <div className="bg-muted px-4 py-2 flex items-center justify-between border-b">
+                                                    <div className="flex items-center gap-2">
+                                                        <Eye className="h-4 w-4" />
+                                                        <span className="text-sm font-medium">Preview (Sem Cache)</span>
                                                     </div>
-                                                )}
+                                                    <div className="flex gap-1">
+                                                        <Button
+                                                            variant={previewViewport === 'mobile' ? 'default' : 'ghost'}
+                                                            size="sm"
+                                                            onClick={() => setPreviewViewport('mobile')}
+                                                            className="h-8 w-8 p-0"
+                                                            title="Mobile (375px)"
+                                                        >
+                                                            <Smartphone className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant={previewViewport === 'tablet' ? 'default' : 'ghost'}
+                                                            size="sm"
+                                                            onClick={() => setPreviewViewport('tablet')}
+                                                            className="h-8 w-8 p-0"
+                                                            title="Tablet (768px)"
+                                                        >
+                                                            <Tablet className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant={previewViewport === 'desktop' ? 'default' : 'ghost'}
+                                                            size="sm"
+                                                            onClick={() => setPreviewViewport('desktop')}
+                                                            className="h-8 w-8 p-0"
+                                                            title="Desktop (100%)"
+                                                        >
+                                                            <Monitor className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-center bg-gray-100 p-4">
+                                                    {editingPage?.html_content ? (
+                                                        <iframe
+                                                            srcDoc={editingPage.html_content}
+                                                            sandbox="allow-scripts allow-same-origin"
+                                                            className="border-0 bg-white shadow-lg transition-all duration-300"
+                                                            style={{
+                                                                width: previewViewport === 'mobile' ? '375px' : previewViewport === 'tablet' ? '768px' : '100%',
+                                                                height: '600px',
+                                                                maxWidth: '100%'
+                                                            }}
+                                                            title="Page Preview"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                                                            Cole o HTML na aba Principal para visualizar
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </TabsContent>
                                     </Tabs>

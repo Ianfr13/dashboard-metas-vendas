@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Play, Pause, Zap, FileText } from "lucide-react";
+import { Plus, Trash2, Copy, Play, Pause, Zap, FileText, Gauge, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -39,6 +39,7 @@ export default function ABTests() {
     const [newTest, setNewTest] = useState({ name: "", variants: [{ name: "A", url: "", weight: 50, visits: 0 }, { name: "B", url: "", weight: 50, visits: 0 }] });
     const [showForm, setShowForm] = useState(false);
     const [cmsPages, setCmsPages] = useState<CMSPage[]>([]);
+    const [speedTests, setSpeedTests] = useState<Record<number, { loading: boolean; speed?: number; cached?: boolean }>>({});
 
     useEffect(() => {
         fetchTests();
@@ -145,6 +146,36 @@ export default function ABTests() {
     function copyUrl(slug: string) {
         navigator.clipboard.writeText(`${WORKER_URL}/${slug}`);
         toast.success("URL copiada!");
+    }
+
+    // Speed/Cache Test
+    async function testSpeed(test: ABTest) {
+        setSpeedTests(prev => ({ ...prev, [test.id]: { loading: true } }));
+
+        try {
+            const start = performance.now();
+            const response = await fetch(`${WORKER_URL}/${test.slug}`, {
+                cache: 'no-store',
+                method: 'HEAD'
+            });
+            const end = performance.now();
+            const speed = Math.round(end - start);
+
+            // Check cache header
+            const cacheStatus = response.headers.get('cf-cache-status');
+            const cached = cacheStatus === 'HIT';
+
+            setSpeedTests(prev => ({ ...prev, [test.id]: { loading: false, speed, cached } }));
+
+            if (speed < 100) {
+                toast.success(`⚡ ${speed}ms ${cached ? '(Cache HIT)' : '(Cache MISS)'}`);
+            } else {
+                toast(`${speed}ms ${cached ? '(Cache HIT)' : '(Cache MISS)'}`);
+            }
+        } catch (e) {
+            setSpeedTests(prev => ({ ...prev, [test.id]: { loading: false } }));
+            toast.error("Erro ao testar velocidade");
+        }
     }
 
     if (loading) return <DashboardLayout><p>Carregando...</p></DashboardLayout>;
@@ -275,6 +306,37 @@ export default function ABTests() {
                                         <div className="text-lg font-bold mt-1">{v.visits} visitas</div>
                                     </div>
                                 ))}
+                            </div>
+
+                            {/* Speed/Cache Meter */}
+                            <div className="mt-4 pt-4 border-t flex items-center gap-4">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => testSpeed(test)}
+                                    disabled={speedTests[test.id]?.loading}
+                                >
+                                    {speedTests[test.id]?.loading ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Gauge className="h-4 w-4 mr-2" />
+                                    )}
+                                    Testar Velocidade
+                                </Button>
+
+                                {speedTests[test.id]?.speed !== undefined && (
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-sm">
+                                            <span className="font-medium">{speedTests[test.id]?.speed}ms</span>
+                                            <span className="text-muted-foreground ml-1">
+                                                {(speedTests[test.id]?.speed || 0) < 100 ? '⚡ Rápido' : (speedTests[test.id]?.speed || 0) < 500 ? '✓ OK' : '⚠️ Lento'}
+                                            </span>
+                                        </div>
+                                        <div className={`text-xs px-2 py-0.5 rounded-full ${speedTests[test.id]?.cached ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                            {speedTests[test.id]?.cached ? 'Cache HIT' : 'Cache MISS'}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
