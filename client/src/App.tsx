@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/admin/index";
 import AdminMetas from "./pages/admin/Metas";
 import AdminConfiguracoes from "./pages/admin/Configuracoes";
 import AdminTraffic from "./pages/admin/Trafego";
+import { UserRoleProvider } from "@/contexts/UserRoleContext";
 import ABTests from "./pages/admin/ABTests";
 import Pages from "./pages/admin/Pages";
 import UserRoles from "./pages/admin/UserRoles";
@@ -176,10 +177,12 @@ function App() {
         >
           <TooltipProvider>
             <Toaster />
-            <Router />
-            <div className="fixed bottom-4 right-4 z-50">
-              <PushNotificationButton />
-            </div>
+            <UserRoleProvider>
+              <Router />
+              <div className="fixed bottom-4 right-4 z-50">
+                <PushNotificationButton />
+              </div>
+            </UserRoleProvider>
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>
