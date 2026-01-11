@@ -291,12 +291,12 @@ export default {
                 '<style>body .esconder { display: none; }</style></head>'
             );
 
-            return new Response(fixedHtml, {
+            return cors(new Response(fixedHtml, {
                 headers: {
                     'Content-Type': 'text/html; charset=utf-8',
-                    'Cache-Control': 'public, max-age=0, must-revalidate' // Force browser to check with Edge (KV is instant)
+                    'Cache-Control': 'public, max-age=0, must-revalidate'
                 }
-            });
+            }));
         }
 
         // 2. TENTATIVA: TESTE A/B
@@ -336,12 +336,12 @@ export default {
 
         // Test not found or inactive
         if (!test) {
-            return new Response('Test not found', { status: 404 });
+            return cors(new Response('Test not found', { status: 404 }));
         }
 
         // No variants configured
         if (!test.variants || test.variants.length === 0) {
-            return new Response('No variants configured', { status: 500 });
+            return cors(new Response('No variants configured', { status: 500 }));
         }
 
         // Select variant based on weights
