@@ -44,20 +44,19 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     const fetchUserRole = async (email: string) => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('user_roles')
-                .select('*')
-                .eq('email', email)
-                .single();
+            // Try fetching via RPC first (bypasses RLS)
+            const { data, error } = await supabase.rpc('get_my_user_role');
 
-            if (error && error.code !== 'PGRST116') {
-                console.error('Error fetching user role:', error);
+            if (error) {
+                console.error('Error fetching user role via RPC:', error);
+                throw error;
             }
 
             if (data) {
+                // RPC returns JSON, so we cast it
                 setUserRole(data as UserRole);
             } else {
-                // Default to 'user' role with no permissions if not in table
+                // Fallback or empty permissions
                 setUserRole({
                     id: '',
                     email,
@@ -67,7 +66,13 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
             }
         } catch (e) {
             console.error('Error in fetchUserRole:', e);
-            setUserRole(null);
+            // Don't nullify immediately if we have network error, but here we probably should
+            setUserRole({
+                id: '',
+                email,
+                role: 'user',
+                permissions: DEFAULT_PERMISSIONS,
+            });
         } finally {
             setLoading(false);
         }
