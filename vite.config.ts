@@ -92,30 +92,17 @@ export default defineConfig({
         manualChunks: (id) => {
           // Vendor chunks (libs grandes que mudam pouco)
           if (id.includes('node_modules')) {
-            // UI libs (Radix, etc - médio e estável)
-            if (id.includes('@radix-ui') || id.includes('class-variance-authority') ||
-              id.includes('clsx') || id.includes('tailwind-merge')) {
-              return 'vendor-ui';
-            }
-            // Charts (grande, muda pouco)
+            // Charts (grande, isolado)
             if (id.includes('recharts')) {
               return 'vendor-charts';
             }
-            // Icons (grande, muda pouco)
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
-            // Supabase + Query (data layer, médio)
+            // Supabase + Query (data layer)
             if (id.includes('@supabase') || id.includes('@tanstack/react-query')) {
               return 'vendor-data';
             }
-            // React ecosystem (core, grande e estável) - CHECK AFTER OTHERS
-            if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router/') ||
-              id.includes('/scheduler/') || id.includes('/prop-types/')) {
-              return 'vendor-react';
-            }
-            // Resto dos node_modules
-            return 'vendor-misc';
+            // Tudo que é essencial para o App rodar (React, Router, UI Libs, Utils)
+            // Agrupamos para evitar circular dependencies e garantir ordem de load
+            return 'vendor-core';
           }
         },
         // Garantir hashes nos nomes para cache imutável
