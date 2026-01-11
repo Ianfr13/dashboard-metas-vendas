@@ -74,12 +74,14 @@ export async function getCreativeRanking(
     const { data: adsData } = await supabase.from('facebook_ads').select('id, preview_shareable_link');
     const adLinkMap = new Map(adsData?.map((a: any) => [a.id, a.preview_shareable_link]) || []);
 
-    // Fetch Facebook Ads spend data
-    const { data: insightsData } = await supabase
-        .from('facebook_insights')
-        .select('ad_id, spend')
-        .gte('date', startDate)
-        .lte('date', end);
+    // Format dates for Facebook Insights (YYYY-MM-DD)
+    const startDateYMD = startDate.split('T')[0];
+    const endDateYMD = endDate.split('T')[0];
+
+    // Fetch Facebook Ads spend data using pagination
+    const insightsData = await fetchAllRows<any>('facebook_insights', 'ad_id, spend', (q) => {
+        return q.gte('date', startDateYMD).lte('date', endDateYMD).not('ad_id', 'is', null);
+    });
 
     // Create spend map: ad_id -> total spend
     const spendMap = new Map<string, number>();
