@@ -9,11 +9,19 @@ import { TrafficSourceMetrics } from "@/lib/edge-functions";
 interface TrafficSourcesTableProps {
     data: TrafficSourceMetrics[];
     selectedFunnelType: 'compra' | 'leads';
+    trafficType?: 'pago' | 'organico' | 'todos';
 }
 
 type SortKey = keyof TrafficSourceMetrics;
 
-export default function TrafficSourcesTable({ data, selectedFunnelType }: TrafficSourcesTableProps) {
+// Helper to classify traffic as paid or organic based on medium
+const isPaidTraffic = (medium: string): boolean => {
+    const m = (medium || '').toLowerCase();
+    const paidMediums = ['cpc', 'ppc', 'paid', 'ads', 'cpm', 'cpa', 'retargeting', 'display', 'remarketing', 'paidsocial', 'paid_social', 'video', 'shopping'];
+    return paidMediums.some(pm => m.includes(pm));
+};
+
+export default function TrafficSourcesTable({ data, selectedFunnelType, trafficType = 'todos' }: TrafficSourcesTableProps) {
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' } | null>({ key: 'sales', direction: 'desc' });
     const [filterSource, setFilterSource] = useState('todos');
 
@@ -22,10 +30,17 @@ export default function TrafficSourcesTable({ data, selectedFunnelType }: Traffi
             // First filter by funnel type
             if ((item.funnelType || 'compra') !== selectedFunnelType) return false;
 
+            // Filter by traffic type (paid vs organic)
+            if (trafficType !== 'todos') {
+                const isPaid = isPaidTraffic(item.medium);
+                if (trafficType === 'pago' && !isPaid) return false;
+                if (trafficType === 'organico' && isPaid) return false;
+            }
+
             if (filterSource === 'todos') return true;
             return item.source === filterSource;
         });
-    }, [data, filterSource, selectedFunnelType]);
+    }, [data, filterSource, selectedFunnelType, trafficType]);
 
     const sortedData = useMemo(() => {
         if (!sortConfig) return filteredData;

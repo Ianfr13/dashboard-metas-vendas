@@ -49,6 +49,7 @@ export default function Metricas() {
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [marketingFunnelType, setMarketingFunnelType] = useState<'compra' | 'leads'>('compra');
+  const [trafficType, setTrafficType] = useState<'pago' | 'organico' | 'todos'>('todos');
 
   // View States
   const [selectedEvent, setSelectedEvent] = useState<'purchase' | 'generate_lead' | 'begin_checkout'>('purchase');
@@ -267,12 +268,19 @@ export default function Metricas() {
 
             {/* Marketing - Funil de Conversão e Tráfego */}
             <TabsContent value="marketing" className="space-y-6">
-              {/* Seletor de Tipo de Funil (Global para a aba) */}
-              <div className="flex justify-end">
-                <Tabs value={marketingFunnelType} onValueChange={(v) => setMarketingFunnelType(v as 'compra' | 'leads')} className="w-[300px]">
+              {/* Seletor de Tipo de Funil + Tipo de Tráfego */}
+              <div className="flex justify-end gap-4 flex-wrap">
+                <Tabs value={marketingFunnelType} onValueChange={(v) => setMarketingFunnelType(v as 'compra' | 'leads')} className="w-[200px]">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="compra">Compra</TabsTrigger>
                     <TabsTrigger value="leads">Leads</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <Tabs value={trafficType} onValueChange={(v) => setTrafficType(v as 'pago' | 'organico' | 'todos')} className="w-[280px]">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="todos">Todos</TabsTrigger>
+                    <TabsTrigger value="pago">Pago</TabsTrigger>
+                    <TabsTrigger value="organico">Orgânico</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -294,6 +302,7 @@ export default function Metricas() {
                 <TrafficSourcesTable
                   data={trafficData}
                   selectedFunnelType={marketingFunnelType}
+                  trafficType={trafficType}
                 />
               </div>
 
