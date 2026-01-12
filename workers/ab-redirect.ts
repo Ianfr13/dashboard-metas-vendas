@@ -256,12 +256,38 @@ function generateAnalyticsScript(slug: string): string {
     var scrollMilestones = [25, 50, 75, 100];
     var achieved = {};
 
+    // Extract funnel params from URL path and query string
+    var fullUrl = window.location.href;
+    var path = window.location.pathname;
+    var params = new URLSearchParams(window.location.search);
+    
+    function extractParam(name) {
+        // Try path first (format: /page/fid=123/fver=v1)
+        var pathMatch = path.match(new RegExp(name + '=([^/&?]+)'));
+        if (pathMatch) return pathMatch[1];
+        // Try query string
+        return params.get(name) || null;
+    }
+    
+    var funnelParams = {
+        fid: extractParam('fid'),
+        ftype: extractParam('ftype') || 'compra',
+        fver: extractParam('fver'),
+        pver: extractParam('pver'),
+        fstg: extractParam('fstg'),
+        oid: extractParam('oid'),
+        utm_source: params.get('utm_source'),
+        utm_medium: params.get('utm_medium'),
+        utm_campaign: params.get('utm_campaign')
+    };
+
     function send(event, data) {
         var payload = JSON.stringify({
             event: event,
             slug: pageSlug,
             session_id: sessionId,
             data: data || {},
+            funnel: funnelParams,
             referrer: document.referrer,
             device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
         });
@@ -296,6 +322,7 @@ function generateAnalyticsScript(slug: string): string {
 </script>
 `;
 }
+
 
 class PerformanceMonitor {
     static async track(slug: string, latency: number, env: Env) {
@@ -592,6 +619,17 @@ export default {
                     session_id?: string;
                     data?: any;
                     device?: string;
+                    funnel?: {
+                        fid?: string;
+                        ftype?: string;
+                        fver?: string;
+                        pver?: string;
+                        fstg?: string;
+                        oid?: string;
+                        utm_source?: string;
+                        utm_medium?: string;
+                        utm_campaign?: string;
+                    };
                 };
 
                 if (!body.slug || !body.event) {
@@ -599,18 +637,41 @@ export default {
                 }
 
                 const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-                const baseKey = `analytics:${body.slug}:${today}`;
+                const fid = body.funnel?.fid || 'none';
+                const fver = body.funnel?.fver || 'none';
+                const pver = body.funnel?.pver || 'none';
+                const fstg = body.funnel?.fstg || 'none';
+                const ftype = body.funnel?.ftype || 'compra';
+
+                // Key format: analytics:fid:slug:date:metric
+                // This groups by funnel first, then by page
+                const baseKey = `analytics:${fid}:${body.slug}:${today}`;
+
+                // Store funnel metadata once per fid:slug:date
+                const metaKey = `${baseKey}:meta`;
+                const existingMeta = await env.AB_CACHE.get(metaKey);
+                if (!existingMeta) {
+                    await env.AB_CACHE.put(metaKey, JSON.stringify({
+                        fid,
+                        ftype,
+                        fver,
+                        pver,
+                        fstg,
+                        slug: body.slug,
+                        oid: body.funnel?.oid || null,
+                        utm_source: body.funnel?.utm_source || null,
+                        utm_medium: body.funnel?.utm_medium || null
+                    }));
+                }
 
                 // Increment counters based on event type
                 if (body.event === 'page_view') {
-                    // Increment views
                     const viewsKey = `${baseKey}:views`;
                     const current = parseInt(await env.AB_CACHE.get(viewsKey) || '0', 10);
                     await env.AB_CACHE.put(viewsKey, String(current + 1));
 
-                    // Track unique sessions
                     if (body.session_id) {
-                        const sessionKey = `analytics:${body.slug}:${today}:sessions`;
+                        const sessionKey = `${baseKey}:sessions`;
                         const sessions = JSON.parse(await env.AB_CACHE.get(sessionKey) || '[]');
                         if (!sessions.includes(body.session_id)) {
                             sessions.push(body.session_id);
@@ -618,7 +679,6 @@ export default {
                         }
                     }
 
-                    // Track device type
                     if (body.device) {
                         const deviceKey = `${baseKey}:device:${body.device}`;
                         const deviceCount = parseInt(await env.AB_CACHE.get(deviceKey) || '0', 10);
@@ -629,11 +689,9 @@ export default {
                     const scrollCount = parseInt(await env.AB_CACHE.get(scrollKey) || '0', 10);
                     await env.AB_CACHE.put(scrollKey, String(scrollCount + 1));
                 } else if (body.event === 'time_on_page' && body.data?.seconds) {
-                    // Store time samples for averaging
                     const timeKey = `${baseKey}:time_samples`;
                     const samples = JSON.parse(await env.AB_CACHE.get(timeKey) || '[]');
                     samples.push(body.data.seconds);
-                    // Keep last 1000 samples to avoid unbounded growth
                     if (samples.length > 1000) samples.shift();
                     await env.AB_CACHE.put(timeKey, JSON.stringify(samples));
                 }
@@ -649,26 +707,50 @@ export default {
         // --- ANALYTICS: Return aggregated data for dashboard ---
         if (url.pathname === '/admin/analytics') {
             const today = new Date().toISOString().split('T')[0];
+            const filterFid = url.searchParams.get('fid'); // Optional filter
             const list = await env.AB_CACHE.list({ prefix: `analytics:` });
 
-            // Group by slug
-            const slugsMap: Record<string, any> = {};
+            // Group by fid -> slug
+            const funnelsMap: Record<string, {
+                fid: string;
+                ftype: string;
+                fver: string;
+                pver: string;
+                pages: Record<string, any>;
+            }> = {};
 
             for (const key of list.keys) {
                 const parts = key.name.split(':');
-                // Format: analytics:slug:date:metric
-                if (parts.length < 4) continue;
+                // Format: analytics:fid:slug:date:metric
+                if (parts.length < 5) continue;
 
-                const slug = parts[1];
-                const date = parts[2];
-                const metric = parts.slice(3).join(':');
+                const fid = parts[1];
+                const slug = parts[2];
+                const date = parts[3];
+                const metric = parts.slice(4).join(':');
 
-                // Only include today's data for real-time
+                // Only today's data
                 if (date !== today) continue;
 
-                if (!slugsMap[slug]) {
-                    slugsMap[slug] = {
+                // Optional filter by fid
+                if (filterFid && fid !== filterFid) continue;
+
+                // Initialize funnel
+                if (!funnelsMap[fid]) {
+                    funnelsMap[fid] = {
+                        fid,
+                        ftype: 'compra',
+                        fver: '',
+                        pver: '',
+                        pages: {}
+                    };
+                }
+
+                // Initialize page within funnel
+                if (!funnelsMap[fid].pages[slug]) {
+                    funnelsMap[fid].pages[slug] = {
                         slug,
+                        fstg: '',
                         views: 0,
                         unique_visitors: 0,
                         scroll_50: 0,
@@ -682,33 +764,56 @@ export default {
                 const value = await env.AB_CACHE.get(key.name);
                 if (!value) continue;
 
-                if (metric === 'views') {
-                    slugsMap[slug].views = parseInt(value, 10);
+                const page = funnelsMap[fid].pages[slug];
+
+                if (metric === 'meta') {
+                    try {
+                        const meta = JSON.parse(value);
+                        funnelsMap[fid].ftype = meta.ftype || 'compra';
+                        funnelsMap[fid].fver = meta.fver || '';
+                        funnelsMap[fid].pver = meta.pver || '';
+                        page.fstg = meta.fstg || '';
+                    } catch { }
+                } else if (metric === 'views') {
+                    page.views = parseInt(value, 10);
                 } else if (metric === 'sessions') {
                     try {
-                        slugsMap[slug].unique_visitors = JSON.parse(value).length;
+                        page.unique_visitors = JSON.parse(value).length;
                     } catch { }
                 } else if (metric === 'scroll50') {
-                    slugsMap[slug].scroll_50 = parseInt(value, 10);
+                    page.scroll_50 = parseInt(value, 10);
                 } else if (metric === 'scroll100') {
-                    slugsMap[slug].scroll_100 = parseInt(value, 10);
+                    page.scroll_100 = parseInt(value, 10);
                 } else if (metric === 'time_samples') {
                     try {
                         const samples = JSON.parse(value);
                         if (samples.length > 0) {
-                            slugsMap[slug].avg_time = Math.round(samples.reduce((a: number, b: number) => a + b, 0) / samples.length);
+                            page.avg_time = Math.round(samples.reduce((a: number, b: number) => a + b, 0) / samples.length);
                         }
                     } catch { }
                 } else if (metric === 'device:mobile') {
-                    slugsMap[slug].mobile = parseInt(value, 10);
+                    page.mobile = parseInt(value, 10);
                 } else if (metric === 'device:desktop') {
-                    slugsMap[slug].desktop = parseInt(value, 10);
+                    page.desktop = parseInt(value, 10);
                 }
             }
 
-            const result = Object.values(slugsMap).sort((a: any, b: any) => b.views - a.views);
+            // Convert to array format
+            const funnels = Object.values(funnelsMap).map(f => ({
+                fid: f.fid,
+                ftype: f.ftype,
+                fver: f.fver,
+                pver: f.pver,
+                pages: Object.values(f.pages).sort((a: any, b: any) => b.views - a.views),
+                totals: Object.values(f.pages).reduce((acc: any, p: any) => ({
+                    views: acc.views + p.views,
+                    unique_visitors: acc.unique_visitors + p.unique_visitors,
+                    mobile: acc.mobile + p.mobile,
+                    desktop: acc.desktop + p.desktop
+                }), { views: 0, unique_visitors: 0, mobile: 0, desktop: 0 })
+            })).sort((a, b) => b.totals.views - a.totals.views);
 
-            return cors(new Response(JSON.stringify({ date: today, pages: result }), {
+            return cors(new Response(JSON.stringify({ date: today, funnels }), {
                 headers: { 'Content-Type': 'application/json' }
             }));
         }
