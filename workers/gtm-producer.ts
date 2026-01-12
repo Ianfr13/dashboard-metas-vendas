@@ -45,6 +45,39 @@ interface PushSubscriptionRow {
     subscription: webpush.PushSubscription;
 }
 
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW = 60; // 1 minuto em segundos
+const RATE_LIMIT_MAX = 100; // 100 eventos por minuto por IP
+
+// Map para tracking de rate limit (em memória, reset a cada deploy)
+const rateLimitMap = new Map<string, { count: number, resetAt: number }>();
+
+/**
+ * Verifica se o IP está dentro do rate limit
+ */
+function checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const record = rateLimitMap.get(ip);
+
+    if (!record || now > record.resetAt) {
+        // Criar novo registro ou resetar
+        rateLimitMap.set(ip, {
+            count: 1,
+            resetAt: now + (RATE_LIMIT_WINDOW * 1000)
+        });
+        return true;
+    }
+
+    if (record.count >= RATE_LIMIT_MAX) {
+        // Limite excedido
+        return false;
+    }
+
+    // Incrementar contador
+    record.count++;
+    return true;
+}
+
 // Domínios permitidos
 const ALLOWED_ORIGINS = [
     'douravita.com.br',
@@ -91,16 +124,18 @@ function extractUtms(urlStr: string) {
     }
 }
 
-// Extrai funnel_id do path da URL
+// Extrai funnel_id do parâmetro 'fid=' no path da URL
 function extractFunnelId(urlStr: string): string | null {
     try {
         const url = new URL(urlStr);
-        const pathParts = url.pathname.split('/').filter(Boolean);
-        return pathParts.length > 0 ? pathParts[pathParts.length - 1] : url.hostname;
+        // Buscar padrão fid=valor no pathname
+        const fidMatch = url.pathname.match(/fid=([^/&?]+)/);
+        return fidMatch ? fidMatch[1] : null;
     } catch {
         return null;
     }
 }
+
 
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -121,6 +156,18 @@ export default {
             const clientIP = request.headers.get('cf-connecting-ip') ||
                 request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
                 'unknown';
+
+            // Verificar rate limit
+            if (!checkRateLimit(clientIP)) {
+                return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+                    status: 429,
+                    headers: {
+                        ...corsHeaders,
+                        'Content-Type': 'application/json',
+                        'Retry-After': '60'
+                    }
+                });
+            }
 
             const origin = request.headers.get('origin');
             const referer = request.headers.get('referer');
@@ -143,6 +190,15 @@ export default {
             }
 
             const body = await request.json() as GTMEvent;
+
+            // LOG: Payload recebido do GTM (antes de qualquer processamento)
+            if (body.event_name === 'purchase') {
+                console.log('[gtm-producer] 🛒 PURCHASE EVENT RECEIVED:');
+                console.log('[gtm-producer] Event Name:', body.event_name);
+                console.log('[gtm-producer] Event Data (raw):', JSON.stringify(body.event_data, null, 2));
+                console.log('[gtm-producer] Page URL:', body.page_url);
+                console.log('[gtm-producer] Session ID:', body.session_id);
+            }
 
             if (!body.event_name) {
                 return new Response(JSON.stringify({ error: 'event_name is required' }), {
@@ -167,6 +223,16 @@ export default {
                 user_agent: request.headers.get('user-agent') || undefined,
                 timestamp: new Date().toISOString(),
             };
+
+            // LOG: Evento enriquecido (após processamento)
+            if (enrichedEvent.event_name === 'purchase') {
+                console.log('[gtm-producer] 📦 ENRICHED EVENT:');
+                console.log('[gtm-producer] Funnel ID extracted:', enrichedEvent.funnel_id);
+                console.log('[gtm-producer] Event Data (enriched):', JSON.stringify(enrichedEvent.event_data, null, 2));
+                console.log('[gtm-producer] UTM Source:', enrichedEvent.utm_source);
+                console.log('[gtm-producer] UTM Medium:', enrichedEvent.utm_medium);
+                console.log('[gtm-producer] IP Address:', enrichedEvent.ip_address);
+            }
 
             // Enviar para a Queue (batch processing)
             await env.GTM_QUEUE.send(enrichedEvent);

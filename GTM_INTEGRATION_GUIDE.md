@@ -28,11 +28,58 @@ Crie uma nova tag do tipo **HTML Personalizado**. Este script captura o **Títul
   var endpoint = {{Metas - Endpoint URL}};
   var secret = {{Metas - Secret Token}};
   var eventName = {{Event}};
+  var ROOT_DOMAIN = '.douravita.com.br'; // ⚠️ Ajuste se seu domínio principal for diferente
+
+  // --- Session Logic (Cookies) ---
+  function setCookie(name, value, days) {
+      var expires = "";
+      if (days) {
+          var date = new Date();
+          date.setTime(date.getTime() + (days*24*60*60*1000));
+          expires = "; expires=" + date.toUTCString();
+      }
+      document.cookie = name + "=" + (value || "")  + expires + "; path=/; domain=" + ROOT_DOMAIN;
+  }
+
+  function getCookie(name) {
+      var nameEQ = name + "=";
+      var ca = document.cookie.split(';');
+      for(var i=0;i < ca.length;i++) {
+          var c = ca[i];
+          while (c.charAt(0)==' ') c = c.substring(1,c.length);
+          if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+      }
+      return null;
+  }
+
+  function generateUUID() { // Public Domain/MIT
+    var d = new Date().getTime();
+    var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0;
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16;
+        if(d > 0){
+            r = (d + r)%16 | 0;
+            d = Math.floor(d/16);
+        } else {
+            r = (d2 + r)%16 | 0;
+            d2 = Math.floor(d2/16);
+        }
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  var sessionId = getCookie('meta_session_id');
+  if (!sessionId) {
+      sessionId = generateUUID();
+      setCookie('meta_session_id', sessionId, 120); // 120 dias de persistência da sessão (long-lived para atribuição)
+  }
+  // --- End Session Logic ---
   
   // 2. Metadados do Navegador e UTMs (Incluso)
   var urlParams = new URLSearchParams(window.location.search);
   var payload = {
     event_name: eventName,
+    session_id: sessionId, // <--- Enviando Session ID
     page_url: window.location.href,
     page_title: document.title, // Título da aba do navegador
     referrer: document.referrer,

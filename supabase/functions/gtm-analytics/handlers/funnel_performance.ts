@@ -64,7 +64,8 @@ export async function getFunnelPerformance(
     // We need 'page_view', 'generate_lead', 'purchase'
     // Ensure endDate includes the full day by adding end-of-day time
     const endDateWithTime = endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`;
-    const events = await fetchAllRows<any>('gtm_events', 'event_name, event_data, session_id', (q) => {
+    // Added 'page_url' to select list
+    const events = await fetchAllRows<any>('gtm_events', 'event_name, event_data, session_id, page_url', (q) => {
         return q.gte('timestamp', startDate).lte('timestamp', endDateWithTime);
     });
 
@@ -87,14 +88,77 @@ export async function getFunnelPerformance(
         revenue: number
     }>()
 
-    events.forEach(event => {
-        const eventData = typeof event.event_data === 'string'
-            ? JSON.parse(event.event_data || '{}')
-            : event.event_data || {};
 
-        // Extract Tracking Parameters from page_location
-        // Structure: /fid=.../fver=.../pver=.../oid=.../fstg=.../ftype=...
-        const location = eventData.page_location || '';
+    // 1. Group events by session_id
+    const sessions = new Map<string, any[]>();
+    // Store events without session_id separately
+    const orphanEvents: any[] = [];
+
+    events.forEach(event => {
+        if (event.session_id) {
+            if (!sessions.has(event.session_id)) {
+                sessions.set(event.session_id, []);
+            }
+            sessions.get(event.session_id)?.push(event);
+        } else {
+            orphanEvents.push(event);
+        }
+    });
+
+    // 2. Process each session to backfill funnel params
+    const processedEvents: any[] = [...orphanEvents];
+
+    sessions.forEach((sessionEvents) => {
+        // Sort by time to find the "entry" event
+        sessionEvents.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        // Find the first event that has funnel params
+        let sessionFunnelParams: any = null;
+
+        for (const event of sessionEvents) {
+            const eventData = typeof event.event_data === 'string'
+                ? JSON.parse(event.event_data || '{}')
+                : event.event_data || {};
+            // Use top-level page_url column first, then event_data fallback
+            const loc = (event.page_url || eventData.page_location || eventData.page_url || '');
+            // Check regex like in the original logic
+            const fidMatch = loc.match(/fid=([^/&?]+)/);
+
+            if (fidMatch) {
+                sessionFunnelParams = {
+                    fid: fidMatch[1],
+                    fver: loc.match(/fver=([^/&?]+)/)?.[1] || '(not set)',
+                    pver: loc.match(/pver=([^/&?]+)/)?.[1] || '(not set)',
+                    oid: loc.match(/oid=([^/&?]+)/)?.[1] || '(not set)',
+                    fstg: loc.match(/fstg=([^/&?]+)/)?.[1] || '(not set)',
+                    ftype: loc.match(/ftype=([^/&?]+)/)?.[1] || 'compra'
+                };
+                break; // Found the entry params
+            }
+        }
+
+        // Apply backfilled params or defaults
+        sessionEvents.forEach(event => {
+            if (sessionFunnelParams) {
+                // Attach a temporary property to use in calculation loop
+                event._backfilled = sessionFunnelParams;
+            }
+            processedEvents.push(event);
+        });
+    });
+
+    // 3. Main Aggregation
+    processedEvents.forEach(event => {
+        const eventData = typeof event.event_data === 'string'
+            ? JSON.parse(event.event_data)
+            : (event.event_data || {});
+
+        // Use top-level page_url column first, then event_data fallback
+        const location = (event.page_url || eventData.page_location || eventData.page_url || '') as string;
+
+        // Use backfilled params if available, otherwise try URL extraction
+        const backfilled = event._backfilled;
+
         const fidMatch = location.match(/fid=([^/&?]+)/);
         const fverMatch = location.match(/fver=([^/&?]+)/);
         const pverMatch = location.match(/pver=([^/&?]+)/);
@@ -102,15 +166,22 @@ export async function getFunnelPerformance(
         const fstgMatch = location.match(/fstg=([^/&?]+)/);
         const ftypeMatch = location.match(/ftype=([^/&?]+)/);
 
-        const fid = fidMatch?.[1] || '(not set)';
-        const fver = fverMatch?.[1] || '(not set)';
-        const pver = pverMatch?.[1] || '(not set)';
-        const oid = oidMatch?.[1] || '(not set)';
-        const fstg = fstgMatch?.[1] || '(not set)';
-        const ftype = (ftypeMatch?.[1] || 'compra') as 'compra' | 'leads';
+        // STICT MODE: User requested to ONLY use 'fid=' parameter calling page_url
+        // Eliminating database column fallback that brought in checkout slugs
+        const fid = backfilled?.fid || fidMatch?.[1] || '(not set)';
+        const fver = backfilled?.fver || fverMatch?.[1] || '(not set)';
+        const pver = backfilled?.pver || pverMatch?.[1] || '(not set)';
+        const oid = backfilled?.oid || oidMatch?.[1] || '(not set)';
+        const fstg = backfilled?.fstg || fstgMatch?.[1] || '(not set)';
+        const ftypeRaw = backfilled?.ftype || ftypeMatch?.[1] || 'compra';
+        const ftype = (ftypeRaw === 'leads') ? 'leads' : 'compra';
 
         // Extract product name from event_data (sent by GTM on purchase/add_to_cart)
         const productName = eventData.product_name || '(not set)';
+
+        // Unique Key for aggregation
+        // ... (rest of logic remains similar)
+
 
         // Chave única para agroupamento (includes productName and funnelType)
         const key = `${fid}|${ftype}|${fver}|${pver}|${oid}|${fstg}|${productName}`;

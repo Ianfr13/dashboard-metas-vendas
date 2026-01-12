@@ -68,7 +68,7 @@ export default {
             // Determinar canal baseado em utm_term
             const canal = (event.utm_term?.toLowerCase() === 'comercial') ? 'comercial' : 'marketing';
 
-            return {
+            const row = {
                 event_name: event.event_name,
                 event_data: event.event_data ? (typeof event.event_data === 'string' ? event.event_data : JSON.stringify(event.event_data)) : null,
                 user_id: event.user_id || null,
@@ -91,6 +91,17 @@ export default {
                 canal: canal,
                 timestamp: event.timestamp || new Date().toISOString(),
             };
+
+            // LOG: Dados que serão inseridos no banco (apenas purchase)
+            if (event.event_name === 'purchase') {
+                console.log('[gtm-consumer] 💾 INSERTING PURCHASE INTO DATABASE:');
+                console.log('[gtm-consumer] Event Data to DB:', row.event_data);
+                console.log('[gtm-consumer] Funnel ID:', row.funnel_id);
+                console.log('[gtm-consumer] Page URL:', row.page_url);
+                console.log('[gtm-consumer] Session ID:', row.session_id);
+            }
+
+            return row;
         });
 
         // Bulk INSERT no Supabase via REST API

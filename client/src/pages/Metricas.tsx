@@ -39,6 +39,7 @@ import VslRankingTable from "@/components/metrics/VslRankingTable";
 import VslRetentionChart from "@/components/metrics/VslRetentionChart";
 import VslComparisonDashboard from "@/components/metrics/VslComparisonDashboard";
 import FacebookAdsDashboard from "@/components/metrics/FacebookAdsDashboard";
+import PageAnalyticsTab from "@/components/metrics/PageAnalyticsTab";
 import { TrafficSourceMetrics, CreativeMetrics, vturbAnalyticsAPI } from "@/lib/edge-functions";
 import FunnelPerformance from "@/components/metricas/FunnelPerformance";
 
@@ -253,7 +254,7 @@ export default function Metricas() {
           </Card>
         ) : (
           <Tabs defaultValue="marketing" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="marketing">Marketing</TabsTrigger>
               <TabsTrigger value="facebook">Facebook Ads</TabsTrigger>
               <TabsTrigger value="produtos">Produtos</TabsTrigger>
@@ -261,6 +262,7 @@ export default function Metricas() {
               <TabsTrigger value="creative">Criativos</TabsTrigger>
               <TabsTrigger value="vturb">Vturb</TabsTrigger>
               <TabsTrigger value="funis">Funis</TabsTrigger>
+              <TabsTrigger value="paginas">Páginas</TabsTrigger>
             </TabsList>
 
             {/* Marketing - Funil de Conversão e Tráfego */}
@@ -662,6 +664,11 @@ export default function Metricas() {
                 startDate={startDate}
                 endDate={endDate}
               />
+            </TabsContent>
+
+            {/* Páginas (Analytics) */}
+            <TabsContent value="paginas" className="space-y-6">
+              <PageAnalyticsTab />
             </TabsContent>
           </Tabs>
         )}

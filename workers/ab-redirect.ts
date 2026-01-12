@@ -240,6 +240,63 @@ interface SpeedStats {
 // In-memory buffer to reduce KV writes (Isolate scope)
 const localStatsBuffer: Record<string, { count: number, total: number, last: number }> = {};
 
+// --- PAGE ANALYTICS SCRIPT (Injected into CMS pages) ---
+function generateAnalyticsScript(slug: string): string {
+    return `
+<script>
+(function() {
+    var ANALYTICS_URL = 'https://ab.douravita.com.br/analytics';
+    var pageSlug = '${slug}';
+    var sessionId = sessionStorage.getItem('_sid') || (function() {
+        var id = Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        sessionStorage.setItem('_sid', id);
+        return id;
+    })();
+    var startTime = Date.now();
+    var scrollMilestones = [25, 50, 75, 100];
+    var achieved = {};
+
+    function send(event, data) {
+        var payload = JSON.stringify({
+            event: event,
+            slug: pageSlug,
+            session_id: sessionId,
+            data: data || {},
+            referrer: document.referrer,
+            device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
+        });
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(ANALYTICS_URL, payload);
+        } else {
+            fetch(ANALYTICS_URL, { method: 'POST', body: payload, keepalive: true });
+        }
+    }
+
+    // Page View (immediate)
+    send('page_view');
+
+    // Scroll Tracking
+    window.addEventListener('scroll', function() {
+        var depth = Math.round((window.scrollY + window.innerHeight) / document.body.scrollHeight * 100);
+        scrollMilestones.forEach(function(m) {
+            if (depth >= m && !achieved[m]) {
+                achieved[m] = true;
+                send('scroll', { depth: m });
+            }
+        });
+    });
+
+    // Time on Page
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            send('time_on_page', { seconds: Math.round((Date.now() - startTime) / 1000) });
+        }
+    });
+})();
+</script>
+`;
+}
+
 class PerformanceMonitor {
     static async track(slug: string, latency: number, env: Env) {
         // 1. Update Local Buffer
@@ -526,6 +583,136 @@ export default {
             }));
         }
 
+        // --- ANALYTICS: Receive events from pages ---
+        if (url.pathname === '/analytics' && request.method === 'POST') {
+            try {
+                const body = await request.json() as {
+                    event: string;
+                    slug: string;
+                    session_id?: string;
+                    data?: any;
+                    device?: string;
+                };
+
+                if (!body.slug || !body.event) {
+                    return cors(new Response('Missing slug or event', { status: 400 }));
+                }
+
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const baseKey = `analytics:${body.slug}:${today}`;
+
+                // Increment counters based on event type
+                if (body.event === 'page_view') {
+                    // Increment views
+                    const viewsKey = `${baseKey}:views`;
+                    const current = parseInt(await env.AB_CACHE.get(viewsKey) || '0', 10);
+                    await env.AB_CACHE.put(viewsKey, String(current + 1));
+
+                    // Track unique sessions
+                    if (body.session_id) {
+                        const sessionKey = `analytics:${body.slug}:${today}:sessions`;
+                        const sessions = JSON.parse(await env.AB_CACHE.get(sessionKey) || '[]');
+                        if (!sessions.includes(body.session_id)) {
+                            sessions.push(body.session_id);
+                            await env.AB_CACHE.put(sessionKey, JSON.stringify(sessions));
+                        }
+                    }
+
+                    // Track device type
+                    if (body.device) {
+                        const deviceKey = `${baseKey}:device:${body.device}`;
+                        const deviceCount = parseInt(await env.AB_CACHE.get(deviceKey) || '0', 10);
+                        await env.AB_CACHE.put(deviceKey, String(deviceCount + 1));
+                    }
+                } else if (body.event === 'scroll' && body.data?.depth) {
+                    const scrollKey = `${baseKey}:scroll${body.data.depth}`;
+                    const scrollCount = parseInt(await env.AB_CACHE.get(scrollKey) || '0', 10);
+                    await env.AB_CACHE.put(scrollKey, String(scrollCount + 1));
+                } else if (body.event === 'time_on_page' && body.data?.seconds) {
+                    // Store time samples for averaging
+                    const timeKey = `${baseKey}:time_samples`;
+                    const samples = JSON.parse(await env.AB_CACHE.get(timeKey) || '[]');
+                    samples.push(body.data.seconds);
+                    // Keep last 1000 samples to avoid unbounded growth
+                    if (samples.length > 1000) samples.shift();
+                    await env.AB_CACHE.put(timeKey, JSON.stringify(samples));
+                }
+
+                return cors(new Response(JSON.stringify({ ok: true }), {
+                    headers: { 'Content-Type': 'application/json' }
+                }));
+            } catch (e: any) {
+                return cors(new Response(JSON.stringify({ error: e.message }), { status: 400 }));
+            }
+        }
+
+        // --- ANALYTICS: Return aggregated data for dashboard ---
+        if (url.pathname === '/admin/analytics') {
+            const today = new Date().toISOString().split('T')[0];
+            const list = await env.AB_CACHE.list({ prefix: `analytics:` });
+
+            // Group by slug
+            const slugsMap: Record<string, any> = {};
+
+            for (const key of list.keys) {
+                const parts = key.name.split(':');
+                // Format: analytics:slug:date:metric
+                if (parts.length < 4) continue;
+
+                const slug = parts[1];
+                const date = parts[2];
+                const metric = parts.slice(3).join(':');
+
+                // Only include today's data for real-time
+                if (date !== today) continue;
+
+                if (!slugsMap[slug]) {
+                    slugsMap[slug] = {
+                        slug,
+                        views: 0,
+                        unique_visitors: 0,
+                        scroll_50: 0,
+                        scroll_100: 0,
+                        avg_time: 0,
+                        mobile: 0,
+                        desktop: 0
+                    };
+                }
+
+                const value = await env.AB_CACHE.get(key.name);
+                if (!value) continue;
+
+                if (metric === 'views') {
+                    slugsMap[slug].views = parseInt(value, 10);
+                } else if (metric === 'sessions') {
+                    try {
+                        slugsMap[slug].unique_visitors = JSON.parse(value).length;
+                    } catch { }
+                } else if (metric === 'scroll50') {
+                    slugsMap[slug].scroll_50 = parseInt(value, 10);
+                } else if (metric === 'scroll100') {
+                    slugsMap[slug].scroll_100 = parseInt(value, 10);
+                } else if (metric === 'time_samples') {
+                    try {
+                        const samples = JSON.parse(value);
+                        if (samples.length > 0) {
+                            slugsMap[slug].avg_time = Math.round(samples.reduce((a: number, b: number) => a + b, 0) / samples.length);
+                        }
+                    } catch { }
+                } else if (metric === 'device:mobile') {
+                    slugsMap[slug].mobile = parseInt(value, 10);
+                } else if (metric === 'device:desktop') {
+                    slugsMap[slug].desktop = parseInt(value, 10);
+                }
+            }
+
+            const result = Object.values(slugsMap).sort((a: any, b: any) => b.views - a.views);
+
+            return cors(new Response(JSON.stringify({ date: today, pages: result }), {
+                headers: { 'Content-Type': 'application/json' }
+            }));
+        }
+
         // Extract slug
         const slug = url.pathname.slice(1).split('/')[0];
         if (!slug || slug === '' || slug === 'favicon.ico') {
@@ -556,12 +743,15 @@ export default {
                 fixedHtml = fixedHtml.replace(fbqRegex, `fbq('track', 'PageView', {}, {eventID: '${eventId}'})`);
             }
 
-            // 2. Inject a global variable and the style fix
+            // 2. Inject a global variable, the style fix, and ANALYTICS SCRIPT
             // We add the style block AND the window variable for GTM usage if needed
+            const analyticsScript = generateAnalyticsScript(slug);
             fixedHtml = fixedHtml.replace(
                 '</head>',
                 `<script>window.__fbEventId = '${eventId}';</script>\n<style>body .esconder { display: none; }</style></head>`
             );
+            // Inject analytics script before </body>
+            fixedHtml = fixedHtml.replace('</body>', analyticsScript + '</body>');
 
             // 3. LAZY LOADING (DEFERRED): Intercept .esconder content
             // We use HTMLRewriter to rewrite src -> data-src for elements inside .esconder
