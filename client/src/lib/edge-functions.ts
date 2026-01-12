@@ -389,8 +389,11 @@ export interface PlacementMetrics {
   source: string;
   pageViews: number;
   sales: number;
+  leads: number;
   revenue: number;
   conversionRate: number;
+  leadConversionRate: number;
+  isFormPlacement: boolean;
 }
 
 export interface FunnelPerformanceMetrics {

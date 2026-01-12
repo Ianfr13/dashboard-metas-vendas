@@ -4,9 +4,12 @@ export interface PlacementMetrics {
     placement: string // traffic_medium
     source: string // traffic_source
     sales: number
+    leads: number // NEW: count of generate_lead events
     revenue: number
     conversionRate: number
+    leadConversionRate: number // NEW: leads / pageViews
     pageViews: number // para calcular conversao
+    isFormPlacement: boolean // NEW: true if this is a Facebook Form placement
 }
 
 export async function getPlacementRanking(
@@ -27,21 +30,29 @@ export async function getPlacementRanking(
     const map = new Map<string, PlacementMetrics>()
 
     events?.forEach(event => {
-        // Agrupar por source + medium (ex: meta_ads | Instagram_Reels)
-        // Se medium for genérico (cpc, paid), talvez não seja útil como "posicionamento",
-        // Mas vamos mostrar o que vier.
         const medium = event.traffic_medium || '(not set)'
         const source = event.traffic_source || '(not set)'
         const key = `${source}|${medium}`
+
+        // Detect Form placements (Facebook Instant Form, Lead Ads)
+        const mediumLower = medium.toLowerCase()
+        const sourceLower = source.toLowerCase()
+        const isFormPlacement = mediumLower.includes('form') ||
+            mediumLower.includes('lead_form') ||
+            mediumLower.includes('instant_form') ||
+            (sourceLower.includes('facebook') && mediumLower.includes('lead'))
 
         if (!map.has(key)) {
             map.set(key, {
                 placement: medium,
                 source: source,
                 sales: 0,
+                leads: 0,
                 revenue: 0,
                 pageViews: 0,
-                conversionRate: 0
+                conversionRate: 0,
+                leadConversionRate: 0,
+                isFormPlacement
             })
         }
 
@@ -52,6 +63,8 @@ export async function getPlacementRanking(
             m.revenue += Number(event.value || 0)
         } else if (event.event_name === 'page_view') {
             m.pageViews++
+        } else if (event.event_name === 'generate_lead') {
+            m.leads++
         }
     })
 
@@ -61,9 +74,13 @@ export async function getPlacementRanking(
             revenue: Math.round(m.revenue * 100) / 100,
             conversionRate: m.pageViews > 0
                 ? Math.round((m.sales / m.pageViews) * 100 * 100) / 100
+                : 0,
+            leadConversionRate: m.pageViews > 0
+                ? Math.round((m.leads / m.pageViews) * 100 * 100) / 100
                 : 0
         }))
-        .sort((a, b) => b.sales - a.sales || b.revenue - a.revenue) // Foco total em VENDA
+        .sort((a, b) => b.sales - a.sales || b.leads - a.leads || b.revenue - a.revenue)
 
     return ranking
 }
+

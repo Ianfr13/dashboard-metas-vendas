@@ -104,6 +104,9 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                                 <TableHead onClick={() => requestSort('addToCart')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
                                     <div className="flex items-center justify-end">Add to Cart {getSortIcon('addToCart')}</div>
                                 </TableHead>
+                                <TableHead onClick={() => requestSort('leads')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-end">Leads {getSortIcon('leads')}</div>
+                                </TableHead>
                                 <TableHead onClick={() => requestSort('addToWishlist')} className="cursor-pointer text-right hover:bg-muted/50 transition-colors">
                                     <div className="flex items-center justify-end">Wishlist {getSortIcon('addToWishlist')}</div>
                                 </TableHead>
@@ -174,6 +177,16 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
                                     <TableCell className="text-right font-mono text-sm">
                                         {formatNumber(item.addToCart)}
                                     </TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex flex-col items-end">
+                                            <span className="font-mono text-sm">{formatNumber(item.leads || 0)}</span>
+                                            {item.pageViews > 0 && item.leads > 0 && (
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    {(((item.leads || 0) / (item.pageViews || 1)) * 100).toFixed(1)}%
+                                                </span>
+                                            )}
+                                        </div>
+                                    </TableCell>
                                     <TableCell className="text-right font-mono text-sm">
                                         {formatNumber(item.addToWishlist)}
                                     </TableCell>
@@ -226,7 +239,7 @@ export default function CreativeRankingTable({ data }: CreativeRankingTableProps
 
                             {sortedData.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                                    <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">
                                         Nenhum dado de criativo registrado no período.
                                     </TableCell>
                                 </TableRow>
