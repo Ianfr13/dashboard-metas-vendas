@@ -78,18 +78,21 @@ export async function getCreativeRanking(
     const startDateYMD = startDate.split('T')[0];
     const endDateYMD = endDate.split('T')[0];
 
-    // Fetch Facebook Ads spend data using pagination
-    const insightsData = await fetchAllRows<any>('facebook_insights', 'ad_id, spend', (q) => {
+    // Fetch Facebook Ads spend AND leads data using pagination
+    const insightsData = await fetchAllRows<any>('facebook_insights', 'ad_id, spend, leads', (q) => {
         return q.gte('date', startDateYMD).lte('date', endDateYMD).not('ad_id', 'is', null);
     });
 
-    // Create spend map: ad_id -> total spend
+    // Create spend and leads maps: ad_id -> totals
     const spendMap = new Map<string, number>();
+    const fbLeadsMap = new Map<string, number>();
     insightsData?.forEach((insight: any) => {
         const adId = insight.ad_id;
         if (adId) {
-            const current = spendMap.get(adId) || 0;
-            spendMap.set(adId, current + Number(insight.spend || 0));
+            const currentSpend = spendMap.get(adId) || 0;
+            spendMap.set(adId, currentSpend + Number(insight.spend || 0));
+            const currentLeads = fbLeadsMap.get(adId) || 0;
+            fbLeadsMap.set(adId, currentLeads + Number(insight.leads || 0));
         }
     });
 
@@ -207,12 +210,16 @@ export async function getCreativeRanking(
                 bestPlacement = sortedPlacements[0][0] // The key (medium)
             }
 
-            // Get spend from spendMap
+            // Get spend and FB leads from maps
             const spend = spendMap.get(m.creativeId) || 0;
+            const fbLeads = fbLeadsMap.get(m.creativeId) || 0;
+
+            // Combine GTM leads + Facebook leads
+            const totalLeads = m.leads + fbLeads;
 
             // Calculate cost metrics
             const cpa = m.sales > 0 ? spend / m.sales : 0;
-            const cpl = m.leads > 0 ? spend / m.leads : 0;
+            const cpl = totalLeads > 0 ? spend / totalLeads : 0;
             const costPerCheckout = m.checkouts > 0 ? spend / m.checkouts : 0;
             const costPerAddToCart = m.addToCart > 0 ? spend / m.addToCart : 0;
 
@@ -220,6 +227,7 @@ export async function getCreativeRanking(
             const { placements, ...rest } = m
             return {
                 ...rest,
+                leads: totalLeads, // Use combined leads
                 bestPlacement,
                 revenue: Math.round(m.revenue * 100) / 100,
                 conversionRate: m.pageViews > 0
