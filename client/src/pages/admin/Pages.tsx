@@ -336,14 +336,16 @@ export default function Pages() {
             if (result.error) throw result.error;
 
             toast.success("Página salva no Banco (Backup)");
-            setEditingPage(result.data);
+            // Preserve the original published_slug so deploy can detect slug changes
+            const originalPublishedSlug = editingPage.published_slug;
+            setEditingPage({ ...result.data, published_slug: originalPublishedSlug });
             setVturbConfig(finalVturbConfig);
             fetchPages();
 
             // Se já salvou no banco, oferecemos deploy
             if (!editingPage.id) {
                 // Se é novo, setamos o ID para permitir deploy
-                setEditingPage(result.data);
+                setEditingPage({ ...result.data, published_slug: originalPublishedSlug });
             }
         } catch (error: any) {
             toast.error("Erro ao salvar: " + error.message);
