@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Play, Pause, Zap, FileText, Gauge, Loader2, RotateCcw } from "lucide-react";
+import { Plus, Trash2, Copy, Play, Pause, Zap, FileText, Gauge, Loader2, RotateCcw, Pencil } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -58,6 +58,7 @@ export default function ABTests() {
     const [loading, setLoading] = useState(true);
     const [newTest, setNewTest] = useState({ name: "", variants: [{ name: "A", url: "", weight: 50, visits: 0 }, { name: "B", url: "", weight: 50, visits: 0 }] });
     const [showForm, setShowForm] = useState(false);
+    const [editingTest, setEditingTest] = useState<ABTest | null>(null);
     const [cmsPages, setCmsPages] = useState<CMSPage[]>([]);
     const [speedTests, setSpeedTests] = useState<Record<number, { loading: boolean; speed?: number; cached?: boolean }>>({});
     const [speedStats, setSpeedStats] = useState<Record<string, any>>({});
@@ -151,6 +152,53 @@ export default function ABTests() {
         setShowForm(false);
         setNewTest({ name: "", variants: [{ name: "A", url: "", weight: 50, visits: 0 }, { name: "B", url: "", weight: 50, visits: 0 }] });
         fetchTests();
+    }
+
+    // Update test
+    async function updateTest() {
+        if (!editingTest) return;
+        if (!editingTest.name || editingTest.variants.some(v => !v.url)) {
+            return toast.error("Preencha todos os campos");
+        }
+
+        // Update test name
+        const { error: testError } = await supabase
+            .from("ab_tests")
+            .update({ name: editingTest.name })
+            .eq("id", editingTest.id);
+
+        if (testError) return toast.error(testError.message);
+
+        // Update variants
+        for (const variant of editingTest.variants) {
+            if (variant.id) {
+                await supabase
+                    .from("ab_test_variants")
+                    .update({
+                        name: variant.name,
+                        url: variant.url,
+                        weight: variant.weight
+                    })
+                    .eq("id", variant.id);
+            }
+        }
+
+        toast.success("Teste atualizado!");
+        purgeCache(editingTest.slug);
+
+        setEditingTest(null);
+        fetchTests();
+    }
+
+    // Start editing
+    function startEdit(test: ABTest) {
+        setEditingTest({ ...test, variants: test.variants.map(v => ({ ...v })) });
+        setShowForm(false);
+    }
+
+    // Cancel editing
+    function cancelEdit() {
+        setEditingTest(null);
     }
 
     // Toggle status
@@ -323,6 +371,84 @@ export default function ABTests() {
                     </Card>
                 )}
 
+                {/* Edit form */}
+                {editingTest && (
+                    <Card className="border-blue-200 bg-blue-50/30">
+                        <CardHeader><CardTitle>Editar Teste: {editingTest.name}</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            <Input
+                                placeholder="Nome do teste"
+                                value={editingTest.name}
+                                onChange={e => setEditingTest({ ...editingTest, name: e.target.value })}
+                            />
+                            {editingTest.variants.map((v, i) => (
+                                <div key={v.id || i} className="flex gap-2">
+                                    <Input
+                                        className="w-20"
+                                        placeholder="Nome"
+                                        value={v.name}
+                                        onChange={e => {
+                                            const variants = [...editingTest.variants];
+                                            variants[i].name = e.target.value;
+                                            setEditingTest({ ...editingTest, variants });
+                                        }}
+                                    />
+                                    <Select
+                                        value={cmsPages.some(p => `${WORKER_URL}/${p.slug}` === v.url) ? v.url : "custom"}
+                                        onValueChange={(value) => {
+                                            const variants = [...editingTest.variants];
+                                            variants[i].url = value === "custom" ? "" : value;
+                                            setEditingTest({ ...editingTest, variants });
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Selecionar..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="custom">
+                                                <span className="flex items-center gap-2">URL Externa</span>
+                                            </SelectItem>
+                                            {cmsPages.map(page => (
+                                                <SelectItem key={page.id} value={`${WORKER_URL}/${page.slug}`}>
+                                                    <span className="flex items-center gap-2">
+                                                        <FileText className="h-3 w-3" />
+                                                        {page.name}
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Input
+                                        className="flex-1"
+                                        placeholder="URL de destino"
+                                        value={v.url}
+                                        onChange={e => {
+                                            const variants = [...editingTest.variants];
+                                            variants[i].url = e.target.value;
+                                            setEditingTest({ ...editingTest, variants });
+                                        }}
+                                    />
+                                    <Input
+                                        className="w-20"
+                                        type="number"
+                                        placeholder="Peso"
+                                        value={v.weight}
+                                        onChange={e => {
+                                            const variants = [...editingTest.variants];
+                                            variants[i].weight = parseInt(e.target.value) || 0;
+                                            setEditingTest({ ...editingTest, variants });
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={cancelEdit}>Cancelar</Button>
+                                <Button onClick={updateTest}>Salvar Alterações</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Tests list */}
                 {tests.map(test => (
                     <Card key={test.id}>
@@ -334,6 +460,9 @@ export default function ABTests() {
                             <div className="flex gap-2">
                                 <Button variant="ghost" size="icon" onClick={() => copyUrl(test.slug)} title="Copiar URL">
                                     <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => startEdit(test)} title="Editar">
+                                    <Pencil className="h-4 w-4 text-blue-500" />
                                 </Button>
                                 <Button variant="ghost" size="icon" onClick={() => resetVisits(test)} title="Zerar Visitas">
                                     <RotateCcw className="h-4 w-4 text-orange-500" />
