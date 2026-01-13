@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity, Video, Eye, CloudOff, CheckCircle2, AlertCircle, Smartphone, Tablet, Monitor, Loader2 } from "lucide-react";
+import { Plus, Trash2, Copy, Save, Rocket, ExternalLink, RefreshCw, Gauge, Zap, Globe, Activity, Video, Eye, CloudOff, CheckCircle2, AlertCircle, Smartphone, Tablet, Monitor, Loader2, Archive, FolderOpen, Dices, Filter } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
@@ -31,6 +31,8 @@ interface Page {
     vturb_config?: VTurbConfig;
     is_published?: boolean;
     published_slug?: string;
+    folder?: string;
+    is_archived?: boolean;
     updated_at: string;
 }
 
@@ -107,9 +109,104 @@ export default function Pages() {
 
     // VTurb Config State
     const [vturbConfig, setVturbConfig] = useState<VTurbConfig>(DEFAULT_VTURB_CONFIG);
+    const [vturbTextInput, setVturbTextInput] = useState<string>('');
 
     // Preview Viewport State
     const [previewViewport, setPreviewViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+
+    // Folder and Archive Filter State
+    const [folderFilter, setFolderFilter] = useState<string>('all');
+    const [showArchived, setShowArchived] = useState<boolean>(false);
+    const [newFolderName, setNewFolderName] = useState<string>('');
+
+    // Get unique folders from pages
+    const folders = Array.from(new Set(pages.filter(p => p.folder).map(p => p.folder!)));
+
+    // Filter pages based on folder and archive status
+    const filteredPages = pages.filter(page => {
+        const matchesFolder = folderFilter === 'all' || page.folder === folderFilter;
+        const matchesArchive = showArchived || !page.is_archived;
+        return matchesFolder && matchesArchive;
+    });
+
+    // Generate random 6-character alphanumeric slug
+    function generateRandomSlug(): string {
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        let slug = '';
+        for (let i = 0; i < 6; i++) {
+            slug += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return slug;
+    }
+
+    // Check if slug is unique
+    async function isSlugUnique(slug: string): Promise<boolean> {
+        const { data } = await supabase
+            .from('pages')
+            .select('id')
+            .eq('slug', slug)
+            .single();
+        return !data;
+    }
+
+    // Generate unique random slug
+    async function generateUniqueSlug(): Promise<string> {
+        let slug = generateRandomSlug();
+        let attempts = 0;
+        while (!(await isSlugUnique(slug)) && attempts < 10) {
+            slug = generateRandomSlug();
+            attempts++;
+        }
+        return slug;
+    }
+
+    // Parse VTurb text input to config
+    function parseVturbText(text: string): VTurbVideo[] {
+        const videos: VTurbVideo[] = [];
+        // Match pattern: 'id': { delay: number } or "id": { delay: number }
+        const regex = /['"]([^'"]+)['"]:\s*\{\s*delay:\s*(\d+)\s*\}/g;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            videos.push({ id: match[1], delay: parseInt(match[2]) });
+        }
+        return videos.length > 0 ? videos : [{ id: '', delay: 10 }];
+    }
+
+    // Convert config to text format
+    function vturbConfigToText(videos: VTurbVideo[]): string {
+        return videos
+            .filter(v => v.id.trim())
+            .map(v => `'${v.id}': { delay: ${v.delay} }`)
+            .join(',\n');
+    }
+
+    // Duplicate page with random slug
+    async function handleDuplicate(page: Page) {
+        const newSlug = await generateUniqueSlug();
+        setEditingPage({
+            ...page,
+            id: 0, // New page
+            name: `${page.name} (Cópia)`,
+            slug: newSlug,
+            is_published: false,
+            published_slug: undefined,
+            updated_at: new Date().toISOString()
+        });
+        if (page.tracking_params) {
+            setGenParams({ ...DEFAULT_GEN_PARAMS, ...page.tracking_params });
+        } else {
+            setGenParams(DEFAULT_GEN_PARAMS);
+        }
+        if (page.vturb_config) {
+            setVturbConfig({ ...DEFAULT_VTURB_CONFIG, ...page.vturb_config });
+            setVturbTextInput(vturbConfigToText(page.vturb_config.videos || []));
+        } else {
+            setVturbConfig(DEFAULT_VTURB_CONFIG);
+            setVturbTextInput('');
+        }
+        setShowForm(true);
+        toast.success('Página duplicada! Slug aleatório gerado.');
+    }
 
     useEffect(() => {
         fetchPages();
@@ -190,6 +287,10 @@ export default function Pages() {
             return toast.error("Nome e Slug são obrigatórios");
         }
 
+        // Parse VTurb text input before saving
+        const parsedVideos = parseVturbText(vturbTextInput);
+        const finalVturbConfig = { ...vturbConfig, videos: parsedVideos };
+
         try {
             let result;
             if (editingPage.id) {
@@ -203,9 +304,10 @@ export default function Pages() {
                         head_code: editingPage.head_code,
                         body_code: editingPage.body_code,
                         footer_code: editingPage.footer_code,
-
+                        folder: editingPage.folder || null,
+                        is_archived: editingPage.is_archived || false,
                         tracking_params: genParams,
-                        vturb_config: vturbConfig,
+                        vturb_config: finalVturbConfig,
                         updated_at: new Date().toISOString()
                     })
                     .eq("id", editingPage.id)
@@ -222,8 +324,10 @@ export default function Pages() {
                         head_code: editingPage.head_code,
                         body_code: editingPage.body_code,
                         footer_code: editingPage.footer_code,
+                        folder: editingPage.folder || null,
+                        is_archived: editingPage.is_archived || false,
                         tracking_params: genParams,
-                        vturb_config: vturbConfig
+                        vturb_config: finalVturbConfig
                     })
                     .select()
                     .single();
@@ -233,6 +337,7 @@ export default function Pages() {
 
             toast.success("Página salva no Banco (Backup)");
             setEditingPage(result.data);
+            setVturbConfig(finalVturbConfig);
             fetchPages();
 
             // Se já salvou no banco, oferecemos deploy
@@ -277,8 +382,9 @@ export default function Pages() {
             }
 
             // VTurb Delay Script Injection
-            if (vturbConfig.enabled && vturbConfig.videos.some(v => v.id.trim())) {
-                const listPitchEntries = vturbConfig.videos
+            const parsedVideosForDeploy = parseVturbText(vturbTextInput);
+            if (vturbConfig.enabled && parsedVideosForDeploy.some(v => v.id.trim())) {
+                const listPitchEntries = parsedVideosForDeploy
                     .filter(v => v.id.trim())
                     .map(v => `'${v.id.trim()}': { delay: ${parseInt(String(v.delay)) || 0} }`)
                     .join(',\n    ');
@@ -531,24 +637,100 @@ document.addEventListener('player:ready', function(event) {
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Editor</CardTitle>
-                                    <div className="flex gap-4">
-                                        <div className="flex-1 space-y-2">
-                                            <Label>Nome Interno</Label>
-                                            <Input
-                                                value={editingPage?.name || ""}
-                                                onChange={e => setEditingPage(prev => ({ ...prev!, name: e.target.value }))}
-                                                placeholder="Ex: VSL 01 - Headline Nova"
-                                            />
-                                        </div>
-                                        <div className="flex-1 space-y-2">
-                                            <Label>Slug (URL)</Label>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-muted-foreground">/</span>
+                                    <div className="space-y-4">
+                                        <div className="flex gap-4">
+                                            <div className="flex-1 space-y-2">
+                                                <Label>Nome Interno</Label>
                                                 <Input
-                                                    value={editingPage?.slug || ""}
-                                                    onChange={e => setEditingPage(prev => ({ ...prev!, slug: e.target.value }))}
-                                                    placeholder="vsl-01"
+                                                    value={editingPage?.name || ""}
+                                                    onChange={e => setEditingPage(prev => ({ ...prev!, name: e.target.value }))}
+                                                    placeholder="Ex: VSL 01 - Headline Nova"
                                                 />
+                                            </div>
+                                            <div className="flex-1 space-y-2">
+                                                <Label>Slug (URL)</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-muted-foreground">/</span>
+                                                    <Input
+                                                        value={editingPage?.slug || ""}
+                                                        onChange={e => setEditingPage(prev => ({ ...prev!, slug: e.target.value }))}
+                                                        placeholder="vsl-01"
+                                                    />
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        title="Gerar slug aleatório (6 caracteres)"
+                                                        onClick={async () => {
+                                                            const newSlug = await generateUniqueSlug();
+                                                            setEditingPage(prev => ({ ...prev!, slug: newSlug }));
+                                                            toast.success(`Slug gerado: ${newSlug}`);
+                                                        }}
+                                                    >
+                                                        <Dices className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="flex-1 space-y-2">
+                                                <Label>Pasta</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <select
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                        value={editingPage?.folder || ""}
+                                                        onChange={e => setEditingPage(prev => ({ ...prev!, folder: e.target.value || undefined }))}
+                                                    >
+                                                        <option value="">Sem pasta</option>
+                                                        {folders.map(folder => (
+                                                            <option key={folder} value={folder}>{folder}</option>
+                                                        ))}
+                                                    </select>
+                                                    <Dialog>
+                                                        <DialogTrigger asChild>
+                                                            <Button variant="outline" size="icon" title="Nova pasta">
+                                                                <Plus className="h-4 w-4" />
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent>
+                                                            <DialogHeader>
+                                                                <DialogTitle>Nova Pasta</DialogTitle>
+                                                                <DialogDescription>Digite o nome da nova pasta</DialogDescription>
+                                                            </DialogHeader>
+                                                            <div className="space-y-4 py-4">
+                                                                <Input
+                                                                    value={newFolderName}
+                                                                    onChange={e => setNewFolderName(e.target.value)}
+                                                                    placeholder="Ex: VSLs, Leads, Testes"
+                                                                />
+                                                                <Button
+                                                                    onClick={() => {
+                                                                        if (newFolderName.trim()) {
+                                                                            setEditingPage(prev => ({ ...prev!, folder: newFolderName.trim() }));
+                                                                            setNewFolderName('');
+                                                                            toast.success(`Pasta "${newFolderName.trim()}" criada`);
+                                                                        }
+                                                                    }}
+                                                                    disabled={!newFolderName.trim()}
+                                                                >
+                                                                    Criar e Selecionar
+                                                                </Button>
+                                                            </div>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end gap-4 pb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        id="archive-toggle"
+                                                        checked={editingPage?.is_archived || false}
+                                                        onCheckedChange={(checked) => setEditingPage(prev => ({ ...prev!, is_archived: checked }))}
+                                                    />
+                                                    <Label htmlFor="archive-toggle" className="flex items-center gap-1 cursor-pointer">
+                                                        <Archive className="h-4 w-4" />
+                                                        Arquivada
+                                                    </Label>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -617,58 +799,25 @@ document.addEventListener('player:ready', function(event) {
 
                                             {vturbConfig.enabled && (
                                                 <div className="space-y-3">
-                                                    <Label>Vídeos Configurados</Label>
-                                                    {vturbConfig.videos.map((video, index) => (
-                                                        <div key={index} className="flex items-center gap-2">
-                                                            <Input
-                                                                className="flex-1 font-mono text-xs"
-                                                                placeholder="ID do Vídeo (ex: abc123xyz)"
-                                                                value={video.id}
-                                                                onChange={e => {
-                                                                    const newVideos = [...vturbConfig.videos];
-                                                                    newVideos[index].id = e.target.value;
-                                                                    setVturbConfig(prev => ({ ...prev, videos: newVideos }));
-                                                                }}
-                                                            />
-                                                            <Input
-                                                                className="w-24"
-                                                                placeholder="Delay (s)"
-                                                                type="text"
-                                                                value={video.delay}
-                                                                onChange={e => {
-                                                                    const val = e.target.value;
-                                                                    if (!/^\d*$/.test(val)) return; // Apenas números
-
-                                                                    const newVideos = [...vturbConfig.videos];
-                                                                    newVideos[index].delay = val;
-                                                                    setVturbConfig(prev => ({ ...prev, videos: newVideos }));
-                                                                }}
-                                                            />
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => {
-                                                                    if (vturbConfig.videos.length > 1) {
-                                                                        const newVideos = vturbConfig.videos.filter((_, i) => i !== index);
-                                                                        setVturbConfig(prev => ({ ...prev, videos: newVideos }));
-                                                                    }
-                                                                }}
-                                                                disabled={vturbConfig.videos.length <= 1}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
+                                                    <div>
+                                                        <Label>Configuração de Vídeos</Label>
+                                                        <p className="text-sm text-muted-foreground mb-2">
+                                                            Cole os IDs no formato do script. Cada linha deve ter o formato:
+                                                        </p>
+                                                        <div className="bg-muted p-3 rounded-md mb-3 font-mono text-xs">
+                                                            <code className="text-green-600">'abc123xyz'</code>: {"{"} delay: <code className="text-blue-600">150</code> {"}"}, <span className="text-muted-foreground">// primeiro vídeo</span><br />
+                                                            <code className="text-green-600">'def456uvw'</code>: {"{"} delay: <code className="text-blue-600">200</code> {"}"} <span className="text-muted-foreground">// segundo vídeo</span>
                                                         </div>
-                                                    ))}
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => setVturbConfig(prev => ({
-                                                            ...prev,
-                                                            videos: [...prev.videos, { id: '', delay: 10 }]
-                                                        }))}
-                                                    >
-                                                        <Plus className="h-4 w-4 mr-1" /> Adicionar Vídeo
-                                                    </Button>
+                                                    </div>
+                                                    <Textarea
+                                                        className="font-mono text-xs min-h-[150px]"
+                                                        value={vturbTextInput}
+                                                        onChange={e => setVturbTextInput(e.target.value)}
+                                                        placeholder={`'video_id_1': { delay: 150 },\n'video_id_2': { delay: 200 }`}
+                                                    />
+                                                    <p className="text-xs text-muted-foreground">
+                                                        O delay é em segundos. O valor será usado para revelar elementos com a classe .esconder após o tempo especificado.
+                                                    </p>
                                                 </div>
                                             )}
                                         </TabsContent>
@@ -814,56 +963,126 @@ document.addEventListener('player:ready', function(event) {
                         <h2 className="text-2xl font-bold">Páginas (CMS)</h2>
                         <p className="text-muted-foreground">Hospedagem de páginas de alta performance</p>
                     </div>
-                    <Button onClick={() => {
+                    <Button onClick={async () => {
+                        const newSlug = await generateUniqueSlug();
                         setEditingPage({
                             id: 0,
                             name: "",
-                            slug: "",
+                            slug: newSlug,
                             html_content: "",
-                            head_code: "",  // Default empty
+                            head_code: "",
                             body_code: "",
                             footer_code: "",
-                            tracking_params: {}, // Empty params for new page
+                            tracking_params: {},
                             updated_at: ""
                         });
                         setGenParams(DEFAULT_GEN_PARAMS);
                         setVturbConfig(DEFAULT_VTURB_CONFIG);
+                        setVturbTextInput('');
                         setShowForm(true);
                     }}>
                         <Plus className="h-4 w-4 mr-2" /> Nova Página
                     </Button>
                 </div>
 
+                {/* Filters Bar */}
+                <div className="flex flex-wrap gap-4 items-center p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Filtros:</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                        <select
+                            className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                            value={folderFilter}
+                            onChange={e => setFolderFilter(e.target.value)}
+                        >
+                            <option value="all">Todas as pastas</option>
+                            {folders.map(folder => (
+                                <option key={folder} value={folder}>{folder}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Switch
+                            id="show-archived"
+                            checked={showArchived}
+                            onCheckedChange={setShowArchived}
+                        />
+                        <Label htmlFor="show-archived" className="text-sm cursor-pointer flex items-center gap-1">
+                            <Archive className="h-4 w-4" />
+                            Mostrar arquivadas
+                        </Label>
+                    </div>
+                    <span className="text-sm text-muted-foreground ml-auto">
+                        {filteredPages.length} página(s)
+                    </span>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {pages.map(page => (
-                        <Card key={page.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => {
-                            setEditingPage(page);
-                            if (page.tracking_params) {
-                                setGenParams({ ...DEFAULT_GEN_PARAMS, ...page.tracking_params });
-                            } else {
-                                setGenParams(DEFAULT_GEN_PARAMS);
-                            }
-                            if (page.vturb_config) {
-                                setVturbConfig({ ...DEFAULT_VTURB_CONFIG, ...page.vturb_config });
-                            } else {
-                                setVturbConfig(DEFAULT_VTURB_CONFIG);
-                            }
-                            setShowForm(true);
-                        }}>
+                    {filteredPages.map(page => (
+                        <Card
+                            key={page.id}
+                            className={`hover:shadow-md transition-shadow cursor-pointer relative ${page.is_archived ? 'opacity-60' : ''}`}
+                            onClick={() => {
+                                setEditingPage(page);
+                                if (page.tracking_params) {
+                                    setGenParams({ ...DEFAULT_GEN_PARAMS, ...page.tracking_params });
+                                } else {
+                                    setGenParams(DEFAULT_GEN_PARAMS);
+                                }
+                                if (page.vturb_config) {
+                                    setVturbConfig({ ...DEFAULT_VTURB_CONFIG, ...page.vturb_config });
+                                    setVturbTextInput(vturbConfigToText(page.vturb_config.videos || []));
+                                } else {
+                                    setVturbConfig(DEFAULT_VTURB_CONFIG);
+                                    setVturbTextInput('');
+                                }
+                                setShowForm(true);
+                            }}
+                        >
+                            {/* Duplicate Button */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-2 right-2 z-10 h-7 w-7 opacity-50 hover:opacity-100"
+                                title="Duplicar página"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDuplicate(page);
+                                }}
+                            >
+                                <Copy className="h-3.5 w-3.5" />
+                            </Button>
                             <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-lg">{page.name}</CardTitle>
-                                    {page.is_published ? (
-                                        <span className="flex items-center gap-1 text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
-                                            <CheckCircle2 className="h-3 w-3" /> Publicado
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                                            <AlertCircle className="h-3 w-3" /> Rascunho
+                                <div className="flex items-center justify-between pr-8">
+                                    <CardTitle className="text-lg truncate">{page.name}</CardTitle>
+                                    <div className="flex items-center gap-1">
+                                        {page.is_archived && (
+                                            <span className="flex items-center gap-1 text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                                                <Archive className="h-3 w-3" />
+                                            </span>
+                                        )}
+                                        {page.is_published ? (
+                                            <span className="flex items-center gap-1 text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                                                <CheckCircle2 className="h-3 w-3" /> Publicado
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                                                <AlertCircle className="h-3 w-3" /> Rascunho
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <code className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded w-fit">/{page.slug}</code>
+                                    {page.folder && (
+                                        <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                                            <FolderOpen className="h-3 w-3" /> {page.folder}
                                         </span>
                                     )}
                                 </div>
-                                <code className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded w-fit">/{page.slug}</code>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
@@ -894,9 +1113,9 @@ document.addEventListener('player:ready', function(event) {
                         </Card>
                     ))}
 
-                    {pages.length === 0 && (
+                    {filteredPages.length === 0 && (
                         <div className="col-span-full py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                            Nenhuma página criada ainda.
+                            {pages.length === 0 ? 'Nenhuma página criada ainda.' : 'Nenhuma página encontrada com os filtros selecionados.'}
                         </div>
                     )}
                 </div>
