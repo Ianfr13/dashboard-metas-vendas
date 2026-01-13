@@ -124,7 +124,8 @@ export default function Pages() {
 
     // Filter pages based on folder and archive status
     const filteredPages = pages.filter(page => {
-        const matchesFolder = folderFilter === 'all' || page.folder === folderFilter;
+        const matchesFolder = folderFilter === 'all' ||
+            (folderFilter === 'none' ? !page.folder : page.folder === folderFilter);
         const matchesArchive = showArchived || !page.is_archived;
         return matchesFolder && matchesArchive;
     });
@@ -1001,8 +1002,9 @@ document.addEventListener('player:ready', function(event) {
                             onChange={e => setFolderFilter(e.target.value)}
                         >
                             <option value="all">Todas as pastas</option>
+                            <option value="none">📁 Sem pasta</option>
                             {folders.map(folder => (
-                                <option key={folder} value={folder}>{folder}</option>
+                                <option key={folder} value={folder}>📂 {folder}</option>
                             ))}
                         </select>
                     </div>
@@ -1044,19 +1046,35 @@ document.addEventListener('player:ready', function(event) {
                                 setShowForm(true);
                             }}
                         >
-                            {/* Duplicate Button */}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute top-2 right-2 z-10 h-7 w-7 opacity-50 hover:opacity-100"
-                                title="Duplicar página"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDuplicate(page);
-                                }}
-                            >
-                                <Copy className="h-3.5 w-3.5" />
-                            </Button>
+                            {/* Action Buttons */}
+                            <div className="absolute top-2 right-2 z-10 flex gap-1">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 opacity-50 hover:opacity-100"
+                                    title={page.is_archived ? "Desarquivar" : "Arquivar"}
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        await supabase.from("pages").update({ is_archived: !page.is_archived }).eq("id", page.id);
+                                        toast.success(page.is_archived ? "Página desarquivada" : "Página arquivada");
+                                        fetchPages();
+                                    }}
+                                >
+                                    <Archive className={`h-3.5 w-3.5 ${page.is_archived ? 'text-orange-500' : ''}`} />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 opacity-50 hover:opacity-100"
+                                    title="Duplicar página"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDuplicate(page);
+                                    }}
+                                >
+                                    <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
                             <CardHeader className="pb-3">
                                 <div className="flex items-center justify-between pr-8">
                                     <CardTitle className="text-lg truncate">{page.name}</CardTitle>
@@ -1079,11 +1097,23 @@ document.addEventListener('player:ready', function(event) {
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <code className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded w-fit">/{page.slug}</code>
-                                    {page.folder && (
-                                        <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
-                                            <FolderOpen className="h-3 w-3" /> {page.folder}
-                                        </span>
-                                    )}
+                                    <select
+                                        className="text-xs bg-blue-50 border border-blue-200 text-blue-600 px-2 py-0.5 rounded-full cursor-pointer hover:bg-blue-100"
+                                        value={page.folder || ""}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onChange={async (e) => {
+                                            e.stopPropagation();
+                                            const newFolder = e.target.value || null;
+                                            await supabase.from("pages").update({ folder: newFolder }).eq("id", page.id);
+                                            toast.success(newFolder ? `Movido para "${newFolder}"` : "Removido da pasta");
+                                            fetchPages();
+                                        }}
+                                    >
+                                        <option value="">📁 Sem pasta</option>
+                                        {folders.map(f => (
+                                            <option key={f} value={f}>📂 {f}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </CardHeader>
                             <CardContent>
