@@ -119,8 +119,9 @@ function detectCheckoutButtons(html: string): CheckoutButton[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
 
-  // Padrões comuns de URLs de checkout
+  // Padrões de URLs de checkout (nosso e externos que podem vir em templates)
   const checkoutPatterns = [
+    /pay\.douravita/i, // Nosso checkout
     /checkout/i,
     /pay\.hotmart/i,
     /go\.hotmart/i,
@@ -135,11 +136,6 @@ function detectCheckoutButtons(html: string): CheckoutButton[] {
     /doppus/i,
     /ticto/i,
     /lastlink/i,
-    /pagar\.me/i,
-    /pagseguro/i,
-    /mercadopago/i,
-    /stripe/i,
-    /paypal/i,
   ];
 
   // Padrões de texto de botão de checkout
@@ -306,17 +302,23 @@ export default function Pages() {
 
   // Checkout URL Changer State
   const [checkoutButtons, setCheckoutButtons] = useState<CheckoutButton[]>([]);
-  const [bulkCheckoutUrl, setBulkCheckoutUrl] = useState<string>("");
+  const [bulkCheckoutUrl, setBulkCheckoutUrl] = useState<string>(
+    "https://pay.douravita.com.br/"
+  );
 
   // Folder and Archive Filter State
   const [folderFilter, setFolderFilter] = useState<string>("all");
   const [showArchived, setShowArchived] = useState<boolean>(false);
   const [newFolderName, setNewFolderName] = useState<string>("");
+  const [customFolders, setCustomFolders] = useState<string[]>([]);
 
-  // Get unique folders from pages
+  // Get unique folders from pages + custom folders created in session
   const folders = Array.from(
-    new Set(pages.filter(p => p.folder).map(p => p.folder!))
-  );
+    new Set([
+      ...pages.filter(p => p.folder).map(p => p.folder!),
+      ...customFolders,
+    ])
+  ).sort();
 
   // Filter pages based on folder and archive status
   const filteredPages = pages.filter(page => {
@@ -1026,13 +1028,21 @@ document.addEventListener('player:ready', function(event) {
                                 <Button
                                   onClick={() => {
                                     if (newFolderName.trim()) {
+                                      const folderName = newFolderName.trim();
                                       setEditingPage(prev => ({
                                         ...prev!,
-                                        folder: newFolderName.trim(),
+                                        folder: folderName,
                                       }));
+                                      // Adicionar à lista de pastas customizadas
+                                      if (!folders.includes(folderName)) {
+                                        setCustomFolders(prev => [
+                                          ...prev,
+                                          folderName,
+                                        ]);
+                                      }
                                       setNewFolderName("");
                                       toast.success(
-                                        `Pasta "${newFolderName.trim()}" criada`
+                                        `Pasta "${folderName}" criada`
                                       );
                                     }
                                   }}
@@ -1368,8 +1378,10 @@ document.addEventListener('player:ready', function(event) {
                             checkout
                           </p>
                           <p className="text-xs mt-2">
-                            Detectamos automaticamente links para: Hotmart,
-                            Kiwify, Eduzz, Monetizze, Braip, PerfectPay, etc.
+                            Troque links de templates externos para{" "}
+                            <code className="bg-muted px-1 rounded">
+                              pay.douravita.com.br
+                            </code>
                           </p>
                         </div>
                       )}
@@ -1752,10 +1764,15 @@ document.addEventListener('player:ready', function(event) {
                   title={page.is_archived ? "Desarquivar" : "Arquivar"}
                   onClick={async e => {
                     e.stopPropagation();
-                    await supabase
+                    const { error } = await supabase
                       .from("pages")
                       .update({ is_archived: !page.is_archived })
                       .eq("id", page.id);
+                    if (error) {
+                      console.error("Erro ao arquivar:", error);
+                      toast.error("Erro ao arquivar: " + error.message);
+                      return;
+                    }
                     toast.success(
                       page.is_archived
                         ? "Página desarquivada"
@@ -1814,10 +1831,15 @@ document.addEventListener('player:ready', function(event) {
                     onChange={async e => {
                       e.stopPropagation();
                       const newFolder = e.target.value || null;
-                      await supabase
+                      const { error } = await supabase
                         .from("pages")
                         .update({ folder: newFolder })
                         .eq("id", page.id);
+                      if (error) {
+                        console.error("Erro ao mover pasta:", error);
+                        toast.error("Erro ao mover: " + error.message);
+                        return;
+                      }
                       toast.success(
                         newFolder
                           ? `Movido para "${newFolder}"`
